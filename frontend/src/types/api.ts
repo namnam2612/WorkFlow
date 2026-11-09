@@ -577,3 +577,30 @@ export interface SearchResult {
   total: number;
   groups: { kind: SearchKind; hits: SearchHit[] }[];
 }
+
+export type AutomationTrigger = 'task_created' | 'status_changed' | 'task_assigned';
+
+export interface AutomationConditions {
+  statusId?: number;
+  type?: TaskType;
+  priority?: Priority;
+}
+
+export type AutomationAction =
+  | { type: 'set_status'; statusId: number }
+  | { type: 'assign'; userIds: number[] }
+  | { type: 'set_priority'; priority: Priority }
+  | { type: 'add_comment'; text: string }
+  | { type: 'notify'; userIds?: number[]; toLeader?: boolean; message: string };
+
+export interface AutomationRule {
+  id: number;
+  projectId: number;
+  name: string;
+  enabled: boolean;
+  trigger: AutomationTrigger;
+  conditions: AutomationConditions;
+  actions: AutomationAction[];
+  runCount: number;
+  lastRunAt: string | null;
+}

@@ -17,6 +17,7 @@ import { scopeOfType } from '../statuses/default-statuses';
 import { STATUS_SELECT } from '../statuses/status-view';
 import { StatusesService } from '../statuses/statuses.service';
 import { AttachmentCleanupService } from '../attachments/attachment-cleanup.service';
+import { AutomationService } from '../automation/automation.service';
 import { bucketOf, MyWorkBucket, myWorkWindow } from './my-work';
 import { assigneesInclude, taskInclude, toTaskView } from './task-view';
 
@@ -53,6 +54,7 @@ export class TasksService {
     private readonly realtime: RealtimeService,
     private readonly attachmentCleanup: AttachmentCleanupService,
     private readonly statuses: StatusesService,
+    private readonly automation: AutomationService,
   ) {}
 
   // ---------------------------------------------------------------- queries
@@ -249,6 +251,9 @@ export class TasksService {
     }
     if (notices.length > 0) await this.notifications.notify(notices);
     this.realtime.taskChanged(created.projectId, created.id);
+    // Quy tắc tự động chạy sau khi việc đã lưu; không bao giờ làm hỏng thao tác tạo
+    await this.automation.handle({ type: 'task_created', taskId: created.id, actorId: user.id });
+    if (assigneeIds.length > 0) await this.automation.handle({ type: 'task_assigned', taskId: created.id, actorId: user.id });
     return this.get(user, created.id);
   }
 
@@ -449,6 +454,8 @@ export class TasksService {
     }
     await this.notifications.notify(notices);
     this.realtime.taskChanged(task.projectId, id);
+    if (statusChanged) await this.automation.handle({ type: 'status_changed', taskId: id, actorId: user.id });
+    if (addedIds.length > 0) await this.automation.handle({ type: 'task_assigned', taskId: id, actorId: user.id });
     return this.get(user, id);
   }
 
@@ -499,6 +506,7 @@ export class TasksService {
       await this.notifications.notify(this.statusNotifications(user, project, updated, target.name, task.assignees.map((a) => a.userId)));
     }
     this.realtime.taskChanged(task.projectId, id);
+    if (statusChanged) await this.automation.handle({ type: 'status_changed', taskId: id, actorId: user.id });
     return this.get(user, id);
   }
 

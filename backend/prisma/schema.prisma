@@ -61,6 +61,12 @@ enum TestRunStatus {
   closed
 }
 
+enum AutomationTrigger {
+  task_created
+  status_changed
+  task_assigned
+}
+
 enum SprintStatus {
   planned
   active
@@ -175,14 +181,15 @@ model Project {
   teamId          Int?
   createdAt       DateTime  @default(now())
 
-  team        Team?           @relation(fields: [teamId], references: [id], onDelete: SetNull)
-  createdBy   User            @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  team        Team?            @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  createdBy   User             @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: Restrict)
   members     ProjectMember[]
   statuses    ProjectStatus[]
   sprints     Sprint[]
   releases    Release[]
   testCases   TestCase[]
   wikiPages   WikiPage[]
+  automations AutomationRule[]
   testRuns    TestRun[]
   tasks       Task[]
   attachments Attachment[]
@@ -589,4 +596,26 @@ model WikiRevision {
   page WikiPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
 
   @@index([pageId, createdAt])
+}
+
+/// Quy tắc tự động: khi có sự kiện trên công việc và thỏa điều kiện thì thực hiện các hành động
+model AutomationRule {
+  id          Int               @id @default(autoincrement())
+  projectId   Int
+  name        String            @db.VarChar(120)
+  enabled     Boolean           @default(true)
+  trigger     AutomationTrigger
+  /// { statusId?, type?, priority? } — mọi điều kiện đã đặt đều phải khớp
+  conditions  Json
+  /// Danh sách hành động: set_status | assign | set_priority | add_comment | notify
+  actions     Json
+  runCount    Int               @default(0)
+  lastRunAt   DateTime?
+  createdById Int
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, trigger, enabled])
 }

@@ -11,6 +11,7 @@ import FilesProjectPage from './pages/files/FilesProjectPage';
 import FilesProjectsPage from './pages/files/FilesProjectsPage';
 import FilesTaskPage from './pages/files/FilesTaskPage';
 import DashboardPage from './pages/DashboardPage';
+import AutomationsPage from './pages/AutomationsPage';
 import BacklogPage from './pages/BacklogPage';
 import LeavePage from './pages/LeavePage';
 import MyWorkPage from './pages/MyWorkPage';
@@ -65,6 +66,7 @@ function AppRoutes() {
           <Route path="projects/:id/board" element={<KanbanPage />} />
           <Route path="projects/:id/backlog" element={<BacklogPage />} />
           <Route path="projects/:id/gantt" element={<GanttPage />} />
+          <Route path="projects/:id/automations" element={<AutomationsPage />} />
           <Route path="projects/:id/wiki" element={<WikiPage />} />
           <Route path="projects/:id/wiki/:pageId" element={<WikiPage />} />
           <Route path="projects/:id/qa" element={<QaPage />} />

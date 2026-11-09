@@ -1,4 +1,4 @@
-import type { BugSeverity, Environment, LeaveStatus, LeaveType, Priority, Role, Specialty, StatusCategory, TaskType, TestResultStatus } from '../types/api';
+import type { AutomationTrigger, BugSeverity, Environment, LeaveStatus, LeaveType, Priority, Role, Specialty, StatusCategory, TaskType, TestResultStatus } from '../types/api';
 
 export const PRIORITIES: Priority[] = ['low', 'medium', 'high', 'urgent'];
 
@@ -83,4 +83,10 @@ export const RESULT_META: Record<TestResultStatus, { label: string; badge: strin
   failed: { label: 'Lỗi', badge: 'bg-red-50 text-red-700 ring-red-200' },
   blocked: { label: 'Bị chặn', badge: 'bg-amber-50 text-amber-700 ring-amber-200' },
   skipped: { label: 'Bỏ qua', badge: 'bg-sky-50 text-sky-700 ring-sky-200' },
+};
+
+export const TRIGGER_LABEL: Record<AutomationTrigger, string> = {
+  task_created: 'Khi có công việc mới',
+  status_changed: 'Khi đổi trạng thái',
+  task_assigned: 'Khi được giao cho ai đó',
 };

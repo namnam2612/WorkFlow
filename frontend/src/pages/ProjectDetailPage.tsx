@@ -1,4 +1,4 @@
-import { BarChart3, BookOpen, FlaskConical, GanttChart, Rocket, KanbanSquare, ListChecks, ListTodo, Pencil, Plus, Send, Trash2, UserMinus, UserPlus } from 'lucide-react';
+import { BarChart3, BookOpen, Zap, FlaskConical, GanttChart, Rocket, KanbanSquare, ListChecks, ListTodo, Pencil, Plus, Send, Trash2, UserMinus, UserPlus } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
@@ -107,6 +107,9 @@ export default function ProjectDetailPage() {
             </Button>
             <Button variant="secondary" icon={<ListTodo className="h-4 w-4" />} onClick={() => navigate(`/projects/${project.id}/backlog`)}>
               Backlog
+            </Button>
+            <Button variant="secondary" icon={<Zap className="h-4 w-4" />} onClick={() => navigate(`/projects/${project.id}/automations`)}>
+              Tự động hóa
             </Button>
             <Button variant="secondary" icon={<BookOpen className="h-4 w-4" />} onClick={() => navigate(`/projects/${project.id}/wiki`)}>
               Tài liệu

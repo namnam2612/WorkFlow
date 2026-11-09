@@ -78,6 +78,11 @@ export function describeActivity(entry: ActivityLogEntry): string {
       const name = (v: unknown) => (v && typeof v === 'object' && 'name' in v ? String((v as { name: unknown }).name) : 'Backlog');
       return `đã chuyển sprint từ "${name(detail.from)}" sang "${name(detail.to)}"`;
     }
+    case 'automation_applied': {
+      const rule = detail.rule && typeof detail.rule === 'object' ? String((detail.rule as { name?: unknown }).name ?? '') : '';
+      const applied = Array.isArray(detail.applied) ? detail.applied.map(String).join('; ') : '';
+      return `[Tự động · ${rule}] ${applied}`;
+    }
     case 'release_changed': {
       const v = (x: unknown) => (x && typeof x === 'object' && 'version' in x ? String((x as { version: unknown }).version) : 'không có');
       const fix = detail.fix as { from?: unknown; to?: unknown } | undefined;

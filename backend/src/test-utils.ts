@@ -10,7 +10,8 @@ export interface PrismaMock {
   comment: Record<'findMany' | 'create' | 'findUnique' | 'delete', MockFn>;
   project: Record<'findUnique' | 'findMany' | 'findUniqueOrThrow' | 'create' | 'update', MockFn>;
   notification: Record<'findFirst', MockFn>;
-  projectStatus: Record<'findMany' | 'findFirst' | 'findUnique' | 'create' | 'createMany' | 'update' | 'delete' | 'aggregate', MockFn>;
+  projectStatus: Record<'findMany' | 'findFirst' | 'findUnique' | 'count' | 'create' | 'createMany' | 'update' | 'delete' | 'aggregate', MockFn>;
+  automationRule: Record<'findUnique' | 'findMany' | 'create' | 'update' | 'delete', MockFn>;
   wikiPage: Record<'findUnique' | 'findMany' | 'create' | 'update' | 'updateMany' | 'delete', MockFn>;
   wikiRevision: Record<'findUnique' | 'findMany' | 'create' | 'deleteMany', MockFn>;
   testCase: Record<'findUnique' | 'findMany' | 'create' | 'update' | 'delete', MockFn>;
@@ -23,7 +24,7 @@ export interface PrismaMock {
   sprint: Record<'findUnique' | 'findMany' | 'findFirst' | 'create' | 'update' | 'delete', MockFn>;
   workLog: Record<'findMany' | 'findUnique' | 'create' | 'delete' | 'aggregate', MockFn>;
   projectMember: Record<'findUnique' | 'findMany' | 'createMany' | 'delete', MockFn>;
-  task: Record<'findUnique' | 'findMany' | 'create' | 'update' | 'updateMany' | 'delete' | 'count' | 'aggregate' | 'groupBy', MockFn>;
+  task: Record<'findUnique' | 'findUniqueOrThrow' | 'findMany' | 'create' | 'update' | 'updateMany' | 'delete' | 'count' | 'aggregate' | 'groupBy', MockFn>;
   taskAssignee: Record<'findMany' | 'createMany' | 'deleteMany', MockFn>;
   $transaction: MockFn;
   $queryRaw: MockFn;
@@ -39,7 +40,8 @@ export function createPrismaMock(): PrismaMock {
     comment: { findMany: jest.fn(), create: jest.fn(), findUnique: jest.fn(), delete: jest.fn() },
     project: { findUnique: jest.fn(), findMany: jest.fn(), findUniqueOrThrow: jest.fn(), create: jest.fn(), update: jest.fn() },
     notification: { findFirst: jest.fn() },
-    projectStatus: { findMany: jest.fn(), findFirst: jest.fn(), findUnique: jest.fn(), create: jest.fn(), createMany: jest.fn(), update: jest.fn(), delete: jest.fn(), aggregate: jest.fn() },
+    projectStatus: { findMany: jest.fn(), findFirst: jest.fn(), findUnique: jest.fn(), count: jest.fn(), create: jest.fn(), createMany: jest.fn(), update: jest.fn(), delete: jest.fn(), aggregate: jest.fn() },
+    automationRule: { findUnique: jest.fn(), findMany: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
     wikiPage: { findUnique: jest.fn(), findMany: jest.fn(), create: jest.fn(), update: jest.fn(), updateMany: jest.fn(), delete: jest.fn() },
     wikiRevision: { findUnique: jest.fn(), findMany: jest.fn(), create: jest.fn(), deleteMany: jest.fn() },
     testCase: { findUnique: jest.fn(), findMany: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
@@ -54,6 +56,7 @@ export function createPrismaMock(): PrismaMock {
     projectMember: { findUnique: jest.fn(), findMany: jest.fn(), createMany: jest.fn(), delete: jest.fn() },
     task: {
       findUnique: jest.fn(),
+      findUniqueOrThrow: jest.fn(),
       findMany: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),

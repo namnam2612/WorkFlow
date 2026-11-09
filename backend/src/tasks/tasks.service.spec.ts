@@ -6,6 +6,7 @@ import { AuthUser } from '../common/types/auth-user';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ProjectAccessService } from '../projects/project-access.service';
 import { RealtimeService } from '../realtime/realtime.service';
+import { AutomationService } from '../automation/automation.service';
 import { StatusesService } from '../statuses/statuses.service';
 import { asPrisma, callArg, createPrismaMock, firstArgs, PrismaMock } from '../test-utils';
 import { ListTasksQueryDto } from './dto/list-tasks-query.dto';
@@ -97,6 +98,7 @@ describe('TasksService', () => {
   let notifications: { notify: jest.Mock };
   let realtime: { taskChanged: jest.Mock };
   let cleanup: { collectTaskTargets: jest.Mock; cleanup: jest.Mock };
+  let automation: { handle: jest.Mock };
   let service: TasksService;
 
   beforeEach(() => {
@@ -121,6 +123,7 @@ describe('TasksService', () => {
       Promise.resolve(buildTask({ id: where.id, ...data })),
     );
 
+    automation = { handle: jest.fn().mockResolvedValue(undefined) };
     cleanup = {
       collectTaskTargets: jest.fn().mockResolvedValue({ files: ['projects/1/tasks/5/a.pdf'], dirs: ['projects/1/tasks/5'] }),
       cleanup: jest.fn().mockResolvedValue(undefined),
@@ -134,6 +137,7 @@ describe('TasksService', () => {
       realtime as unknown as RealtimeService,
       cleanup as unknown as AttachmentCleanupService,
       new StatusesService(prismaService, new ProjectAccessService(prismaService)),
+      automation as unknown as AutomationService,
     );
     // get() dựng lại chi tiết bằng nhiều truy vấn include — không thuộc phạm vi các test này
     jest.spyOn(service, 'get').mockResolvedValue({} as never);

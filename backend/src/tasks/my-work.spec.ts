@@ -1,6 +1,7 @@
 import { AuthUser } from '../common/types/auth-user';
 import { ProjectAccessService } from '../projects/project-access.service';
 import { asPrisma, callArg, createPrismaMock } from '../test-utils';
+import { AutomationService } from '../automation/automation.service';
 import { StatusesService } from '../statuses/statuses.service';
 import { bucketOf, myWorkWindow, startOfVnDay } from './my-work';
 import { TasksService } from './tasks.service';
@@ -70,7 +71,7 @@ describe('TasksService.myWork', () => {
     ]);
     prisma.task.count.mockResolvedValue(3);
     const p = asPrisma(prisma);
-    const service = new TasksService(p, new ProjectAccessService(p), {} as ActivityService, {} as NotificationsService, {} as RealtimeService, {} as AttachmentCleanupService, {} as StatusesService);
+    const service = new TasksService(p, new ProjectAccessService(p), {} as ActivityService, {} as NotificationsService, {} as RealtimeService, {} as AttachmentCleanupService, {} as StatusesService, {} as AutomationService);
     const result = await service.myWork(member, NOW);
     expect(result.overdue.map((t) => t.id)).toEqual([1]);
     expect(result.dueToday.map((t) => t.id)).toEqual([2]);

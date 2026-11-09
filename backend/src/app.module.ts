@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { AutomationModule } from './automation/automation.module';
 import { ActivityModule } from './activity/activity.module';
 import { AttachmentsModule } from './attachments/attachments.module';
 import { FilesModule } from './files/files.module';
@@ -53,6 +54,7 @@ import { WorkLogsModule } from './worklogs/worklogs.module';
     QaModule,
     WikiModule,
     SearchModule,
+    AutomationModule,
     TasksModule,
     CommentsModule,
     AttachmentsModule,
