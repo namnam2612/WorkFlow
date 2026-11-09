@@ -1,4 +1,4 @@
-import type { BugSeverity, Environment, Priority, Role, StatusCategory, TaskType } from '../types/api';
+import type { BugSeverity, Environment, Priority, Role, Specialty, StatusCategory, TaskType } from '../types/api';
 
 export const PRIORITIES: Priority[] = ['low', 'medium', 'high', 'urgent'];
 
@@ -65,3 +65,6 @@ export const CHART_CHROME = {
   dark: { surface: '#111111', grid: 'rgba(255,255,255,0.08)', ink: '#888888', cursor: 'rgba(255,255,255,0.05)', line: '#ffffff', accent: '#7ee2a8', warn: '#ffd561' },
   light: { surface: '#ffffff', grid: 'rgba(0,0,0,0.1)', ink: '#6b6b6b', cursor: 'rgba(0,0,0,0.04)', line: '#0a0a0a', accent: '#2f9e44', warn: '#e0a100' },
 } as const;
+
+export const SPECIALTIES: Specialty[] = ['dev', 'qa', 'designer', 'other'];
+export const SPECIALTY_LABEL: Record<Specialty, string> = { dev: 'Dev', qa: 'QA', designer: 'Designer', other: 'Khác' };

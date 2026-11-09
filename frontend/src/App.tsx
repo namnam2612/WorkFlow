@@ -14,6 +14,8 @@ import DashboardPage from './pages/DashboardPage';
 import BacklogPage from './pages/BacklogPage';
 import MyWorkPage from './pages/MyWorkPage';
 import ReportsPage from './pages/ReportsPage';
+import TeamDetailPage from './pages/TeamDetailPage';
+import TeamsPage from './pages/TeamsPage';
 import KanbanPage from './pages/KanbanPage';
 import LoginPage from './pages/LoginPage';
 import MemberDetailPage from './pages/MemberDetailPage';
@@ -64,6 +66,8 @@ function AppRoutes() {
           <Route path="tasks/:id" element={<TaskDetailPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="teams" element={<TeamsPage />} />
+          <Route path="teams/:id" element={<TeamDetailPage />} />
           <Route path="members" element={<MembersPage />} />
           <Route path="members/:id" element={<MemberDetailPage />} />
           <Route path="*" element={<NotFoundPage />} />

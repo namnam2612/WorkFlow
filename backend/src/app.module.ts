@@ -20,6 +20,7 @@ import { SchedulerModule } from './scheduler/scheduler.module';
 import { SprintsModule } from './sprints/sprints.module';
 import { StatusesModule } from './statuses/statuses.module';
 import { TasksModule } from './tasks/tasks.module';
+import { TeamsModule } from './teams/teams.module';
 import { UsersModule } from './users/users.module';
 import { WorkLogsModule } from './worklogs/worklogs.module';
 
@@ -39,6 +40,7 @@ import { WorkLogsModule } from './worklogs/worklogs.module';
     StatusesModule,
     SprintsModule,
     WorkLogsModule,
+    TeamsModule,
     TasksModule,
     CommentsModule,
     AttachmentsModule,

@@ -21,6 +21,14 @@ enum StatusCategory {
 }
 
 /// Bộ trạng thái dùng cho công việc thường hay cho Bug (Bug có vòng đời riêng)
+/// Chuyên môn của thành viên trong nhóm (để lập kế hoạch nhân lực)
+enum Specialty {
+  dev
+  qa
+  designer
+  other
+}
+
 enum SprintStatus {
   planned
   active
@@ -89,6 +97,8 @@ model User {
   memberships     ProjectMember[]
   assignedTasks   TaskAssignee[]
   workLogs        WorkLog[]
+  ledTeams        Team[]          @relation("TeamLeader")
+  teamMemberships TeamMember[]
   createdTasks    Task[]          @relation("TaskCreator")
   comments        Comment[]
   activityLogs    ActivityLog[]
@@ -128,8 +138,10 @@ model Project {
   /// Incoming Webhook của Slack: sự kiện của dự án được đăng vào kênh. Là bí mật, không trả về qua API
   slackWebhookUrl String?   @db.VarChar(500)
   createdById     Int
+  teamId          Int?
   createdAt       DateTime  @default(now())
 
+  team        Team?           @relation(fields: [teamId], references: [id], onDelete: SetNull)
   createdBy   User            @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: Restrict)
   members     ProjectMember[]
   statuses    ProjectStatus[]
@@ -138,6 +150,7 @@ model Project {
   attachments Attachment[]
 
   @@index([createdById])
+  @@index([teamId])
 }
 
 /// Trạng thái tùy biến của từng dự án (cột Kanban). Có 2 bộ: công việc thường và Bug.
@@ -340,4 +353,32 @@ model WorkLog {
 
   @@index([taskId])
   @@index([userId, workedOn])
+}
+
+/// Nhóm làm việc: một nhóm có thể phụ trách nhiều dự án, thành viên có chuyên môn (Dev/QA/...)
+model Team {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(120)
+  description String?  @db.VarChar(500)
+  leaderId    Int
+  createdAt   DateTime @default(now())
+
+  leader   User         @relation("TeamLeader", fields: [leaderId], references: [id], onDelete: Restrict)
+  members  TeamMember[]
+  projects Project[]
+
+  @@index([leaderId])
+}
+
+model TeamMember {
+  teamId    Int
+  userId    Int
+  specialty Specialty @default(other)
+  joinedAt  DateTime  @default(now())
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([teamId, userId])
+  @@index([userId])
 }

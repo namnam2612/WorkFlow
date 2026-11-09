@@ -14,6 +14,7 @@ import { ProjectAccessService } from './project-access.service';
 
 const projectInclude = {
   createdBy: { select: USER_BRIEF_SELECT },
+  team: { select: { id: true, name: true } },
   members: { include: { user: { select: { ...USER_BRIEF_SELECT, email: true, role: true } } }, orderBy: { userId: 'asc' } },
 } satisfies Prisma.ProjectInclude;
 
@@ -57,6 +58,9 @@ export class ProjectsService {
     const memberIds = new Set(dto.memberIds ?? []);
     // Trưởng nhóm tạo dự án luôn là thành viên; admin quản lý bằng quyền hệ thống nên không bắt buộc
     if (user.role === 'leader') memberIds.add(user.id);
+    // Chọn nhóm thì mọi thành viên của nhóm vào dự án
+    const teamMemberIds = dto.teamId ? await this.teamMemberIds(user, dto.teamId) : [];
+    for (const id of teamMemberIds) memberIds.add(id);
     await this.assertUsersExistAndActive([...memberIds]);
 
     const project = await this.prisma.$transaction(async (tx) => {
@@ -68,6 +72,7 @@ export class ProjectsService {
           endDate: dto.endDate ? new Date(dto.endDate) : null,
           createdById: user.id,
           slackWebhookUrl: dto.slackWebhookUrl ?? null,
+          teamId: dto.teamId ?? null,
           members: { create: [...memberIds].map((userId) => ({ userId })) },
         },
         include: projectInclude,
@@ -96,9 +101,16 @@ export class ProjectsService {
     const endDate = dto.endDate === undefined ? current.endDate?.toISOString() : dto.endDate;
     this.assertDateRange(startDate, endDate);
 
+    // Đổi nhóm: thành viên của nhóm mới được thêm vào dự án (người đã có giữ nguyên, không ai bị gỡ)
+    const newTeamMemberIds = dto.teamId ? await this.teamMemberIds(user, dto.teamId) : [];
+    const existing = newTeamMemberIds.length > 0 ? new Set((await this.prisma.projectMember.findMany({ where: { projectId: id }, select: { userId: true } })).map((m) => m.userId)) : new Set<number>();
+    const toAdd = newTeamMemberIds.filter((uid) => !existing.has(uid));
+    if (toAdd.length > 0) await this.assertUsersExistAndActive(toAdd);
+    if (toAdd.length > 0) await this.prisma.projectMember.createMany({ data: toAdd.map((userId) => ({ projectId: id, userId })), skipDuplicates: true });
     const project = await this.prisma.project.update({
       where: { id },
       data: {
+        teamId: dto.teamId,
         name: dto.name,
         description: dto.description,
         startDate: dto.startDate === undefined ? undefined : dto.startDate ? new Date(dto.startDate) : null,
@@ -107,6 +119,7 @@ export class ProjectsService {
       },
       include: projectInclude,
     });
+    await this.notifications.notify(toAdd.filter((uid) => uid !== user.id).map((userId) => ({ userId, type: 'project_added', message: `Bạn được thêm vào dự án "${project.name}"`, link: `/projects/${project.id}`, projectId: project.id })));
     const counts = await this.countsFor([id]);
     return this.toView(project, counts.get(id));
   }
@@ -177,6 +190,16 @@ export class ProjectsService {
     if (start && end && new Date(end).getTime() < new Date(start).getTime()) {
       throw new BadRequestException('Ngày kết thúc phải sau hoặc bằng ngày bắt đầu');
     }
+  }
+
+  /** Id thành viên của một nhóm; người dùng phải thấy được nhóm đó (admin, trưởng nhóm hoặc thành viên) */
+  private async teamMemberIds(user: AuthUser, teamId: number): Promise<number[]> {
+    const team = await this.prisma.team.findFirst({
+      where: { id: teamId, ...(user.role === 'admin' ? {} : { OR: [{ leaderId: user.id }, { members: { some: { userId: user.id } } }] }) },
+      select: { members: { where: { user: { isActive: true } }, select: { userId: true } } },
+    });
+    if (!team) throw new BadRequestException('Nhóm không tồn tại hoặc bạn không thuộc nhóm đó');
+    return team.members.map((m) => m.userId);
   }
 
   private async assertUsersExistAndActive(userIds: number[]): Promise<void> {

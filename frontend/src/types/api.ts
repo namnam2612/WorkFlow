@@ -74,6 +74,9 @@ export interface ProjectSummary {
   createdBy: UserBrief;
   /** Đã cấu hình Slack webhook (URL là bí mật nên không trả về) */
   slackConfigured: boolean;
+  /** Nhóm phụ trách dự án */
+  team: { id: number; name: string } | null;
+  teamId: number | null;
   members: UserBrief[];
   taskCount: number;
   doneCount: number;
@@ -362,4 +365,31 @@ export interface Timesheet {
   totalMinutes: number;
   byUser: { user: UserBrief; minutes: number; taskCount: number }[];
   byDay: { date: string; minutes: number }[];
+}
+
+export type Specialty = 'dev' | 'qa' | 'designer' | 'other';
+
+export interface Team {
+  id: number;
+  name: string;
+  description: string | null;
+  leaderId: number;
+  leader: UserBrief;
+  memberCount: number;
+  projectCount: number;
+  /** Người xem có quyền quản lý nhóm này (trưởng nhóm hoặc admin) */
+  canManage: boolean;
+  createdAt: string;
+}
+
+export interface TeamMemberView extends UserBrief {
+  email: string;
+  jobTitle: string | null;
+  specialty: Specialty;
+  joinedAt: string;
+}
+
+export interface TeamDetail extends Team {
+  members: TeamMemberView[];
+  projects: { id: number; name: string }[];
 }

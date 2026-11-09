@@ -9,6 +9,8 @@ export interface ProjectInput {
   endDate?: string | null;
   /** undefined = giữ nguyên; null = gỡ; chuỗi = đặt mới */
   slackWebhookUrl?: string | null;
+  /** Nhóm phụ trách: thành viên của nhóm được thêm vào dự án; null = gỡ nhóm */
+  teamId?: number | null;
   memberIds?: number[];
 }
 

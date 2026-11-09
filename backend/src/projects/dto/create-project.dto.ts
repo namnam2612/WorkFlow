@@ -30,6 +30,11 @@ export class CreateProjectDto {
   @MaxLength(500)
   slackWebhookUrl?: string | null;
 
+  /** Nhóm phụ trách dự án; null = không thuộc nhóm. Đặt nhóm thì mọi thành viên của nhóm được thêm vào dự án. */
+  @IsOptional()
+  @IsInt()
+  teamId?: number | null;
+
   @IsOptional()
   @IsArray()
   @ArrayUnique()

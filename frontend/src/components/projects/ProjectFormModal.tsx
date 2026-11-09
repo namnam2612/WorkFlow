@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useFormAttachments } from '../../hooks/useFormAttachments';
 import { useSaveProject } from '../../hooks/useProjects';
+import { useTeams } from '../../hooks/useTeams';
 import { useUsers } from '../../hooks/useUsers';
 import { getErrorMessage } from '../../lib/api';
 import { isoToVnDateInput, vnDateInputToIso } from '../../lib/format';
@@ -65,6 +66,8 @@ export function ProjectFormModal({ open, onClose, project, onSaved }: ProjectFor
     },
   });
   const [removeSlack, setRemoveSlack] = useState(false);
+  const teamsQuery = useTeams(open);
+  const [teamId, setTeamId] = useState(project?.teamId != null ? String(project.teamId) : '');
 
   const toggleMember = (id: number) =>
     setMemberIds((current) => (current.includes(id) ? current.filter((x) => x !== id) : [...current, id]));
@@ -85,6 +88,7 @@ export function ProjectFormModal({ open, onClose, project, onSaved }: ProjectFor
         startDate: vnDateInputToIso(values.startDate),
         endDate: vnDateInputToIso(values.endDate),
         // Webhook là bí mật nên không điền sẵn: để trống = giữ nguyên, nhập mới = thay, "Gỡ" = xóa
+        teamId: teamId ? Number(teamId) : project ? null : undefined,
         ...(values.slackWebhookUrl ? { slackWebhookUrl: values.slackWebhookUrl } : removeSlack ? { slackWebhookUrl: null } : {}),
         ...(project ? {} : { memberIds }),
       });
@@ -135,6 +139,17 @@ export function ProjectFormModal({ open, onClose, project, onSaved }: ProjectFor
             <input id="project-end" type="date" className={inputClass} {...register('endDate')} />
           </Field>
         </div>
+
+        <Field label="Nhóm phụ trách" htmlFor="project-team" hint="Chọn nhóm thì mọi thành viên của nhóm được thêm vào dự án.">
+          <select id="project-team" className={inputClass} value={teamId} onChange={(e) => setTeamId(e.target.value)}>
+            <option value="">Không thuộc nhóm nào</option>
+            {(teamsQuery.data ?? []).map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </Field>
 
         <Field
           label="Slack webhook (tùy chọn)"

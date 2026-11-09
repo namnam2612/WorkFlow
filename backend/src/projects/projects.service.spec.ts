@@ -62,3 +62,60 @@ describe('ProjectsService.removeMember - gỡ khỏi danh sách người đượ
     expect(prisma.taskAssignee.deleteMany).not.toHaveBeenCalled();
   });
 });
+
+describe('ProjectsService - bộ trạng thái mặc định và nhóm phụ trách', () => {
+  let prisma: PrismaMock;
+  let notify: jest.Mock;
+  let service: ProjectsService;
+  const row = (id: number, teamId: number | null = null) => ({ id, name: 'Dự án mới', description: null, startDate: null, endDate: null, createdById: 10, teamId, createdAt: new Date(), createdBy: {}, team: null, members: [], slackWebhookUrl: null });
+
+  beforeEach(() => {
+    prisma = createPrismaMock();
+    notify = jest.fn().mockResolvedValue(undefined);
+    prisma.project.findUnique.mockResolvedValue(PROJECT);
+    prisma.project.findUniqueOrThrow.mockResolvedValue({ startDate: null, endDate: null });
+    prisma.project.create.mockImplementation(({ data }: { data: { teamId: number | null } }) => Promise.resolve(row(50, data.teamId)));
+    prisma.project.update.mockImplementation(({ data }: { data: { teamId?: number | null } }) => Promise.resolve(row(1, data.teamId ?? null)));
+    prisma.projectStatus.createMany.mockResolvedValue({ count: 11 });
+    prisma.user.findMany.mockResolvedValue([]);
+    prisma.user.count.mockResolvedValue(0);
+    prisma.task.groupBy.mockResolvedValue([]);
+    prisma.projectStatus.findMany.mockResolvedValue([]);
+    prisma.team.findFirst.mockResolvedValue({ members: [{ userId: 20 }, { userId: 21 }] });
+    prisma.projectMember.findMany.mockResolvedValue([{ userId: 20 }]);
+    prisma.projectMember.createMany.mockResolvedValue({ count: 1 });
+    const p = asPrisma(prisma);
+    service = new ProjectsService(p, new ProjectAccessService(p), { notify } as unknown as NotificationsService, {} as ActivityService, {} as AttachmentCleanupService, {} as SlackService);
+  });
+
+  it('dự án mới tự có hai bộ trạng thái mặc định (5 công việc + 6 Bug)', async () => {
+    prisma.user.count.mockResolvedValue(1);
+    await service.create(owner, { name: 'Dự án mới' });
+    const data = (callArg(prisma.projectStatus.createMany) as { data: { scope: string; projectId: number }[] }).data;
+    expect(data.filter((s) => s.scope === 'task')).toHaveLength(5);
+    expect(data.filter((s) => s.scope === 'bug')).toHaveLength(6);
+    expect(data.every((s) => s.projectId === 50)).toBe(true);
+  });
+
+  it('tạo dự án thuộc nhóm: mọi thành viên của nhóm vào dự án', async () => {
+    prisma.user.count.mockResolvedValue(3);
+    await service.create(owner, { name: 'Dự án mới', teamId: 3 });
+    const members = (callArg(prisma.project.create) as { data: { members: { create: { userId: number }[] } } }).data.members.create.map((m) => m.userId).sort();
+    expect(members).toEqual([10, 20, 21]);
+    expect(callArg(prisma.project.create)).toMatchObject({ data: { teamId: 3 } });
+  });
+
+  it('đổi nhóm: chỉ thêm người chưa có vào dự án (không gỡ ai) và báo cho họ', async () => {
+    prisma.user.count.mockResolvedValue(1);
+    await service.update(owner, 1, { teamId: 3 });
+    expect(callArg(prisma.projectMember.createMany)).toMatchObject({ data: [{ projectId: 1, userId: 21 }], skipDuplicates: true });
+    expect((callArg(notify) as { userId: number }[]).map((n) => n.userId)).toEqual([21]);
+  });
+
+  it('nhóm mà người dùng không thấy thì bị từ chối; teamId = null để gỡ nhóm', async () => {
+    prisma.team.findFirst.mockResolvedValue(null);
+    await expect(service.update(owner, 1, { teamId: 99 })).rejects.toBeInstanceOf(BadRequestException);
+    await service.update(owner, 1, { teamId: null });
+    expect(callArg(prisma.project.update)).toMatchObject({ data: { teamId: null } });
+  });
+});

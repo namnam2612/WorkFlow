@@ -99,7 +99,7 @@ export default function ProjectDetailPage() {
     <>
       <PageHeader
         title={project.name}
-        description={`${formatDate(project.startDate)} → ${formatDate(project.endDate)} · Tạo bởi ${project.createdBy.name}`}
+        description={`${formatDate(project.startDate)} → ${formatDate(project.endDate)} · Tạo bởi ${project.createdBy.name}${project.team ? ` · Nhóm ${project.team.name}` : ''}`}
         actions={
           <>
             <Button icon={<KanbanSquare className="h-4 w-4" />} onClick={() => navigate(`/projects/${project.id}/board`)}>
