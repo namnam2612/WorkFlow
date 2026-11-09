@@ -13,7 +13,7 @@
 ## Giai đoạn 3 — CRUD
 - [x] Backend: User, Project, ProjectMember
 - [x] Backend: Task + subtask, danh sách có lọc/sắp xếp/phân trang, board, move
-- [ ] Frontend: Dự án, Danh sách task, Thành viên
+- [x] Frontend: Dự án (+ quản lý thành viên), Danh sách task (lọc/sắp xếp/phân trang, đồng bộ URL), Chi tiết task, Thành viên (+ admin tạo/sửa user)
 
 ## Giai đoạn 4 — Kanban
 - [x] API status + position (PATCH /tasks/:id/move, đánh số lại cột trong transaction)
