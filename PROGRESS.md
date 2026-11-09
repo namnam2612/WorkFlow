@@ -41,6 +41,15 @@
 - [x] Kho tài liệu tách tab Tài liệu/Ảnh, nhóm theo ngày; xem trước thêm txt/md/csv/json/xml/yaml/html/docx/xlsx/pptx/svg (migration backfill mimeType cho file cũ)
 - [x] Seed có file mẫu do nhiều người gửi; test phân quyền AttachmentsService; docker volume `uploads_data`, nginx cho phép body lớn
 
+## Giai đoạn 9 — Đính kèm file ngay trong form & file của dự án
+- [x] `Attachment.projectId` (nullable, migration `project_attachments` giữ nguyên dữ liệu cũ): một file thuộc DÚNG MỘT nơi, dự án (projectId) hoặc công việc (taskId); service kiểm tra ràng buộc (MySQL không cho CHECK trên cột có FK ON DELETE)
+- [x] API `GET/POST /projects/:projectId/attachments`; Kho tài liệu trả `source: 'project' | 'task'` và lọc `?source=`; `?projectId=` gồm cả file dự án; xóa dự án dọn cả file dự án lẫn file task
+- [x] Quyền file dự án: thành viên dự án xem/tải; leader của dự án và admin tải lên; người gửi, leader của dự án, admin xóa
+- [x] Form Tạo/Sửa dự án và Tạo/Sửa công việc có `AttachmentPicker` (dưới Mô tả): kéo thả/chọn nhiều file, báo lỗi ngay (quá 20MB, file rỗng, file thực thi, quá 10 file, trùng file), danh sách file kèm nút bỏ chọn
+- [x] Luồng tạo: gọi API tạo trước → lấy id → tải LẦN LƯỢT từng file (tiến trình từng file). File lỗi không làm mất dự án/công việc: form hiện đúng file nào lỗi + lý do, "Thử lại" chỉ gửi các file lỗi (không tạo trùng)
+- [x] Trang chi tiết dự án có "File đính kèm của dự án" (xem trước, tải, xóa theo quyền); Kho tài liệu có bộ lọc Nguồn, file dự án gắn nhãn "Dự án" và bấm tên dự án để mở chi tiết
+- [x] Seed: mỗi dự án có 2 PDF + 1 ảnh của dự án; test phân quyền file dự án
+
 ## Quyết định thiết kế
 - MySQL của dự án map ra cổng host **3307** vì máy đã có MySQL khác ở 3306.
 - Hồ sơ cá nhân (`/profile`): chức danh, SĐT, email liên hệ, giới thiệu, link GitHub/LinkedIn/Facebook (kiểm tra tên miền ở backend). Ảnh đại diện lưu trong DB (bảng `UserAvatar`, MEDIUMBLOB) để không phụ thuộc ổ đĩa container; trình duyệt tự cắt vuông 256px trước khi gửi, backend nhận tối đa 1MB và kiểm tra JPEG/PNG/WebP bằng chữ ký file. `GET /users/:id/avatar` công khai (thẻ <img> không gửi được header Authorization).

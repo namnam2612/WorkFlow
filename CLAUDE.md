@@ -22,7 +22,7 @@ Web app để Leader giao việc và theo dõi tiến độ/deadline; thành vi�
 - Task → `done` set `completedAt`; rời `done` thì xóa.
 
 ## File đính kèm
-- `backend/src/attachments/`: lưu qua `StorageService` (đổi sang S3/MinIO bằng cách thay provider trong `StorageModule`). Thư mục `UPLOAD_DIR` (mặc định `./uploads`, đã `.gitignore`); Docker dùng volume `uploads_data`. Xóa task/dự án phải dọn file (`AttachmentCleanupService`). Frontend tải/xem file bằng `fetchBlob` (có Authorization), không dùng thẻ `<a href>`/`<img src>` trực tiếp tới API.
+- `backend/src/attachments/`: lưu qua `StorageService` (đổi sang S3/MinIO bằng cách thay provider trong `StorageModule`). Thư mục `UPLOAD_DIR` (mặc định `./uploads`, đã `.gitignore`); Docker dùng volume `uploads_data`. Một file thuộc ĐÚNG MỘT nơi: task (`taskId`) hoặc dự án (`projectId`) — `AttachmentsService.store` kiểm tra; file dự án chỉ leader/admin tải lên, không có ActivityLog (log gắn với task). Xóa task/dự án phải dọn file (`AttachmentCleanupService`). Form tạo/sửa dùng `AttachmentPicker` + `useFormAttachments`: gọi API tạo trước, có id mới tải từng file. Frontend tải/xem file bằng `fetchBlob` (có Authorization), không dùng thẻ `<a href>`/`<img src>` trực tiếp tới API.
 
 ## Lệnh chạy
 ```bash
@@ -30,7 +30,7 @@ cp .env.example .env && docker compose up -d mysql     # MySQL ở localhost:330
 cd backend && npm i && cp .env.example .env
 npx prisma migrate deploy && npm run seed
 npm run start:dev                          # API http://localhost:3000/api
-npm run build && npm run lint && npm test  # 163 unit test
+npm run build && npm run lint && npm test  # 174 unit test
 cd ../frontend && npm i && npm run dev     # http://localhost:5173 (proxy /api, /socket.io)
 npm run build && npm run lint
 docker compose up -d --build               # toàn bộ stack: web http://localhost:8080

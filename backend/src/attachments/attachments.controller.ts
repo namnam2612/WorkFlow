@@ -7,7 +7,7 @@ import { AttachmentsService, IncomingFile, MAX_FILES_PER_UPLOAD } from './attach
 import { ListAttachmentsQueryDto } from './dto/list-attachments-query.dto';
 import { contentDisposition } from './file-types';
 
-/** Quyền xem/tải/xóa kiểm tra trong AttachmentsService theo dự án của task chứa file */
+/** Quyền xem/tải/xóa kiểm tra trong AttachmentsService theo dự án chứa file (trực tiếp hoặc qua công việc) */
 @Controller()
 export class AttachmentsController {
   constructor(private readonly attachments: AttachmentsService) {}
@@ -20,7 +20,19 @@ export class AttachmentsController {
   @Post('tasks/:taskId/attachments')
   @UseInterceptors(FilesInterceptor('files', MAX_FILES_PER_UPLOAD))
   upload(@CurrentUser() user: AuthUser, @Param('taskId', ParseIntPipe) taskId: number, @UploadedFiles() files: IncomingFile[] | undefined) {
-    return this.attachments.upload(user, taskId, files);
+    return this.attachments.uploadToTask(user, taskId, files);
+  }
+
+  @Get('projects/:projectId/attachments')
+  listForProject(@CurrentUser() user: AuthUser, @Param('projectId', ParseIntPipe) projectId: number) {
+    return this.attachments.listForProject(user, projectId);
+  }
+
+  /** Chỉ leader của dự án / admin (kiểm tra trong service) */
+  @Post('projects/:projectId/attachments')
+  @UseInterceptors(FilesInterceptor('files', MAX_FILES_PER_UPLOAD))
+  uploadToProject(@CurrentUser() user: AuthUser, @Param('projectId', ParseIntPipe) projectId: number, @UploadedFiles() files: IncomingFile[] | undefined) {
+    return this.attachments.uploadToProject(user, projectId, files);
   }
 
   /** Kho tài liệu */

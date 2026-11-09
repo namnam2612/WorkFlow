@@ -111,6 +111,9 @@ const SAMPLE_COMMENTS = [
   'OK, đã xem. Chỉnh lại một chút rồi merge nhé.',
 ];
 
+/** Màu ảnh minh họa khác nhau theo dự án */
+const projectIndexHue = (name: string): number => [...name].reduce((sum, ch) => sum + ch.charCodeAt(0), 0) % 360;
+
 async function main(): Promise<void> {
   const password = process.env.SEED_DEFAULT_PASSWORD ?? 'Password123!';
   const passwordHash = await bcrypt.hash(password, 10);
@@ -169,6 +172,29 @@ async function main(): Promise<void> {
     await prisma.projectMember.createMany({
       data: [leader.id, ...memberIds].map((userId) => ({ projectId: project.id, userId })),
     });
+
+    // File đính kèm của DỰ ÁN (do leader gửi): PDF hợp đồng / kế hoạch + một ảnh sơ đồ
+    const projectSamples = [
+      { name: `Hợp đồng - ${def.name}.pdf`, mime: 'application/pdf', data: makePdf(`Hop dong: ${def.name}`), ago: 12 },
+      { name: `Kế hoạch tổng thể.pdf`, mime: 'application/pdf', data: makePdf(`Ke hoach tong the: ${def.name}`), ago: 9 },
+      { name: `Sơ đồ tổ chức.png`, mime: 'image/png', data: makePng(360, 240, projectIndexHue(def.name)), ago: 8 },
+    ];
+    for (const sample of projectSamples) {
+      const stored = await writeSample(sample);
+      await prisma.attachment.create({
+        data: {
+          projectId: project.id,
+          uploaderId: leader.id,
+          originalName: sample.name,
+          storedName: stored.storedName,
+          mimeType: sample.mime,
+          size: stored.size,
+          path: stored.path,
+          createdAt: daysFromNow(-sample.ago),
+        },
+      });
+      fileCount++;
+    }
 
     const positionByStatus = new Map<TaskStatus, number>();
     const nextPosition = (status: TaskStatus): number => {

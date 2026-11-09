@@ -21,8 +21,9 @@ export class AttachmentCleanupService {
     return rows.map((r) => r.path);
   }
 
+  /** File của dự án và của mọi công việc trong dự án */
   async collectProjectFiles(projectId: number): Promise<string[]> {
-    const rows = await this.prisma.attachment.findMany({ where: { task: { projectId } }, select: { path: true } });
+    const rows = await this.prisma.attachment.findMany({ where: { OR: [{ projectId }, { task: { projectId } }] }, select: { path: true } });
     return rows.map((r) => r.path);
   }
 

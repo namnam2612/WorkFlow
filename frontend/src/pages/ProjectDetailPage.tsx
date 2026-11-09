@@ -2,6 +2,7 @@ import { KanbanSquare, ListChecks, Pencil, Plus, Trash2, UserMinus, UserPlus } f
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
+import { AttachmentSection } from '../components/attachments/AttachmentSection';
 import { ProjectFormModal } from '../components/projects/ProjectFormModal';
 import { TaskFormModal } from '../components/tasks/TaskFormModal';
 import { TaskTable } from '../components/tasks/TaskTable';
@@ -123,6 +124,8 @@ export default function ProjectDetailPage() {
             </div>
             {project.overdueCount > 0 && <p className="mt-3 text-sm font-medium text-red-600">{project.overdueCount} công việc đang quá hạn</p>}
           </Card>
+
+          <AttachmentSection scope={{ kind: 'project', id: project.id }} canUpload={canManage} title="File đính kèm của dự án" />
 
           <Card
             title="Công việc gần đây"

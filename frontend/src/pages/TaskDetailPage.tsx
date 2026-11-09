@@ -167,7 +167,7 @@ export default function TaskDetailPage() {
             </Card>
           )}
 
-          <AttachmentSection taskId={task.id} />
+          <AttachmentSection scope={{ kind: 'task', id: task.id }} />
 
           <TaskDiscussion taskId={task.id} canComment={canComment} canModerate={canManage} />
         </div>

@@ -1,41 +1,45 @@
-import clsx from 'clsx';
-import { Paperclip, UploadCloud } from 'lucide-react';
-import { useRef, useState } from 'react';
-import { useDeleteAttachment, useTaskAttachments, useUploadAttachments } from '../../hooks/useAttachments';
+import { Paperclip } from 'lucide-react';
+import { useState } from 'react';
+import { useDeleteAttachment, useScopeAttachments, useUploadAttachments, type AttachmentScope } from '../../hooks/useAttachments';
 import { getErrorMessage } from '../../lib/api';
-import { formatBytes, MAX_FILES_PER_UPLOAD, MAX_UPLOAD_BYTES } from '../../lib/files';
+import { formatBytes, validateIncomingFiles } from '../../lib/files';
 import type { Attachment } from '../../types/api';
 import { Card } from '../ui/Card';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { ErrorState, InlineError } from '../ui/States';
 import { useToast } from '../ui/useToast';
 import { AttachmentActions } from './AttachmentActions';
+import { FileDropZone } from './FileDropZone';
 import { FileIcon } from './FileIcon';
 import { FilePreviewModal } from './FilePreviewModal';
 import { Uploader } from './Uploader';
 
-/** Khu vực "File đính kèm" trong chi tiết task: kéo thả/chọn file, tiến trình upload, danh sách file */
-export function AttachmentSection({ taskId }: { taskId: number }) {
+interface AttachmentSectionProps {
+  scope: AttachmentScope;
+  /** Người xem có được tải file lên không (file dự án: chỉ leader/admin; file task: mọi thành viên) */
+  canUpload?: boolean;
+  title?: string;
+}
+
+/** Khu vực "File đính kèm" của task hoặc dự án: kéo thả/chọn file, tiến trình upload, danh sách file */
+export function AttachmentSection({ scope, canUpload = true, title = 'File đính kèm' }: AttachmentSectionProps) {
   const toast = useToast();
-  const query = useTaskAttachments(taskId);
-  const upload = useUploadAttachments(taskId);
+  const query = useScopeAttachments(scope);
+  const upload = useUploadAttachments(scope);
   const remove = useDeleteAttachment();
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewing, setPreviewing] = useState<Attachment | null>(null);
   const [deleting, setDeleting] = useState<Attachment | null>(null);
 
-  const send = async (list: FileList | File[]) => {
-    const files = Array.from(list);
-    if (files.length === 0) return;
+  const send = async (incoming: File[]) => {
+    if (incoming.length === 0) return;
     setError(null);
-    if (files.length > MAX_FILES_PER_UPLOAD) return setError(`Mỗi lần chỉ tải lên tối đa ${MAX_FILES_PER_UPLOAD} file`);
-    const tooBig = files.find((f) => f.size > MAX_UPLOAD_BYTES);
-    if (tooBig) return setError(`"${tooBig.name}" vượt quá ${formatBytes(MAX_UPLOAD_BYTES)}`);
+    const { accepted, errors } = validateIncomingFiles([], incoming);
+    if (errors.length > 0) setError(errors.join('\n'));
+    if (accepted.length === 0) return;
     try {
-      await upload.mutateAsync(files);
-      toast.show(files.length === 1 ? 'Đã đính kèm file' : `Đã đính kèm ${files.length} file`, 'success');
+      await upload.mutateAsync(accepted);
+      toast.show(accepted.length === 1 ? 'Đã đính kèm file' : `Đã đính kèm ${accepted.length} file`, 'success');
     } catch (err) {
       setError(getErrorMessage(err));
     }
@@ -57,46 +61,23 @@ export function AttachmentSection({ taskId }: { taskId: number }) {
   const uploading = upload.isPending;
 
   return (
-    <Card title={`File đính kèm (${items.length})`} action={<Paperclip className="h-4 w-4 text-slate-500" aria-hidden />}>
-      <div
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragging(false);
-          if (!uploading) void send(e.dataTransfer.files);
-        }}
-        className={clsx(
-          'rounded-2xl border border-dashed px-4 py-6 text-center transition-colors duration-300',
-          dragging ? 'border-white/50 bg-white/[0.06]' : 'border-white/[0.14] hover:border-white/30',
-        )}
-      >
-        <input ref={inputRef} type="file" multiple className="sr-only" aria-label="Chọn file đính kèm" onChange={(e) => {
-          if (e.target.files) void send(e.target.files);
-          e.target.value = '';
-        }} />
-        <UploadCloud className="mx-auto h-6 w-6 text-slate-500" aria-hidden />
-        <p className="mt-2 text-sm text-slate-700">
-          Kéo thả file vào đây hoặc{' '}
-          <button type="button" disabled={uploading} onClick={() => inputRef.current?.click()} className="link-underline !normal-case !tracking-normal text-white disabled:opacity-50">
-            bấm để chọn
-          </button>
-        </p>
-        <p className="mt-1 text-xs text-slate-500">Tối đa {MAX_FILES_PER_UPLOAD} file mỗi lần, mỗi file {formatBytes(MAX_UPLOAD_BYTES)}. Không nhận file thực thi (.exe, .sh, .bat...).</p>
-        {uploading && (
-          <div className="mx-auto mt-3 max-w-sm" role="progressbar" aria-valuenow={upload.progress ?? 0} aria-valuemin={0} aria-valuemax={100} aria-label="Tiến trình tải lên">
-            <div className="h-1 overflow-hidden rounded-full bg-slate-200">
-              <div className="h-full rounded-full bg-white transition-[width] duration-200" style={{ width: `${upload.progress ?? 0}%` }} />
+    <Card title={`${title} (${items.length})`} action={<Paperclip className="h-4 w-4 text-slate-500" aria-hidden />}>
+      {canUpload ? (
+        <FileDropZone onFiles={(files) => void send(files)} disabled={uploading}>
+          {uploading && (
+            <div className="mx-auto mt-3 max-w-sm" role="progressbar" aria-valuenow={upload.progress ?? 0} aria-valuemin={0} aria-valuemax={100} aria-label="Tiến trình tải lên">
+              <div className="h-1 overflow-hidden rounded-full bg-slate-200">
+                <div className="h-full rounded-full bg-white transition-[width] duration-200" style={{ width: `${upload.progress ?? 0}%` }} />
+              </div>
+              <p className="tabular mt-1 text-xs text-slate-500">Đang tải lên... {upload.progress ?? 0}%</p>
             </div>
-            <p className="tabular mt-1 text-xs text-slate-500">Đang tải lên... {upload.progress ?? 0}%</p>
-          </div>
-        )}
-      </div>
+          )}
+        </FileDropZone>
+      ) : (
+        <p className="text-xs text-slate-500">Chỉ trưởng nhóm của dự án và quản trị viên mới đính kèm được file vào dự án. Bạn có thể xem và tải về.</p>
+      )}
       {error && (
-        <div className="mt-3">
+        <div className="mt-3 whitespace-pre-line">
           <InlineError message={error} />
         </div>
       )}

@@ -4,6 +4,7 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { trimString } from '../../common/utils/transforms';
 import { FILE_TYPE_FILTERS, FileTypeFilter } from '../file-types';
 
+export const ATTACHMENT_SOURCES = ['project', 'task'] as const;
 export const ATTACHMENT_SORT_FIELDS = ['createdAt', 'name', 'size'] as const;
 
 export class ListAttachmentsQueryDto extends PaginationQueryDto {
@@ -18,6 +19,11 @@ export class ListAttachmentsQueryDto extends PaginationQueryDto {
   @IsInt()
   @Min(1)
   projectId?: number;
+
+  /** Nguồn file: đính vào dự án hay vào công việc */
+  @IsOptional()
+  @IsIn(ATTACHMENT_SOURCES, { message: 'Nguồn file không hợp lệ' })
+  source?: (typeof ATTACHMENT_SOURCES)[number];
 
   /** Lọc theo người gửi */
   @IsOptional()

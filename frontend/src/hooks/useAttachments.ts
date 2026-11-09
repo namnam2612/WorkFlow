@@ -1,11 +1,25 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { api, fetchBlob, uploadFiles } from '../lib/api';
 import type { Attachment, AttachmentFilters, AttachmentPage } from '../types/api';
 import { invalidateTaskRelated } from './useTasks';
 
-export function useTaskAttachments(taskId: number) {
-  return useQuery({ queryKey: ['attachments', 'task', taskId], queryFn: () => api.get<Attachment[]>(`/tasks/${taskId}/attachments`) });
+/** File thuộc về một công việc hoặc một dự án (hai nguồn dùng chung mọi component) */
+export interface AttachmentScope {
+  kind: 'task' | 'project';
+  id: number;
+}
+
+export const attachmentPath = (scope: AttachmentScope) => `/${scope.kind === 'task' ? 'tasks' : 'projects'}/${scope.id}/attachments`;
+
+export function useScopeAttachments(scope: AttachmentScope) {
+  return useQuery({ queryKey: ['attachments', scope.kind, scope.id], queryFn: () => api.get<Attachment[]>(attachmentPath(scope)) });
+}
+
+/** Làm mới mọi thứ có thể đổi sau khi file của task/dự án thay đổi (số file trên thẻ, Kho tài liệu...) */
+export async function invalidateAttachmentRelated(queryClient: QueryClient, scope: AttachmentScope): Promise<void> {
+  if (scope.kind === 'task') return invalidateTaskRelated(queryClient, scope.id);
+  await Promise.all(['attachments', 'projects', 'project'].map((key) => queryClient.invalidateQueries({ queryKey: [key] })));
 }
 
 /** Kho tài liệu: toàn bộ file trong các dự án người dùng được xem */
@@ -17,19 +31,19 @@ export function useAttachmentList(filters: AttachmentFilters) {
   });
 }
 
-export function useUploadAttachments(taskId: number) {
+export function useUploadAttachments(scope: AttachmentScope) {
   const queryClient = useQueryClient();
   const [progress, setProgress] = useState<number | null>(null);
   const mutation = useMutation({
     mutationFn: async (files: File[]) => {
       setProgress(0);
       try {
-        return await uploadFiles<Attachment[]>(`/tasks/${taskId}/attachments`, files, setProgress);
+        return await uploadFiles<Attachment[]>(attachmentPath(scope), files, setProgress);
       } finally {
         setProgress(null);
       }
     },
-    onSuccess: () => invalidateTaskRelated(queryClient, taskId),
+    onSuccess: () => invalidateAttachmentRelated(queryClient, scope),
   });
   return { ...mutation, progress };
 }
@@ -38,7 +52,8 @@ export function useDeleteAttachment() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (attachment: Attachment) => api.delete(`/attachments/${attachment.id}`),
-    onSuccess: (_data, attachment) => invalidateTaskRelated(queryClient, attachment.taskId),
+    onSuccess: (_data, attachment) =>
+      invalidateAttachmentRelated(queryClient, attachment.taskId === null ? { kind: 'project', id: attachment.project.id } : { kind: 'task', id: attachment.taskId }),
   });
 }
 

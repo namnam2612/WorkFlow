@@ -1,8 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { useAuth } from '../../auth/useAuth';
+import { useFormAttachments } from '../../hooks/useFormAttachments';
 import { useProject, useProjects } from '../../hooks/useProjects';
 import { useCreateTask, useUpdateTask } from '../../hooks/useTasks';
 import { getErrorMessage } from '../../lib/api';
@@ -11,6 +12,8 @@ import { isoToVnDateTimeInput, vnDateTimeInputToIso } from '../../lib/format';
 import { canManageProject } from '../../lib/permissions';
 import { inputClass } from '../../lib/styles';
 import type { Priority, Task, TaskStatus } from '../../types/api';
+import { AttachmentPicker } from '../attachments/AttachmentPicker';
+import { FormUploadPhase } from '../attachments/FormUploadPhase';
 import { Button } from '../ui/Button';
 import { Field } from '../ui/Field';
 import { Modal } from '../ui/Modal';
@@ -55,6 +58,9 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
   const update = useUpdateTask(task?.id ?? 0);
   const projectsQuery = useProjects();
   const [serverError, setServerError] = useState<string | null>(null);
+  const attach = useFormAttachments('task');
+  const savedTaskId = useRef<number | null>(null);
+  const busy = create.isPending || update.isPending || attach.uploading;
 
   const {
     register,
@@ -86,6 +92,12 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
   const isEdit = task !== undefined;
   const isSubtask = parentId !== undefined || task?.parentId != null;
 
+  const finish = (taskId: number) => {
+    toast.show(isEdit ? 'Đã cập nhật công việc' : isSubtask ? 'Đã thêm công việc con' : 'Đã tạo công việc', 'success');
+    onSaved?.(taskId);
+    onClose();
+  };
+
   const onSubmit = async (values: FormValues) => {
     setServerError(null);
     const payload = {
@@ -98,26 +110,44 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
       estimatedHours: toNumberOrNull(values.estimatedHours),
       actualHours: toNumberOrNull(values.actualHours),
     };
+    let taskId: number;
     try {
       if (isEdit && task) {
         await update.mutateAsync(payload);
-        toast.show('Đã cập nhật công việc', 'success');
-        onSaved?.(task.id);
+        taskId = task.id;
       } else {
-        const created = await create.mutateAsync({ ...payload, projectId: Number(values.projectId), parentId });
-        toast.show(isSubtask ? 'Đã thêm công việc con' : 'Đã tạo công việc', 'success');
-        onSaved?.(created.id);
+        taskId = (await create.mutateAsync({ ...payload, projectId: Number(values.projectId), parentId })).id;
       }
-      onClose();
     } catch (error) {
       setServerError(getErrorMessage(error));
+      return;
     }
+    // Công việc đã lưu; file lỗi không làm mất nó (xem FormUploadPhase để thử lại)
+    savedTaskId.current = taskId;
+    attach.setSavedId(taskId);
+    if (await attach.uploadFor(taskId)) finish(taskId);
+  };
+
+  const retryUpload = async () => {
+    if (savedTaskId.current === null) return;
+    if (await attach.uploadFor(savedTaskId.current)) finish(savedTaskId.current);
   };
 
   const title = isEdit ? 'Sửa công việc' : isSubtask ? 'Thêm công việc con' : 'Tạo công việc mới';
 
   return (
-    <Modal open={open} onClose={onClose} title={title} size="lg">
+    <Modal open={open} onClose={attach.uploading ? () => undefined : onClose} title={title} size="lg">
+      {attach.uploading || attach.hasFailures ? (
+        <FormUploadPhase
+          noun="công việc"
+          entries={attach.entries}
+          uploading={attach.uploading}
+          onRetry={() => void retryUpload()}
+          onSkip={() => {
+            if (savedTaskId.current !== null) finish(savedTaskId.current);
+          }}
+        />
+      ) : (
       <form onSubmit={(event) => void handleSubmit(onSubmit)(event)} noValidate className="space-y-4">
         <InlineError message={serverError} />
         <Field label="Tiêu đề" htmlFor="task-title" error={errors.title?.message}>
@@ -126,6 +156,7 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
         <Field label="Mô tả" htmlFor="task-description" error={errors.description?.message}>
           <textarea id="task-description" rows={4} className={inputClass} {...register('description')} />
         </Field>
+        <AttachmentPicker files={attach.files} onChange={attach.setFiles} disabled={busy} />
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Dự án" htmlFor="task-project" error={errors.projectId?.message}>
@@ -188,11 +219,12 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
           <Button variant="secondary" onClick={onClose}>
             Hủy
           </Button>
-          <Button type="submit" loading={create.isPending || update.isPending}>
+          <Button type="submit" loading={busy}>
             {isEdit ? 'Lưu thay đổi' : 'Tạo'}
           </Button>
         </div>
       </form>
+      )}
     </Modal>
   );
 }

@@ -11,6 +11,7 @@ import { ListAttachmentsQueryDto } from './dto/list-attachments-query.dto';
 import { contentDisposition, fixFileNameEncoding, looksExecutable, sanitizeFileName, sniffMime } from './file-types';
 
 const PROJECT = { id: 1, name: 'Dự án A', createdById: 10 };
+const VISIBLE_TO_20 = { OR: [{ members: { some: { userId: 20 } } }, { createdById: 20 }] };
 
 const admin: AuthUser = { id: 1, email: 'a@x.vn', name: 'Admin', role: 'admin' };
 const owner: AuthUser = { id: 10, email: 'l@x.vn', name: 'Trưởng nhóm', role: 'leader' };
@@ -39,9 +40,13 @@ function row(overrides: Record<string, unknown> = {}) {
     createdAt: new Date('2026-11-01T00:00:00Z'),
     uploader: { id: 20, name: 'Người gửi', avatarUrl: null },
     task: { id: 7, title: 'Task A', status: 'todo', project: PROJECT },
+    project: null,
     ...overrides,
   };
 }
+
+/** File đính vào dự án (không thuộc công việc nào) */
+const projectRow = (overrides: Record<string, unknown> = {}) => row({ taskId: null, task: null, project: PROJECT, ...overrides });
 
 describe('AttachmentsService', () => {
   let prisma: PrismaMock;
@@ -75,7 +80,7 @@ describe('AttachmentsService', () => {
       { mimeType: 'text/csv', _count: { _all: 1 } },
       { mimeType: 'application/zip', _count: { _all: 4 } },
     ]);
-    prisma.attachment.create.mockImplementation(({ data }: { data: Record<string, unknown> }) => Promise.resolve(row({ id: 6, ...data })));
+    prisma.attachment.create.mockImplementation(({ data }: { data: Record<string, unknown> }) => Promise.resolve(row({ id: 6, ...data, ...(data.taskId === null ? { task: null, project: PROJECT } : {}) })));
     prisma.attachment.delete.mockResolvedValue({});
 
     const prismaService = asPrisma(prisma);
@@ -175,12 +180,12 @@ describe('AttachmentsService', () => {
 
   describe('upload', () => {
     it('người ngoài dự án không tải lên được', async () => {
-      await expect(service.upload(outsider, 7, [file('a.txt')])).rejects.toBeInstanceOf(ForbiddenException);
+      await expect(service.uploadToTask(outsider, 7, [file('a.txt')])).rejects.toBeInstanceOf(ForbiddenException);
       expect(storage.save).not.toHaveBeenCalled();
     });
 
     it('mọi thành viên dự án tải lên được; lưu bằng UUID, ghi người gửi và activity log', async () => {
-      const result = await service.upload(teammate, 7, [file('Báo cáo tháng 11.pdf', PDF), file('ảnh.png', PNG)]);
+      const result = await service.uploadToTask(teammate, 7, [file('Báo cáo tháng 11.pdf', PDF), file('ảnh.png', PNG)]);
       expect(result).toHaveLength(2);
       expect(storage.save).toHaveBeenCalledTimes(2);
       const key = callArg(storage.save, 0, 0) as string;
@@ -194,43 +199,43 @@ describe('AttachmentsService', () => {
     });
 
     it.each(['virus.exe', 'run.sh', 'setup.BAT', 'script.js', 'x.ps1'])('chặn file thực thi theo đuôi: %s', async (name) => {
-      await expect(service.upload(uploader, 7, [file(name)])).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.uploadToTask(uploader, 7, [file(name)])).rejects.toBeInstanceOf(BadRequestException);
       expect(storage.save).not.toHaveBeenCalled();
     });
 
     it('chặn file thực thi đổi đuôi (ELF / PE / shebang)', async () => {
       const elf = Buffer.concat([Buffer.from([0x7f, 0x45, 0x4c, 0x46]), Buffer.alloc(60)]);
-      await expect(service.upload(uploader, 7, [file('anh.png', elf)])).rejects.toBeInstanceOf(BadRequestException);
-      await expect(service.upload(uploader, 7, [file('ghi-chu.txt', Buffer.from('#!/bin/sh\nrm -rf /'))])).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.uploadToTask(uploader, 7, [file('anh.png', elf)])).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.uploadToTask(uploader, 7, [file('ghi-chu.txt', Buffer.from('#!/bin/sh\nrm -rf /'))])).rejects.toBeInstanceOf(BadRequestException);
       const pe = Buffer.alloc(0x80);
       pe.write('MZ', 0);
       pe.writeUInt32LE(0x40, 0x3c);
       pe.write('PE\0\0', 0x40, 'binary');
-      await expect(service.upload(uploader, 7, [file('doc.pdf', pe)])).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.uploadToTask(uploader, 7, [file('doc.pdf', pe)])).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('một file xấu trong lô => từ chối cả lô, chưa lưu file nào', async () => {
-      await expect(service.upload(uploader, 7, [file('ok.pdf', PDF), file('bad.exe')])).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.uploadToTask(uploader, 7, [file('ok.pdf', PDF), file('bad.exe')])).rejects.toBeInstanceOf(BadRequestException);
       expect(storage.save).not.toHaveBeenCalled();
       expect(prisma.attachment.create).not.toHaveBeenCalled();
     });
 
     it('từ chối file quá dung lượng, file rỗng, không có file, quá 10 file', async () => {
-      await expect(service.upload(uploader, 7, [file('lon.pdf', Buffer.alloc(2048))])).rejects.toBeInstanceOf(PayloadTooLargeException);
-      await expect(service.upload(uploader, 7, [file('rong.txt', Buffer.alloc(0))])).rejects.toBeInstanceOf(BadRequestException);
-      await expect(service.upload(uploader, 7, undefined)).rejects.toBeInstanceOf(BadRequestException);
-      await expect(service.upload(uploader, 7, Array.from({ length: 11 }, (_, i) => file(`f${i}.txt`)))).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.uploadToTask(uploader, 7, [file('lon.pdf', Buffer.alloc(2048))])).rejects.toBeInstanceOf(PayloadTooLargeException);
+      await expect(service.uploadToTask(uploader, 7, [file('rong.txt', Buffer.alloc(0))])).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.uploadToTask(uploader, 7, undefined)).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.uploadToTask(uploader, 7, Array.from({ length: 11 }, (_, i) => file(`f${i}.txt`)))).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('ghi DB lỗi => xóa các file đã lưu (không để file mồ côi)', async () => {
       prisma.attachment.create.mockRejectedValue(new Error('db down'));
-      await expect(service.upload(uploader, 7, [file('a.pdf', PDF)])).rejects.toThrow('db down');
+      await expect(service.uploadToTask(uploader, 7, [file('a.pdf', PDF)])).rejects.toThrow('db down');
       expect(storage.delete).toHaveBeenCalledTimes(1);
       expect(storage.delete).toHaveBeenCalledWith(callArg(storage.save, 0, 0));
     });
 
     it('loại file do server quyết định theo đuôi, không tin Content-Type client', async () => {
-      await service.upload(uploader, 7, [{ ...file('ghi-chu.txt'), mimetype: 'application/x-msdownload' } as never]);
+      await service.uploadToTask(uploader, 7, [{ ...file('ghi-chu.txt'), mimetype: 'application/x-msdownload' } as never]);
       expect(callArg(prisma.attachment.create) as { data: Record<string, unknown> }).toMatchObject({ data: { mimeType: 'text/plain' } });
     });
   });
@@ -265,6 +270,88 @@ describe('AttachmentsService', () => {
     });
   });
 
+  describe('file đính kèm của dự án', () => {
+    beforeEach(() => {
+      prisma.attachment.findUnique.mockResolvedValue(projectRow());
+      prisma.attachment.findMany.mockResolvedValue([projectRow()]);
+    });
+
+    it('chỉ leader của dự án và admin được tải lên; thành viên thường, leader khác, người ngoài thì không', async () => {
+      for (const user of [teammate, uploader, otherLeader, outsider]) {
+        await expect(service.uploadToProject(user, 1, [file('hop-dong.pdf', PDF)])).rejects.toBeInstanceOf(ForbiddenException);
+      }
+      expect(storage.save).not.toHaveBeenCalled();
+      for (const user of [owner, admin]) {
+        await expect(service.uploadToProject(user, 1, [file('hop-dong.pdf', PDF)])).resolves.toHaveLength(1);
+      }
+    });
+
+    it('lưu với projectId, taskId = null, ghi người gửi; không ghi activity log, không phát realtime của task', async () => {
+      const [view] = await service.uploadToProject(owner, 1, [file('hop-dong.pdf', PDF)]);
+      expect(callArg(prisma.attachment.create) as { data: Record<string, unknown> }).toMatchObject({
+        data: { taskId: null, projectId: 1, uploaderId: 10, originalName: 'hop-dong.pdf', mimeType: 'application/pdf' },
+      });
+      expect(activity.log).not.toHaveBeenCalled();
+      expect(realtime.taskChanged).not.toHaveBeenCalled();
+      expect(view).toMatchObject({ source: 'project', taskId: null, task: null, project: { id: 1, name: 'Dự án A' } });
+    });
+
+    it('file của task lưu taskId và projectId = null (đúng một nơi)', async () => {
+      await service.uploadToTask(teammate, 7, [file('a.pdf', PDF)]);
+      expect(callArg(prisma.attachment.create) as { data: Record<string, unknown> }).toMatchObject({ data: { taskId: 7, projectId: null } });
+    });
+
+    it('áp dụng cùng kiểm tra file như task (đuôi thực thi, dung lượng, rỗng)', async () => {
+      await expect(service.uploadToProject(owner, 1, [file('x.exe')])).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.uploadToProject(owner, 1, [file('lon.pdf', Buffer.alloc(2048))])).rejects.toBeInstanceOf(PayloadTooLargeException);
+      await expect(service.uploadToProject(owner, 1, undefined)).rejects.toBeInstanceOf(BadRequestException);
+      expect(storage.save).not.toHaveBeenCalled();
+    });
+
+    it('404 khi dự án không tồn tại', async () => {
+      prisma.project.findUnique.mockResolvedValue(null);
+      await expect(service.uploadToProject(admin, 99, [file('a.pdf', PDF)])).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('ghi DB lỗi => dọn file đã lưu', async () => {
+      prisma.attachment.create.mockRejectedValue(new Error('db down'));
+      await expect(service.uploadToProject(owner, 1, [file('a.pdf', PDF)])).rejects.toThrow('db down');
+      expect(storage.delete).toHaveBeenCalledWith(callArg(storage.save, 0, 0));
+    });
+
+    it('chỉ thành viên dự án xem danh sách; người ngoài bị chặn', async () => {
+      await expect(service.listForProject(outsider, 1)).rejects.toBeInstanceOf(ForbiddenException);
+      for (const user of [teammate, uploader, owner, admin]) {
+        await expect(service.listForProject(user, 1)).resolves.toHaveLength(1);
+      }
+      expect(callArg(prisma.attachment.findMany) as { where: unknown }).toMatchObject({ where: { projectId: 1 } });
+    });
+
+    it('thành viên dự án tải về / xem trước được; người ngoài thì không', async () => {
+      await expect(service.openDownload(teammate, 5)).resolves.toMatchObject({ name: 'bao-cao.pdf' });
+      await expect(service.openPreview(teammate, 5)).resolves.toMatchObject({ mime: 'application/pdf' });
+      await expect(service.openDownload(outsider, 5)).rejects.toBeInstanceOf(ForbiddenException);
+      await expect(service.openPreview(outsider, 5)).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('xóa: người gửi, leader của dự án và admin được; thành viên khác và leader khác thì không', async () => {
+      await expect(service.remove(teammate, 5)).rejects.toBeInstanceOf(ForbiddenException);
+      await expect(service.remove(otherLeader, 5)).rejects.toBeInstanceOf(ForbiddenException);
+      await expect(service.remove(outsider, 5)).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.attachment.delete).not.toHaveBeenCalled();
+      for (const user of [uploader, owner, admin]) await service.remove(user, 5);
+      expect(prisma.attachment.delete).toHaveBeenCalledTimes(3);
+      expect(storage.delete).toHaveBeenCalledWith('2026/11/uuid.pdf');
+      expect(activity.log).not.toHaveBeenCalled();
+    });
+
+    it('Kho tài liệu: file dự án có source=project, không có task, kèm dự án để mở chi tiết', async () => {
+      const result = await service.list(teammate, Object.assign(new ListAttachmentsQueryDto(), {}));
+      expect(result.items[0]).toMatchObject({ source: 'project', task: null, taskId: null, project: { id: 1, name: 'Dự án A' }, canDelete: false });
+      expect((await service.list(owner, Object.assign(new ListAttachmentsQueryDto(), {}))).items[0].canDelete).toBe(true);
+    });
+  });
+
   describe('Kho tài liệu (list)', () => {
     const query = (over: Partial<ListAttachmentsQueryDto> = {}): ListAttachmentsQueryDto =>
       Object.assign(new ListAttachmentsQueryDto(), over);
@@ -273,13 +360,13 @@ describe('AttachmentsService', () => {
     it('luôn giới hạn theo các dự án người dùng được xem (member)', async () => {
       await service.list(uploader, query());
       expect(whereOf().AND[0]).toEqual({
-        task: { project: { OR: [{ members: { some: { userId: 20 } } }, { createdById: 20 }] } },
+        OR: [{ task: { project: VISIBLE_TO_20 } }, { project: VISIBLE_TO_20 }],
       });
     });
 
     it('admin xem tất cả (không giới hạn dự án)', async () => {
       await service.list(admin, query());
-      expect(whereOf().AND[0]).toEqual({ task: { project: {} } });
+      expect(whereOf().AND[0]).toEqual({ OR: [{ task: { project: {} } }, { project: {} }] });
     });
 
     it('lọc theo tên, dự án, người gửi, loại, khoảng ngày; sắp xếp theo tên', async () => {
@@ -291,13 +378,24 @@ describe('AttachmentsService', () => {
       expect(and).toEqual(
         expect.arrayContaining([
           { originalName: { contains: 'báo cáo' } },
-          { task: { projectId: 1 } },
+          { OR: [{ projectId: 1 }, { task: { projectId: 1 } }] },
           { uploaderId: 21 },
           { mimeType: { in: ['application/pdf'] } },
           { createdAt: { gte: new Date('2026-11-01'), lte: new Date('2026-11-30') } },
         ]),
       );
       expect((callArg(prisma.attachment.findMany) as { orderBy: unknown[] }).orderBy[0]).toEqual({ originalName: 'asc' });
+    });
+
+    it('lọc theo nguồn: dự án / công việc', async () => {
+      await service.list(uploader, query({ source: 'project' }));
+      expect(whereOf().AND).toEqual(expect.arrayContaining([{ projectId: { not: null } }]));
+      prisma.attachment.findMany.mockClear();
+      await service.list(uploader, query({ source: 'task' }));
+      expect(whereOf().AND).toEqual(expect.arrayContaining([{ taskId: { not: null } }]));
+      prisma.attachment.findMany.mockClear();
+      await service.list(uploader, query());
+      expect(whereOf().AND.some((f) => 'taskId' in f || ('projectId' in f && typeof f.projectId === 'object'))).toBe(false);
     });
 
     it('tab Tài liệu (type=file) = mọi thứ không phải ảnh', async () => {

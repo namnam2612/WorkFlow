@@ -1,13 +1,16 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { useFormAttachments } from '../../hooks/useFormAttachments';
 import { useSaveProject } from '../../hooks/useProjects';
 import { useUsers } from '../../hooks/useUsers';
 import { getErrorMessage } from '../../lib/api';
 import { isoToVnDateInput, vnDateInputToIso } from '../../lib/format';
 import { inputClass } from '../../lib/styles';
 import type { ProjectDetail, ProjectSummary } from '../../types/api';
+import { AttachmentPicker } from '../attachments/AttachmentPicker';
+import { FormUploadPhase } from '../attachments/FormUploadPhase';
 import { Avatar } from '../ui/Avatar';
 import { Button } from '../ui/Button';
 import { Field } from '../ui/Field';
@@ -42,6 +45,9 @@ export function ProjectFormModal({ open, onClose, project, onSaved }: ProjectFor
   const usersQuery = useUsers({ isActive: true }, open && !project);
   const [memberIds, setMemberIds] = useState<number[]>([]);
   const [serverError, setServerError] = useState<string | null>(null);
+  const attach = useFormAttachments('project');
+  const savedRef = useRef<ProjectDetail | null>(null);
+  const busy = save.isPending || attach.uploading;
 
   const {
     register,
@@ -60,28 +66,53 @@ export function ProjectFormModal({ open, onClose, project, onSaved }: ProjectFor
   const toggleMember = (id: number) =>
     setMemberIds((current) => (current.includes(id) ? current.filter((x) => x !== id) : [...current, id]));
 
+  const finish = (saved: ProjectDetail) => {
+    toast.show(project ? 'Đã cập nhật dự án' : 'Đã tạo dự án', 'success');
+    onSaved?.(saved);
+    onClose();
+  };
+
   const onSubmit = async (values: FormValues) => {
     setServerError(null);
+    let saved: ProjectDetail;
     try {
-      const saved = await save.mutateAsync({
+      saved = await save.mutateAsync({
         name: values.name,
         description: values.description.trim() || null,
         startDate: vnDateInputToIso(values.startDate),
         endDate: vnDateInputToIso(values.endDate),
         ...(project ? {} : { memberIds }),
       });
-      toast.show(project ? 'Đã cập nhật dự án' : 'Đã tạo dự án', 'success');
-      onSaved?.(saved);
-      onClose();
     } catch (error) {
       setServerError(getErrorMessage(error));
+      return;
     }
+    // Dự án đã lưu; file lỗi không làm mất dự án (xem FormUploadPhase để thử lại)
+    attach.setSavedId(saved.id);
+    savedRef.current = saved;
+    if (await attach.uploadFor(saved.id)) finish(saved);
+  };
+
+  const retryUpload = async () => {
+    if (attach.savedId === null || !savedRef.current) return;
+    if (await attach.uploadFor(attach.savedId)) finish(savedRef.current);
   };
 
   const candidates = (usersQuery.data?.items ?? []).filter((u) => u.role !== 'admin');
 
   return (
-    <Modal open={open} onClose={onClose} title={project ? 'Sửa dự án' : 'Tạo dự án mới'} size="lg">
+    <Modal open={open} onClose={attach.uploading ? () => undefined : onClose} title={project ? 'Sửa dự án' : 'Tạo dự án mới'} size="lg">
+      {attach.uploading || attach.hasFailures ? (
+        <FormUploadPhase
+          noun="dự án"
+          entries={attach.entries}
+          uploading={attach.uploading}
+          onRetry={() => void retryUpload()}
+          onSkip={() => {
+            if (savedRef.current) finish(savedRef.current);
+          }}
+        />
+      ) : (
       <form onSubmit={(event) => void handleSubmit(onSubmit)(event)} noValidate className="space-y-4">
         <InlineError message={serverError} />
         <Field label="Tên dự án" htmlFor="project-name" error={errors.name?.message}>
@@ -90,6 +121,7 @@ export function ProjectFormModal({ open, onClose, project, onSaved }: ProjectFor
         <Field label="Mô tả" htmlFor="project-description" error={errors.description?.message}>
           <textarea id="project-description" rows={3} className={inputClass} {...register('description')} />
         </Field>
+        <AttachmentPicker files={attach.files} onChange={attach.setFiles} disabled={busy} />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Ngày bắt đầu" htmlFor="project-start" error={errors.startDate?.message}>
             <input id="project-start" type="date" className={inputClass} {...register('startDate')} />
@@ -121,11 +153,12 @@ export function ProjectFormModal({ open, onClose, project, onSaved }: ProjectFor
           <Button variant="secondary" onClick={onClose}>
             Hủy
           </Button>
-          <Button type="submit" loading={save.isPending}>
+          <Button type="submit" loading={busy}>
             {project ? 'Lưu thay đổi' : 'Tạo dự án'}
           </Button>
         </div>
       </form>
+      )}
     </Modal>
   );
 }

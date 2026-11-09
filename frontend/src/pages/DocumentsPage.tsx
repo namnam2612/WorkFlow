@@ -21,13 +21,14 @@ import { groupByDay } from '../lib/dateGroups';
 import { CATEGORY_LABEL, formatBytes } from '../lib/files';
 import { formatDateTime, vnDateInputToEndOfDayIso, vnDateInputToIso } from '../lib/format';
 import { inputClass } from '../lib/styles';
-import type { Attachment, AttachmentFilters, FileCategory } from '../types/api';
+import type { Attachment, AttachmentFilters, AttachmentSource, FileCategory } from '../types/api';
 
 const SORT_FIELDS = ['createdAt', 'name', 'size'] as const;
 type SortField = (typeof SORT_FIELDS)[number];
 const SORT_LABEL: Record<SortField, string> = { createdAt: 'Ngày gửi', name: 'Tên file', size: 'Dung lượng' };
 /** Loại con trong tab Tài liệu (ảnh nằm riêng ở tab Ảnh nên không lẫn vào đây) */
 const DOC_TYPES: Exclude<FileCategory, 'image'>[] = ['pdf', 'document', 'spreadsheet', 'other'];
+const SOURCE_LABEL: Record<AttachmentSource, string> = { project: 'Dự án', task: 'Công việc' };
 const VIEW_KEY = 'taskflow.documentsView';
 type Tab = 'docs' | 'images';
 type View = 'table' | 'grid';
@@ -38,6 +39,31 @@ function readView(): View {
   } catch {
     return 'table';
   }
+}
+
+/** Nơi file được đính vào: công việc (kèm dự án) hoặc chính dự án. Bấm vào tên để mở chi tiết. */
+function FileOwner({ file }: { file: Attachment }) {
+  const link = 'block truncate underline decoration-white/20 underline-offset-4 hover:decoration-white';
+  if (file.task) {
+    return (
+      <>
+        <Link to={`/tasks/${file.task.id}`} title={file.task.title} className={clsx(link, 'text-xs text-slate-600')}>
+          {file.task.title}
+        </Link>
+        <Link to={`/projects/${file.project.id}`} title={file.project.name} className="block truncate text-xs text-slate-500 hover:text-white">
+          {file.project.name}
+        </Link>
+      </>
+    );
+  }
+  return (
+    <>
+      <span className="mb-0.5 inline-block rounded-full border border-white/[0.14] px-2 py-px text-[10px] font-medium uppercase tracking-[1px] text-slate-600">{SOURCE_LABEL.project}</span>
+      <Link to={`/projects/${file.project.id}`} title={file.project.name} className={clsx(link, 'text-xs text-slate-600')}>
+        {file.project.name}
+      </Link>
+    </>
+  );
 }
 
 /** Thẻ file (dạng lưới): ảnh thu nhỏ hoặc biểu tượng loại file, tên, task, người gửi */
@@ -51,10 +77,7 @@ function FileCard({ file, onOpen, onPreview, onDelete }: { file: Attachment; onO
         <p className="truncate text-sm font-medium text-slate-900" title={file.originalName}>
           {file.originalName}
         </p>
-        <Link to={`/tasks/${file.task.id}`} title={file.task.title} className="block truncate text-xs text-slate-600 underline decoration-white/20 underline-offset-4 hover:decoration-white">
-          {file.task.title}
-        </Link>
-        <p className="truncate text-xs text-slate-500">{file.project.name}</p>
+        <FileOwner file={file} />
       </div>
       <div className="mt-auto space-y-2 border-t border-white/[0.08] pt-3">
         <Uploader attachment={file} />
@@ -83,6 +106,7 @@ export default function DocumentsPage() {
   const tab: Tab = params.get('tab') === 'images' ? 'images' : 'docs';
   const projectId = params.get('projectId') ?? '';
   const uploaderId = params.get('uploaderId') ?? '';
+  const source: AttachmentSource | undefined = params.get('source') === 'project' ? 'project' : params.get('source') === 'task' ? 'task' : undefined;
   const docType = DOC_TYPES.find((t) => t === params.get('type'));
   const from = params.get('from') ?? '';
   const to = params.get('to') ?? '';
@@ -134,6 +158,7 @@ export default function DocumentsPage() {
   const filters: AttachmentFilters = {
     search: q || undefined,
     projectId: projectId ? Number(projectId) : undefined,
+    source,
     uploaderId: uploaderId ? Number(uploaderId) : undefined,
     type: tab === 'images' ? 'image' : (docType ?? 'file'),
     from: from ? (vnDateInputToIso(from) ?? undefined) : undefined,
@@ -144,7 +169,7 @@ export default function DocumentsPage() {
     pageSize,
   };
   const listQuery = useAttachmentList(filters);
-  const hasFilters = Boolean(q || projectId || uploaderId || docType || from || to);
+  const hasFilters = Boolean(q || projectId || source || uploaderId || docType || from || to);
 
   const clearFilters = () => {
     window.clearTimeout(searchTimer.current);
@@ -219,7 +244,7 @@ export default function DocumentsPage() {
     <>
       <PageHeader
         title="Kho tài liệu"
-        description="Toàn bộ file đính kèm của mọi công việc, tách riêng ảnh và tài liệu, xếp theo ngày gửi."
+        description="Toàn bộ file đính kèm của dự án và công việc, tách riêng ảnh và tài liệu, xếp theo ngày gửi."
         actions={
           tab === 'docs' && (
             <div className="inline-flex gap-1" role="group" aria-label="Kiểu hiển thị">
@@ -253,6 +278,11 @@ export default function DocumentsPage() {
               </option>
             ))}
           </select>
+          <select aria-label="Nguồn" value={source ?? ''} onChange={(e) => update({ source: e.target.value })} className={inputClass}>
+            <option value="">Nguồn: Dự án và Công việc</option>
+            <option value="project">Nguồn: Dự án</option>
+            <option value="task">Nguồn: Công việc</option>
+          </select>
           <select aria-label="Người gửi" value={uploaderId} onChange={(e) => update({ uploaderId: e.target.value })} className={inputClass}>
             <option value="">Tất cả người gửi</option>
             {usersQuery.data?.items.map((u) => (
@@ -272,19 +302,6 @@ export default function DocumentsPage() {
               ))}
             </select>
           )}
-          <div className="flex gap-2">
-            <select aria-label="Sắp xếp theo" value={sortBy} onChange={(e) => update({ sortBy: e.target.value }, false)} className={inputClass}>
-              {SORT_FIELDS.map((f) => (
-                <option key={f} value={f}>
-                  {SORT_LABEL[f]}
-                </option>
-              ))}
-            </select>
-            <select aria-label="Thứ tự" value={order} onChange={(e) => update({ order: e.target.value }, false)} className={inputClass}>
-              <option value="desc">Giảm dần</option>
-              <option value="asc">Tăng dần</option>
-            </select>
-          </div>
         </div>
         <div className="flex flex-wrap items-end gap-3">
           <label className="text-xs font-medium text-slate-600">
@@ -294,6 +311,22 @@ export default function DocumentsPage() {
           <label className="text-xs font-medium text-slate-600">
             đến ngày
             <input type="date" value={to} onChange={(e) => update({ to: e.target.value })} className={`${inputClass} mt-1`} />
+          </label>
+          <label className="text-xs font-medium text-slate-600">
+            Sắp xếp
+            <span className="mt-1 flex gap-2">
+              <select aria-label="Sắp xếp theo" value={sortBy} onChange={(e) => update({ sortBy: e.target.value }, false)} className={inputClass}>
+                {SORT_FIELDS.map((f) => (
+                  <option key={f} value={f}>
+                    {SORT_LABEL[f]}
+                  </option>
+                ))}
+              </select>
+              <select aria-label="Thứ tự" value={order} onChange={(e) => update({ order: e.target.value }, false)} className={inputClass}>
+                <option value="desc">Giảm dần</option>
+                <option value="asc">Tăng dần</option>
+              </select>
+            </span>
           </label>
           {hasFilters && (
             <Button variant="ghost" size="sm" icon={<X className="h-4 w-4" />} onClick={clearFilters} className="mb-1 ml-auto">
@@ -310,7 +343,7 @@ export default function DocumentsPage() {
       ) : data.items.length === 0 ? (
         <EmptyState
           title={hasFilters ? `Không có ${tab === 'images' ? 'ảnh' : 'tài liệu'} phù hợp bộ lọc` : tab === 'images' ? 'Chưa có ảnh nào' : 'Chưa có tài liệu nào'}
-          description={hasFilters ? 'Thử nới lỏng hoặc xóa bộ lọc.' : 'Hãy đính kèm file vào một công việc, file sẽ xuất hiện ở đây.'}
+          description={hasFilters ? 'Thử nới lỏng hoặc xóa bộ lọc.' : 'Hãy đính kèm file vào một dự án hoặc công việc, file sẽ xuất hiện ở đây.'}
           action={hasFilters ? <Button variant="secondary" onClick={clearFilters}>Xóa bộ lọc</Button> : undefined}
         />
       ) : (
@@ -334,7 +367,7 @@ export default function DocumentsPage() {
                 <thead className="bg-white/[0.02]">
                   <tr>
                     {sortHeader('name', 'Tên file')}
-                    {plainHeader('Task')}
+                    {plainHeader('Công việc')}
                     {plainHeader('Dự án')}
                     {plainHeader('Người gửi')}
                     {sortHeader('size', 'Dung lượng', 'whitespace-nowrap')}
@@ -363,9 +396,13 @@ export default function DocumentsPage() {
                             </div>
                           </td>
                           <td className="max-w-[10rem] px-3 py-3">
-                            <Link to={`/tasks/${file.task.id}`} title={file.task.title} className="block truncate text-sm text-slate-800 underline decoration-white/20 underline-offset-4 hover:decoration-white">
-                              {file.task.title}
-                            </Link>
+                            {file.task ? (
+                              <Link to={`/tasks/${file.task.id}`} title={file.task.title} className="block truncate text-sm text-slate-800 underline decoration-white/20 underline-offset-4 hover:decoration-white">
+                                {file.task.title}
+                              </Link>
+                            ) : (
+                              <span className="inline-block rounded-full border border-white/[0.14] px-2 py-0.5 text-[11px] font-medium uppercase tracking-[1px] text-slate-600">{SOURCE_LABEL.project}</span>
+                            )}
                           </td>
                           <td className="max-w-[8rem] px-3 py-3">
                             <Link to={`/projects/${file.project.id}`} className="block truncate text-sm text-slate-600 hover:text-white">

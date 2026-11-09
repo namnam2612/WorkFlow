@@ -161,16 +161,22 @@ export interface UserProfile extends User {
 
 export type FileCategory = 'image' | 'pdf' | 'document' | 'spreadsheet' | 'other';
 
+export type AttachmentSource = 'project' | 'task';
+
 /** File đính kèm; `uploader` là người gửi (người đã tải file lên) */
 export interface Attachment {
   id: number;
-  taskId: number;
+  /** 'project' = đính vào dự án, 'task' = đính vào công việc */
+  source: AttachmentSource;
+  /** null với file của dự án */
+  taskId: number | null;
   originalName: string;
   mimeType: string;
   size: number;
   createdAt: string;
   uploader: UserBrief;
-  task: { id: number; title: string; status: TaskStatus };
+  /** null với file của dự án */
+  task: { id: number; title: string; status: TaskStatus } | null;
   project: { id: number; name: string };
   /** Ảnh/PDF xem trực tiếp được */
   previewable: boolean;
@@ -186,6 +192,8 @@ export type AttachmentPage = Paginated<Attachment> & { counts: AttachmentCounts 
 export interface AttachmentFilters {
   search?: string;
   projectId?: number;
+  /** Nguồn: file của dự án hay của công việc */
+  source?: AttachmentSource;
   uploaderId?: number;
   /** `file` = mọi thứ không phải ảnh (tab Tài liệu) */
   type?: FileCategory | 'file';

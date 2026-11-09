@@ -39,16 +39,16 @@ model User {
   createdAt    DateTime @default(now())
 
   // Hồ sơ cá nhân (tất cả tùy chọn)
-  jobTitle     String?  @db.VarChar(120)
-  phone        String?  @db.VarChar(20)
-  contactEmail String?  @db.VarChar(190)
-  bio          String?  @db.VarChar(500)
-  githubUrl    String?  @db.VarChar(255)
-  linkedinUrl  String?  @db.VarChar(255)
-  facebookUrl  String?  @db.VarChar(255)
+  jobTitle     String? @db.VarChar(120)
+  phone        String? @db.VarChar(20)
+  contactEmail String? @db.VarChar(190)
+  bio          String? @db.VarChar(500)
+  githubUrl    String? @db.VarChar(255)
+  linkedinUrl  String? @db.VarChar(255)
+  facebookUrl  String? @db.VarChar(255)
 
-  avatar          UserAvatar?
-  attachments     Attachment[]
+  avatar      UserAvatar?
+  attachments Attachment[]
 
   createdProjects Project[]       @relation("ProjectCreator")
   memberships     ProjectMember[]
@@ -92,9 +92,10 @@ model Project {
   createdById Int
   createdAt   DateTime  @default(now())
 
-  createdBy User            @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: Restrict)
-  members   ProjectMember[]
-  tasks     Task[]
+  createdBy   User            @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  members     ProjectMember[]
+  tasks       Task[]
+  attachments Attachment[]
 
   @@index([createdById])
 }
@@ -145,10 +146,13 @@ model Task {
   @@index([parentId])
 }
 
-/// File đính kèm của task. File thật nằm ở UPLOAD_DIR (qua StorageService), bảng này chỉ giữ metadata.
+/// File đính kèm của task HOẶC của dự án (đúng một trong hai: taskId xor projectId — service kiểm tra,
+/// MySQL không cho CHECK trên cột có FK ON DELETE). File thật nằm ở UPLOAD_DIR (qua StorageService),
+/// bảng này chỉ giữ metadata.
 model Attachment {
   id           Int      @id @default(autoincrement())
-  taskId       Int
+  taskId       Int?
+  projectId    Int?
   uploaderId   Int
   /// Tên gốc người dùng đặt (hiển thị và dùng khi tải về)
   originalName String   @db.VarChar(255)
@@ -160,10 +164,12 @@ model Attachment {
   path         String   @db.VarChar(255)
   createdAt    DateTime @default(now())
 
-  task     Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  uploader User @relation(fields: [uploaderId], references: [id], onDelete: Restrict)
+  task     Task?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  project  Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploader User     @relation(fields: [uploaderId], references: [id], onDelete: Restrict)
 
   @@index([taskId])
+  @@index([projectId])
   @@index([uploaderId])
   @@index([createdAt])
 }

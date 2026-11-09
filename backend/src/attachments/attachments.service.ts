@@ -35,15 +35,24 @@ export interface IncomingFile {
   buffer: Buffer;
 }
 
+const projectRefSelect = { id: true, name: true, createdById: true } satisfies Prisma.ProjectSelect;
+
 const attachmentInclude = {
   uploader: { select: USER_BRIEF_SELECT },
-  task: { select: { id: true, title: true, status: true, project: { select: { id: true, name: true, createdById: true } } } },
+  task: { select: { id: true, title: true, status: true, project: { select: projectRefSelect } } },
+  project: { select: projectRefSelect },
 } satisfies Prisma.AttachmentInclude;
 
 type AttachmentRow = Prisma.AttachmentGetPayload<{ include: typeof attachmentInclude }>;
 
 /** Số file theo loại; `file` = mọi thứ không phải ảnh */
 export type AttachmentCounts = Record<FileCategory | 'all' | 'file', number>;
+
+/** Nơi file được đính vào: đúng MỘT trong hai (taskId xor projectId) */
+interface AttachmentOwner {
+  taskId: number | null;
+  projectId: number | null;
+}
 
 export type AttachmentPage = Paginated<ReturnType<AttachmentsService['toView']>> & { counts: AttachmentCounts };
 
@@ -75,14 +84,27 @@ export class AttachmentsService {
     return rows.map((row) => this.toView(user, row));
   }
 
+  async listForProject(user: AuthUser, projectId: number) {
+    await this.access.assertCanView(user, projectId);
+    const rows = await this.prisma.attachment.findMany({
+      where: { projectId },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      include: attachmentInclude,
+    });
+    return rows.map((row) => this.toView(user, row));
+  }
+
   /**
-   * Kho tài liệu: mọi file thuộc các dự án người dùng được xem.
+   * Kho tài liệu: mọi file (của dự án lẫn của công việc) thuộc các dự án người dùng được xem.
    * Kèm `counts` theo loại (áp dụng cùng bộ lọc, trừ bộ lọc loại) để hiển thị số trên các tab Ảnh / Tài liệu.
    */
   async list(user: AuthUser, query: ListAttachmentsQueryDto): Promise<AttachmentPage> {
-    const base: Prisma.AttachmentWhereInput[] = [{ task: { project: this.access.visibleProjectWhere(user) } }];
+    const visible = this.access.visibleProjectWhere(user);
+    const base: Prisma.AttachmentWhereInput[] = [{ OR: [{ task: { project: visible } }, { project: visible }] }];
     if (query.search) base.push({ originalName: { contains: query.search } });
-    if (query.projectId !== undefined) base.push({ task: { projectId: query.projectId } });
+    if (query.projectId !== undefined) base.push({ OR: [{ projectId: query.projectId }, { task: { projectId: query.projectId } }] });
+    if (query.source === 'project') base.push({ projectId: { not: null } });
+    else if (query.source === 'task') base.push({ taskId: { not: null } });
     if (query.uploaderId !== undefined) base.push({ uploaderId: query.uploaderId });
     if (query.from || query.to) base.push({ createdAt: { ...(query.from ? { gte: query.from } : {}), ...(query.to ? { lte: query.to } : {}) } });
     const filters = [...base];
@@ -148,9 +170,24 @@ export class AttachmentsService {
 
   // -------------------------------------------------------------- mutations
 
-  async upload(user: AuthUser, taskId: number, files: IncomingFile[] | undefined) {
+  /** Mọi thành viên dự án được đính file vào công việc */
+  async uploadToTask(user: AuthUser, taskId: number, files: IncomingFile[] | undefined) {
     const task = await this.findTaskOrThrow(taskId);
-    await this.access.assertCanView(user, task.projectId); // mọi thành viên dự án được tải lên
+    await this.access.assertCanView(user, task.projectId);
+    return this.store(user, { taskId, projectId: null }, task.projectId, files);
+  }
+
+  /** Chỉ trưởng nhóm của dự án / quản trị viên được đính file vào dự án */
+  async uploadToProject(user: AuthUser, projectId: number, files: IncomingFile[] | undefined) {
+    await this.access.assertCanManage(user, projectId);
+    return this.store(user, { taskId: null, projectId }, projectId, files);
+  }
+
+  /** Lưu cả lô: kiểm tra hết trước khi ghi, lỗi giữa chừng thì dọn file đã ghi */
+  private async store(user: AuthUser, owner: AttachmentOwner, projectId: number, files: IncomingFile[] | undefined) {
+    if ((owner.taskId === null) === (owner.projectId === null)) {
+      throw new BadRequestException('File phải thuộc về đúng một công việc hoặc một dự án');
+    }
     if (!files || files.length === 0) throw new BadRequestException('Vui lòng chọn ít nhất một file');
     if (files.length > MAX_FILES_PER_UPLOAD) throw new BadRequestException(`Mỗi lần chỉ tải lên tối đa ${MAX_FILES_PER_UPLOAD} file`);
 
@@ -174,7 +211,8 @@ export class AttachmentsService {
         for (const item of prepared) {
           const row = await tx.attachment.create({
             data: {
-              taskId,
+              taskId: owner.taskId,
+              projectId: owner.projectId,
               uploaderId: user.id,
               originalName: item.name,
               storedName: item.storedName ?? '',
@@ -184,15 +222,18 @@ export class AttachmentsService {
             },
             include: attachmentInclude,
           });
-          await this.activity.log(
-            { taskId, userId: user.id, action: 'attachment_added', detail: { attachmentId: row.id, name: row.originalName, size: row.size } },
-            tx,
-          );
+          // Lịch sử hoạt động gắn với công việc; file của dự án không có dòng lịch sử
+          if (owner.taskId !== null) {
+            await this.activity.log(
+              { taskId: owner.taskId, userId: user.id, action: 'attachment_added', detail: { attachmentId: row.id, name: row.originalName, size: row.size } },
+              tx,
+            );
+          }
           created.push(row);
         }
         return created;
       });
-      this.realtime.taskChanged(task.projectId, taskId);
+      if (owner.taskId !== null) this.realtime.taskChanged(projectId, owner.taskId);
       return rows.map((row) => this.toView(user, row));
     } catch (error) {
       // Không để lại file mồ côi nếu ghi DB thất bại
@@ -204,15 +245,18 @@ export class AttachmentsService {
   async remove(user: AuthUser, id: number): Promise<void> {
     const row = await this.prisma.attachment.findUnique({ where: { id }, include: attachmentInclude });
     if (!row) throw new NotFoundException('Không tìm thấy file');
-    await this.access.assertCanView(user, row.task.project.id);
+    const project = this.projectOf(row);
+    await this.access.assertCanView(user, project.id);
     if (!this.canDelete(user, row)) throw new ForbiddenException('Chỉ người gửi, trưởng nhóm của dự án hoặc quản trị viên mới được xóa file');
 
     await this.prisma.$transaction(async (tx) => {
       await tx.attachment.delete({ where: { id } });
-      await this.activity.log({ taskId: row.taskId, userId: user.id, action: 'attachment_removed', detail: { name: row.originalName } }, tx);
+      if (row.taskId !== null) {
+        await this.activity.log({ taskId: row.taskId, userId: user.id, action: 'attachment_removed', detail: { name: row.originalName } }, tx);
+      }
     });
     await this.storage.delete(row.path);
-    this.realtime.taskChanged(row.task.project.id, row.taskId);
+    if (row.taskId !== null) this.realtime.taskChanged(project.id, row.taskId);
   }
 
   // ---------------------------------------------------------------- helpers
@@ -231,21 +275,31 @@ export class AttachmentsService {
     return { name, ext, mime: mimeFor(name), buffer: file.buffer };
   }
 
+  /** Dự án chứa file: trực tiếp (file dự án) hoặc qua công việc */
+  private projectOf(row: AttachmentRow): { id: number; name: string; createdById: number } {
+    const project = row.project ?? row.task?.project;
+    if (!project) throw new NotFoundException('File không thuộc dự án hay công việc nào');
+    return project;
+  }
+
   private canDelete(user: AuthUser, row: AttachmentRow): boolean {
-    return row.uploaderId === user.id || this.access.canManage(user, row.task.project);
+    return row.uploaderId === user.id || this.access.canManage(user, this.projectOf(row));
   }
 
   private toView(user: AuthUser, row: AttachmentRow) {
+    const project = this.projectOf(row);
     return {
       id: row.id,
+      /** 'project' = đính vào dự án, 'task' = đính vào công việc */
+      source: row.taskId === null ? ('project' as const) : ('task' as const),
       taskId: row.taskId,
       originalName: row.originalName,
       mimeType: row.mimeType,
       size: row.size,
       createdAt: row.createdAt,
       uploader: row.uploader,
-      task: { id: row.task.id, title: row.task.title, status: row.task.status },
-      project: { id: row.task.project.id, name: row.task.project.name },
+      task: row.task ? { id: row.task.id, title: row.task.title, status: row.task.status } : null,
+      project: { id: project.id, name: project.name },
       previewable: isPreviewableMime(row.mimeType),
       canDelete: this.canDelete(user, row),
     };
@@ -254,7 +308,7 @@ export class AttachmentsService {
   private async findViewableOrThrow(user: AuthUser, id: number): Promise<AttachmentRow> {
     const row = await this.prisma.attachment.findUnique({ where: { id }, include: attachmentInclude });
     if (!row) throw new NotFoundException('Không tìm thấy file');
-    await this.access.assertCanView(user, row.task.project.id);
+    await this.access.assertCanView(user, this.projectOf(row).id);
     return row;
   }
 
