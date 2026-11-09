@@ -1,6 +1,7 @@
-import { LayoutGrid, Rows3 } from 'lucide-react';
+import clsx from 'clsx';
+import { ArrowDown, ArrowUp, LayoutGrid, Rows3 } from 'lucide-react';
 import type { ViewMode } from '../../hooks/useViewMode';
-import { inputClass } from '../../lib/styles';
+import { chipClass } from '../../lib/styles';
 import { Button } from '../ui/Button';
 
 interface SortOption {
@@ -20,36 +21,40 @@ interface FolderToolbarProps {
   onIncludeEmptyChange?: (value: boolean) => void;
 }
 
-/** Thanh công cụ mỗi cấp: sắp xếp (theo tên / cập nhật mới nhất), lưới ⇄ danh sách */
+/**
+ * Thanh công cụ mỗi cấp, cùng ngôn ngữ với các bộ lọc khác của app: sắp xếp là chip (bấm lại để đảo chiều),
+ * lưới ⇄ danh sách là cặp nút như trang "Tất cả file".
+ */
 export function FolderToolbar({ view, onViewChange, sortBy, order, sortOptions, onSortChange, includeEmpty, onIncludeEmptyChange }: FolderToolbarProps) {
+  const pick = (value: string) => {
+    if (value === sortBy) onSortChange(value, order === 'asc' ? 'desc' : 'asc');
+    else onSortChange(value, value === 'name' ? 'asc' : 'desc');
+  };
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-3">
-      <label className="sr-only" htmlFor="folder-sort">
-        Sắp xếp theo
-      </label>
-      <select
-        id="folder-sort"
-        value={`${sortBy}:${order}`}
-        onChange={(e) => {
-          const [field, dir] = e.target.value.split(':');
-          onSortChange(field ?? sortOptions[0]?.value ?? 'name', dir === 'asc' ? 'asc' : 'desc');
-        }}
-        className={`${inputClass} w-auto!`}
-      >
-        {sortOptions.flatMap((o) => [
-          <option key={`${o.value}:asc`} value={`${o.value}:asc`}>
-            {o.label} ↑
-          </option>,
-          <option key={`${o.value}:desc`} value={`${o.value}:desc`}>
-            {o.label} ↓
-          </option>,
-        ])}
-      </select>
+    <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-3">
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Sắp xếp theo">
+        <span className="eyebrow !tracking-[2px]">Sắp xếp</span>
+        {sortOptions.map((o) => {
+          const active = o.value === sortBy;
+          return (
+            <button
+              key={o.value}
+              type="button"
+              aria-pressed={active}
+              title={active ? (order === 'asc' ? 'Đang tăng dần, bấm để giảm dần' : 'Đang giảm dần, bấm để tăng dần') : undefined}
+              onClick={() => pick(o.value)}
+              className={clsx(chipClass(active), 'inline-flex items-center gap-1.5')}
+            >
+              {o.label}
+              {active && (order === 'asc' ? <ArrowUp className="h-3.5 w-3.5" aria-hidden /> : <ArrowDown className="h-3.5 w-3.5" aria-hidden />)}
+            </button>
+          );
+        })}
+      </div>
       {onIncludeEmptyChange && (
-        <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
-          <input type="checkbox" checked={includeEmpty ?? false} onChange={(e) => onIncludeEmptyChange(e.target.checked)} className="h-4 w-4 rounded border-slate-300" />
+        <button type="button" aria-pressed={includeEmpty ?? false} onClick={() => onIncludeEmptyChange(!includeEmpty)} className={chipClass(includeEmpty ?? false)}>
           Hiện cả task chưa có file
-        </label>
+        </button>
       )}
       <div className="ml-auto inline-flex gap-1" role="group" aria-label="Kiểu hiển thị">
         <Button variant={view === 'grid' ? 'primary' : 'secondary'} size="sm" icon={<LayoutGrid className="h-4 w-4" />} aria-pressed={view === 'grid'} onClick={() => onViewChange('grid')}>

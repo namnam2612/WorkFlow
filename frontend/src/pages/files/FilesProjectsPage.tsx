@@ -1,6 +1,5 @@
 import { FolderItem } from '../../components/files/FolderItem';
 import { FolderToolbar } from '../../components/files/FolderToolbar';
-import { FilesBreadcrumb } from '../../components/files/FilesBreadcrumb';
 import { Pagination } from '../../components/ui/Pagination';
 import { EmptyState, ErrorState, PageLoader } from '../../components/ui/States';
 import { useFileProjects } from '../../hooks/useFolders';
@@ -22,7 +21,6 @@ export default function FilesProjectsPage() {
 
   return (
     <>
-      <FilesBreadcrumb items={[{ label: 'Kho tài liệu' }]} />
       <FolderToolbar view={view} onViewChange={setView} sortBy={params.sortBy} order={params.order} sortOptions={SORT_OPTIONS} onSortChange={params.setSort} />
 
       {query.isLoading ? (
@@ -35,8 +33,8 @@ export default function FilesProjectsPage() {
         <div className={query.isPlaceholderData ? 'opacity-60 transition-opacity' : ''}>
           {view === 'grid' ? (
             <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {data.items.map((p) => (
-                <FolderItem key={p.id} view="grid" kind="project" to={`/files/projects/${p.id}`} name={p.name} stats={p} />
+              {data.items.map((p, index) => (
+                <FolderItem key={p.id} view="grid" index={index} kind="project" to={`/files/projects/${p.id}`} name={p.name} stats={p} />
               ))}
             </ul>
           ) : (

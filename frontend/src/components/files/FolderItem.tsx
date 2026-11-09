@@ -3,6 +3,8 @@ import { Files, Folder } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { folderSummary } from '../../lib/files';
+import { Reveal } from '../fx/Reveal';
+import { TiltCard } from '../fx/TiltCard';
 import { formatDate } from '../../lib/format';
 import type { FolderStats } from '../../types/api';
 
@@ -15,6 +17,8 @@ interface FolderItemProps {
   name: string;
   stats: FolderStats;
   view: 'grid' | 'list';
+  /** Thứ tự trong lưới (để hiệu ứng hiện dần lệch nhau như thẻ dự án) */
+  index?: number;
   /** Phụ đề (vd "Việc con của ...") */
   note?: string;
   /** Huy hiệu bên phải (vd trạng thái task) */
@@ -38,7 +42,7 @@ function FolderIcon({ kind, className }: { kind: FolderKind; className?: string 
 }
 
 /** Một thư mục trong Kho tài liệu: dạng thẻ (lưới) hoặc dòng (danh sách) */
-export function FolderItem({ to, kind, name, stats, view, note, badge }: FolderItemProps) {
+export function FolderItem({ to, kind, name, stats, view, index = 0, note, badge }: FolderItemProps) {
   const updated = stats.latestAt ? `Cập nhật ${formatDate(stats.latestAt)}` : null;
   if (view === 'list') {
     return (
@@ -59,21 +63,24 @@ export function FolderItem({ to, kind, name, stats, view, note, badge }: FolderI
     );
   }
   return (
-    <li>
-      <Link to={to} className="group flex h-full flex-col gap-4 rounded-2xl border border-white/[0.08] bg-card p-4 transition-colors duration-300 hover:border-white/25">
-        <div className="flex items-start justify-between gap-2">
-          <FolderIcon kind={kind} className="h-12 w-12" />
-          {badge}
-        </div>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-slate-900" title={name}>
-            {name}
-          </p>
-          {note && <p className="truncate text-xs text-slate-500">{note}</p>}
-          <p className="tabular mt-1 text-sm text-slate-600">{folderSummary(stats)}</p>
-          {updated && <p className="tabular text-xs text-slate-500">{updated}</p>}
-        </div>
-      </Link>
-    </li>
+    <Reveal as="li" index={index}>
+      <TiltCard className="rounded-2xl border border-white/[0.08] bg-card hover:border-white/20">
+        <Link to={to} className="flex h-full flex-col gap-4 p-5">
+          <div className="flex items-start gap-3">
+            <FolderIcon kind={kind} className="h-10 w-10" />
+            <div className="min-w-0 flex-1">
+              <p className="line-clamp-2 break-words font-semibold leading-snug text-slate-900" title={name}>
+                {name}
+              </p>
+              <p className="mt-0.5 truncate text-xs text-slate-500">{note ?? updated ?? 'Chưa có file'}</p>
+            </div>
+          </div>
+          <div className="mt-auto flex items-center justify-between gap-2 border-t border-white/[0.08] pt-4">
+            <p className="tabular whitespace-nowrap text-sm text-slate-700">{folderSummary(stats)}</p>
+            {badge ?? (note && stats.latestAt ? <p className="tabular whitespace-nowrap text-xs text-slate-500">{formatDate(stats.latestAt)}</p> : null)}
+          </div>
+        </Link>
+      </TiltCard>
+    </Reveal>
   );
 }

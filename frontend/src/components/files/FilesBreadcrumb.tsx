@@ -15,10 +15,10 @@ export function FilesBreadcrumb({ items }: { items: Crumb[] }) {
       <ol className="flex flex-wrap items-center gap-1.5 text-sm">
         {items.map((item, index) => (
           <Fragment key={`${item.label}-${index}`}>
-            {index > 0 && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden />}
+            {index > 0 && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden />}
             <li className="min-w-0">
               {item.to ? (
-                <Link to={item.to} className="max-w-[16rem] truncate text-slate-600 underline decoration-white/20 underline-offset-4 hover:text-white hover:decoration-white" title={item.label}>
+                <Link to={item.to} className="max-w-[16rem] truncate text-slate-500 transition-colors hover:text-white" title={item.label}>
                   {item.label}
                 </Link>
               ) : (

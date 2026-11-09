@@ -72,8 +72,8 @@ export default function FilesProjectPage() {
           {view === 'grid' ? (
             <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               <FolderItem view="grid" kind="common" to={commonTo} name="File chung của dự án" stats={common} note="Đính trực tiếp vào dự án" />
-              {data.items.map((t) => (
-                <FolderItem key={t.id} view="grid" kind="task" to={`/files/tasks/${t.id}`} name={t.name} stats={t} note={t.parent ? `Việc con của "${t.parent.title}"` : undefined} badge={<StatusBadge status={t.status} />} />
+              {data.items.map((t, index) => (
+                <FolderItem key={t.id} view="grid" index={index + 1} kind="task" to={`/files/tasks/${t.id}`} name={t.name} stats={t} note={t.parent ? `Việc con của "${t.parent.title}"` : undefined} badge={<StatusBadge status={t.status} />} />
               ))}
             </ul>
           ) : (

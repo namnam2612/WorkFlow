@@ -65,7 +65,7 @@ export default function FilesLayout() {
         }
       />
 
-      <div className="relative mb-6">
+      <div className="relative mb-6 max-w-md">
         <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-400" aria-hidden />
         <input
           value={input}
