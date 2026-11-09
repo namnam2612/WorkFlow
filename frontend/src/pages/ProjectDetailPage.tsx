@@ -128,11 +128,11 @@ export default function ProjectDetailPage() {
             <Button variant="secondary" icon={<BarChart3 className="h-4 w-4" />} onClick={() => navigate(`/projects/${project.id}/reports`)}>
               Báo cáo
             </Button>
+            <Button variant="secondary" icon={<Plus className="h-4 w-4" />} onClick={() => setCreatingTask(true)}>
+              Thêm công việc
+            </Button>
             {canManage && (
               <>
-                <Button variant="secondary" icon={<Plus className="h-4 w-4" />} onClick={() => setCreatingTask(true)}>
-                  Thêm công việc
-                </Button>
                 <Button variant="ghost" icon={<Share2 className="h-4 w-4" />} onClick={() => setGuestOpen(true)}>
                   Cổng khách
                 </Button>

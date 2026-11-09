@@ -170,20 +170,19 @@ export class TasksService {
   async create(user: AuthUser, dto: CreateTaskDto) {
     const project = await this.access.assertCanView(user, dto.projectId);
     const canManage = this.access.canManage(user, project);
-    // Thành viên chỉ được thêm công việc con (không tạo công việc lớn mới)
-    if (!canManage && !dto.parentId) {
-      throw new ForbiddenException('Chỉ trưởng nhóm của dự án hoặc quản trị viên mới tạo được công việc mới');
-    }
     const parent = dto.parentId ? await this.assertValidParent(dto.parentId, dto.projectId) : null;
     const type = dto.type ?? 'task';
     if (parent && (type === 'epic' || type === 'story')) throw new BadRequestException('Công việc con chỉ có thể là Task hoặc Bug');
     this.assertBugFields(type, dto.severity, dto.environment);
-    const assigneeIds = [...new Set(dto.assigneeIds ?? [])];
-    if (!canManage && parent) {
-      if (!this.isAssigned(parent, user.id)) {
+    let assigneeIds = [...new Set(dto.assigneeIds ?? [])];
+    // Người không quản lý dự án chỉ được tạo công việc cho chính mình
+    if (!canManage) {
+      if (parent && !this.isAssigned(parent, user.id)) {
         throw new ForbiddenException('Bạn chỉ được thêm công việc con vào công việc được giao cho mình');
       }
       this.assertSelfAssignment(user, assigneeIds, []);
+      // Công việc lớn tự giao cho người tạo; công việc con được phép để trống
+      if (!parent) assigneeIds = [user.id];
     }
     await this.assertValidAssignees(project, assigneeIds);
 
@@ -536,7 +535,7 @@ export class TasksService {
   /** Thành viên chỉ được thêm/bớt CHÍNH MÌNH khỏi danh sách người được giao (không đụng tới người khác) */
   private assertSelfAssignment(user: AuthUser, addedIds: number[], removedIds: number[]): void {
     if ([...addedIds, ...removedIds].some((uid) => uid !== user.id)) {
-      throw new ForbiddenException('Thành viên chỉ được giao công việc con cho chính mình');
+      throw new ForbiddenException('Bạn chỉ được giao công việc cho chính mình');
     }
   }
 

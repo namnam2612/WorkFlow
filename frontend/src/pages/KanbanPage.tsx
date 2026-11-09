@@ -235,11 +235,9 @@ export default function KanbanPage() {
               Tùy chỉnh cột
             </Button>
           )}
-          {canManage && (
-            <Button icon={<Plus className="h-4 w-4" />} onClick={() => setCreatingIn(statuses[0]?.id ?? null)}>
-              {scope === 'bug' ? 'Thêm Bug' : 'Thêm công việc'}
-            </Button>
-          )}
+          <Button icon={<Plus className="h-4 w-4" />} onClick={() => setCreatingIn(statuses[0]?.id ?? null)}>
+            {scope === 'bug' ? 'Thêm Bug' : 'Thêm công việc'}
+          </Button>
         </div>
       </div>
 
@@ -261,7 +259,7 @@ export default function KanbanPage() {
               tasks={visible[status.id] ?? []}
               totalCount={(columns[status.id] ?? []).length}
               canDrag={canDrag}
-              onAdd={canManage ? () => setCreatingIn(status.id) : undefined}
+              onAdd={() => setCreatingIn(status.id)}
             />
           ))}
         </div>

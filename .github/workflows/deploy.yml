@@ -1,0 +1,47 @@
+# Tự deploy lên server mỗi khi push vào main (hoặc bấm "Run workflow" trong tab Actions).
+# Cần tạo các secret trong GitHub: Settings → Secrets and variables → Actions
+# Tuỳ chọn (Variables): DOMAIN, APP_DIR
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cài SSH key
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_TARGET: ${{ secrets.DEPLOY_TARGET }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          # Chấp nhận khoá dạng base64 một dòng (khuyên dùng) hoặc dạng gốc nhiều dòng
+          if printf '%s' "$DEPLOY_SSH_KEY" | grep -q 'BEGIN'; then
+            printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/id_ed25519
+          else
+            printf '%s' "$DEPLOY_SSH_KEY" | tr -d '\r\n ' | base64 -d > ~/.ssh/id_ed25519
+          fi
+          chmod 600 ~/.ssh/id_ed25519
+          if ! ssh-keygen -y -f ~/.ssh/id_ed25519 >/dev/null; then
+            echo "Số dòng khoá nhận được: $(wc -l < ~/.ssh/id_ed25519)"
+            echo "::error::DEPLOY_SSH_KEY không hợp lệ — hãy dán chuỗi base64 của khoá private (xem hướng dẫn)"
+            exit 1
+          fi
+          ssh-keyscan -H "${DEPLOY_TARGET#*@}" >> ~/.ssh/known_hosts
+
+      - name: Deploy
+        env:
+          LE_EMAIL: ${{ secrets.LE_EMAIL }}
+          DOMAIN: ${{ vars.DOMAIN || 'alpha.hopphu.vn' }}
+          APP_DIR: ${{ vars.APP_DIR || '/opt/taskflow-alpha' }}
+        run: bash deploy/deploy.sh "${{ secrets.DEPLOY_TARGET }}"

@@ -114,7 +114,6 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
   const statusesQuery = useProjectStatuses(projectId);
   const type = watch('type');
   const statusOptions = statusesOf(statusesQuery.data, type === 'bug' ? 'bug' : 'task');
-  const manageableProjects = (projectsQuery.data ?? []).filter((p) => canManageProject(user, p));
   // Thành viên (không phải leader/admin của dự án) chỉ được giao việc con cho chính mình
   const canAssignOthers = canManageProject(user, projectQuery.data);
   const members: UserBrief[] = (projectQuery.data?.members ?? []).filter((m) => canAssignOthers || m.id === user?.id);
@@ -221,7 +220,7 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
               {...register('projectId', { onChange: () => setAssignees([]) })}
             >
               <option value="">— Chọn dự án —</option>
-              {(isEdit || parentId !== undefined || defaultProjectId !== undefined ? (projectsQuery.data ?? []) : manageableProjects).map((p) => (
+              {(projectsQuery.data ?? []).map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
                 </option>
@@ -324,7 +323,7 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
           <div className="sm:col-span-2">
             <p className={labelClass}>Người thực hiện{assignees.length > 1 ? ` (${assignees.length})` : ''}</p>
             <AssigneePicker options={members} selected={assignees} onChange={setAssignees} lockedIds={lockedIds} disabled={!projectId || busy} emptyLabel={projectId ? 'Chưa giao cho ai' : 'Chọn dự án trước'} />
-            <p className="mt-1 text-xs text-slate-500">{!canAssignOthers && projectId ? 'Bạn chỉ có thể giao công việc con cho chính mình' : 'Có thể giao cho nhiều người cùng làm.'}</p>
+            <p className="mt-1 text-xs text-slate-500">{!canAssignOthers && projectId ? 'Bạn chỉ có thể giao công việc cho chính mình' : 'Có thể giao cho nhiều người cùng làm.'}</p>
           </div>
           <Field label="Mức ưu tiên" htmlFor="task-priority">
             <select id="task-priority" className={inputClass} {...register('priority')}>

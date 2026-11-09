@@ -12,7 +12,7 @@ Web app để Leader giao việc và theo dõi tiến độ/deadline; thành vi�
 
 ## Phân quyền
 - Trạng thái task KHÔNG cố định: mỗi dự án có bộ trạng thái riêng (`ProjectStatus`, `Task.statusId`); logic hệ thống (tiến độ, quá hạn, `completedAt`) chỉ dựa vào `status.category` (`todo|in_progress|done`), không so tên trạng thái. Bug (`type = bug`) dùng bộ trạng thái scope `bug`.
-- Một task giao được cho NHIỀU người (`TaskAssignee`, API `assigneeIds`); "người được giao" = một trong số họ. `admin`: toàn hệ thống. `leader`: quản lý dự án mình tạo (task, thành viên). `member`: xem task của dự án mình tham gia; cập nhật status/actualHours/bình luận task được giao cho mình; thêm công việc con vào task lớn được giao cho mình (giao cho chính mình hoặc để trống) và sửa/xóa công việc con do mình tạo.
+- Một task giao được cho NHIỀU người (`TaskAssignee`, API `assigneeIds`); "người được giao" = một trong số họ. `admin`: toàn hệ thống. `leader`: quản lý dự án mình tạo (task, thành viên). `member`: xem task của dự án mình tham gia; cập nhật status/actualHours/bình luận task được giao cho mình; tạo công việc (luôn giao cho chính mình), thêm công việc con vào task lớn được giao cho mình (giao cho chính mình hoặc để trống) và sửa/xóa công việc con do mình tạo.
 - Kiểm tra ở backend (Guard `JwtAuthGuard`, `RolesGuard`, + kiểm tra truy cập dự án trong service). Frontend chỉ ẩn nút thêm cho UX.
 
 ## Quy ước
