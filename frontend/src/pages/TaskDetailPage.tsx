@@ -7,6 +7,7 @@ import { DeadlineText } from '../components/tasks/DeadlineText';
 import { SubtaskRow } from '../components/tasks/SubtaskRow';
 import { AttachmentSection } from '../components/attachments/AttachmentSection';
 import { TaskDiscussion } from '../components/tasks/TaskDiscussion';
+import { DependenciesCard } from '../components/tasks/DependenciesCard';
 import { WorkLogSection } from '../components/tasks/WorkLogSection';
 import { TaskFormModal } from '../components/tasks/TaskFormModal';
 import { PriorityBadge, SeverityBadge, StatusBadge, TypeBadge } from '../components/ui/Badges';
@@ -193,6 +194,8 @@ export default function TaskDetailPage() {
             </Card>
           )}
 
+          <DependenciesCard task={task} canManage={canManage} />
+
           {task.type !== 'epic' && <WorkLogSection taskId={task.id} canLog={canManage || isAssignee(user, task)} canModerate={canManage} />}
 
           <AttachmentSection scope={{ kind: 'task', id: task.id }} />
@@ -251,6 +254,7 @@ export default function TaskDetailPage() {
                   <MetaRow label="Môi trường">{task.environment ? ENVIRONMENT_LABEL[task.environment] : '—'}</MetaRow>
                 </>
               )}
+              {task.startDate && <MetaRow label="Bắt đầu">{formatDateTime(task.startDate)}</MetaRow>}
               <MetaRow label="Deadline">
                 <div className="flex flex-col items-end gap-0.5">
                   <span>{formatDateTime(task.deadline)}</span>

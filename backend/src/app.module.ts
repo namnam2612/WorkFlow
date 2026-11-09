@@ -17,6 +17,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProjectsModule } from './projects/projects.module';
 import { RealtimeModule } from './realtime/realtime.module';
+import { PlanningModule } from './schedule/schedule.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { SprintsModule } from './sprints/sprints.module';
 import { StatusesModule } from './statuses/statuses.module';
@@ -43,6 +44,7 @@ import { WorkLogsModule } from './worklogs/worklogs.module';
     WorkLogsModule,
     TeamsModule,
     LeavesModule,
+    PlanningModule,
     TasksModule,
     CommentsModule,
     AttachmentsModule,

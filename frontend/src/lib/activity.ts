@@ -64,6 +64,16 @@ export function describeActivity(entry: ActivityLogEntry): string {
       return `đã đổi loại từ "${typeLabel(detail.from)}" sang "${typeLabel(detail.to)}"`;
     case 'story_points_changed':
       return `đã đổi Story Point: ${String(detail.from ?? '—')} → ${String(detail.to ?? '—')}`;
+    case 'start_date_changed': {
+      const from = typeof detail.from === 'string' ? formatDateTime(detail.from) : 'không có';
+      const to = typeof detail.to === 'string' ? formatDateTime(detail.to) : 'không có';
+      return `đã đổi ngày bắt đầu từ ${from} sang ${to}`;
+    }
+    case 'dependency_changed': {
+      const added = detail.added && typeof detail.added === 'object' ? String((detail.added as { title?: unknown }).title ?? '') : null;
+      const removed = detail.removed && typeof detail.removed === 'object' ? String((detail.removed as { title?: unknown }).title ?? '') : null;
+      return added !== null ? `đã đặt phải chờ "${added}" xong` : `đã bỏ phụ thuộc vào "${removed ?? ''}"`;
+    }
     case 'sprint_changed': {
       const name = (v: unknown) => (v && typeof v === 'object' && 'name' in v ? String((v as { name: unknown }).name) : 'Backlog');
       return `đã chuyển sprint từ "${name(detail.from)}" sang "${name(detail.to)}"`;

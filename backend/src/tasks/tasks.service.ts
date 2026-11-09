@@ -27,6 +27,8 @@ const detailInclude = {
   project: { select: { id: true, name: true, createdById: true } },
   parent: { select: { id: true, title: true, assignees: { select: { userId: true } } } },
   subtasks: { include: taskInclude, orderBy: [{ position: 'asc' }, { id: 'asc' }] },
+  dependencies: { select: { dependsOn: { select: { id: true, title: true, deadline: true, status: { select: STATUS_SELECT } } } } },
+  dependents: { select: { task: { select: { id: true, title: true, status: { select: STATUS_SELECT } } } } },
   _count: { select: { comments: true, attachments: true } },
 } satisfies Prisma.TaskInclude;
 
@@ -136,9 +138,13 @@ export class TasksService {
     if (!task) throw new NotFoundException('Không tìm thấy công việc');
     await this.access.assertCanView(user, task.projectId);
 
-    const { subtasks, _count, assignees, parent, ...rest } = task;
+    const { subtasks, _count, assignees, parent, dependencies, dependents, ...rest } = task;
     return {
       ...rest,
+      /** Phải chờ những việc này xong */
+      dependsOn: dependencies.map((d) => d.dependsOn),
+      /** Những việc đang chờ công việc này */
+      blocking: dependents.map((d) => d.task),
       assignees: assignees.map((a) => a.user),
       // Người được giao của task cha (chỉ id) để frontend biết quyền thêm/bình luận công việc con
       parent: parent ? { id: parent.id, title: parent.title, assigneeIds: parent.assignees.map((a) => a.userId) } : null,
@@ -172,6 +178,7 @@ export class TasksService {
     }
     await this.assertValidAssignees(project, assigneeIds);
 
+    this.assertDateOrder(dto.startDate, dto.deadline);
     const status = await this.statuses.resolve(dto.projectId, scopeOfType(type), dto.statusId);
     const placement = await this.resolvePlacement(dto.projectId, type, parent?.id ?? null, dto.sprintId, dto.epicId);
     const created = await this.prisma.$transaction(async (tx) => {
@@ -192,6 +199,7 @@ export class TasksService {
           severity: type === 'bug' ? (dto.severity ?? 'major') : null,
           environment: type === 'bug' ? (dto.environment ?? null) : null,
           priority: dto.priority ?? 'medium',
+          startDate: dto.startDate ? new Date(dto.startDate) : null,
           deadline: dto.deadline ? new Date(dto.deadline) : null,
           estimatedHours: dto.estimatedHours ?? null,
           actualHours: dto.actualHours ?? null,
@@ -311,6 +319,19 @@ export class TasksService {
     if (dto.priority !== undefined && dto.priority !== task.priority) {
       data.priority = dto.priority;
       logs.push({ action: 'priority_changed', detail: { from: task.priority, to: dto.priority } });
+    }
+    if (dto.startDate !== undefined || dto.deadline !== undefined) {
+      this.assertDateOrder(
+        dto.startDate === undefined ? task.startDate?.toISOString() : dto.startDate,
+        dto.deadline === undefined ? task.deadline?.toISOString() : dto.deadline,
+      );
+    }
+    if (dto.startDate !== undefined) {
+      const next = dto.startDate ? new Date(dto.startDate) : null;
+      if ((next?.getTime() ?? null) !== (task.startDate?.getTime() ?? null)) {
+        data.startDate = next;
+        logs.push({ action: 'start_date_changed', detail: { from: task.startDate?.toISOString() ?? null, to: next?.toISOString() ?? null } });
+      }
     }
     if (dto.deadline !== undefined) {
       const next = dto.deadline ? new Date(dto.deadline) : null;
@@ -538,6 +559,13 @@ export class TasksService {
       if (!epic || epic.projectId !== projectId || epic.type !== 'epic') throw new BadRequestException('Epic không tồn tại trong dự án này');
     }
     return { sprintId: sprintId ?? null, epicId: epicId ?? null };
+  }
+
+  /** Ngày bắt đầu không được sau deadline */
+  private assertDateOrder(start?: string | null, deadline?: string | null): void {
+    if (start && deadline && new Date(start).getTime() > new Date(deadline).getTime()) {
+      throw new BadRequestException('Ngày bắt đầu phải trước hoặc bằng deadline');
+    }
   }
 
   private async sprintRef(id: number | null): Promise<{ id: number; name: string } | null> {

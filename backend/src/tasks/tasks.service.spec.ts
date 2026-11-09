@@ -70,6 +70,7 @@ function buildTask(overrides: Partial<Task> & { assigneeIds?: number[] } = {}): 
     type: 'task',
     statusId,
     storyPoints: null,
+    startDate: null,
     sprintId: null,
     epicId: null,
     severity: null,
@@ -856,6 +857,21 @@ describe('TasksService', () => {
       prisma.task.findUnique.mockResolvedValue(buildTask({ type: 'story', sprintId: 8, epicId: 3 }));
       await service.update(owner, 5, { type: 'epic' });
       expect(callArg(prisma.task.update)).toMatchObject({ data: { type: 'epic', sprintId: null, epicId: null } });
+    });
+  });
+  describe('ngày bắt đầu', () => {
+    it('phải trước hoặc bằng deadline (cả khi chỉ sửa một trong hai)', async () => {
+      await expect(service.create(owner, { projectId: 1, title: 'V', startDate: '2026-12-10T00:00:00Z', deadline: '2026-12-01T00:00:00Z' })).rejects.toBeInstanceOf(BadRequestException);
+      await service.create(owner, { projectId: 1, title: 'V', startDate: '2026-12-01T00:00:00Z', deadline: '2026-12-10T00:00:00Z' });
+      expect(callArg(prisma.task.create)).toMatchObject({ data: { startDate: new Date('2026-12-01T00:00:00Z') } });
+      prisma.task.findUnique.mockResolvedValue(buildTask({ deadline: new Date('2026-12-05T00:00:00Z') }));
+      await expect(service.update(owner, 5, { startDate: '2026-12-20T00:00:00Z' })).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('đổi ngày bắt đầu được ghi lịch sử', async () => {
+      prisma.task.findUnique.mockResolvedValue(buildTask({ startDate: new Date('2026-12-01T00:00:00Z') }));
+      await service.update(owner, 5, { startDate: '2026-12-03T00:00:00Z' });
+      expect(activity.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'start_date_changed' }), prisma);
     });
   });
 });

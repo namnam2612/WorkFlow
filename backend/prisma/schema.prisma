@@ -208,6 +208,8 @@ model Task {
   type           TaskType     @default(task)
   statusId       Int
   storyPoints    Int?
+  /// Ngày bắt đầu dự kiến (Gantt/Calendar); deadline là ngày kết thúc
+  startDate      DateTime?
   sprintId       Int?
   /// Epic (task type = epic) mà story/task này thuộc về
   epicId         Int?
@@ -223,15 +225,19 @@ model Task {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  status       ProjectStatus @relation(fields: [statusId], references: [id], onDelete: Restrict)
-  sprint       Sprint?       @relation(fields: [sprintId], references: [id], onDelete: SetNull)
-  epic         Task?         @relation("EpicChildren", fields: [epicId], references: [id], onDelete: SetNull)
-  epicChildren Task[]        @relation("EpicChildren")
+  project      Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  status       ProjectStatus    @relation(fields: [statusId], references: [id], onDelete: Restrict)
+  sprint       Sprint?          @relation(fields: [sprintId], references: [id], onDelete: SetNull)
+  epic         Task?            @relation("EpicChildren", fields: [epicId], references: [id], onDelete: SetNull)
+  epicChildren Task[]           @relation("EpicChildren")
   workLogs     WorkLog[]
-  parent       Task?         @relation("Subtasks", fields: [parentId], references: [id], onDelete: Cascade)
-  subtasks     Task[]        @relation("Subtasks")
-  creator      User          @relation("TaskCreator", fields: [creatorId], references: [id], onDelete: Restrict)
+  /// Công việc này phải chờ những việc nào xong (finish-to-start)
+  dependencies TaskDependency[] @relation("DependencyTask")
+  /// Những việc đang chờ công việc này
+  dependents   TaskDependency[] @relation("DependencyOn")
+  parent       Task?            @relation("Subtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  subtasks     Task[]           @relation("Subtasks")
+  creator      User             @relation("TaskCreator", fields: [creatorId], references: [id], onDelete: Restrict)
 
   assignees    TaskAssignee[]
   comments     Comment[]
@@ -418,4 +424,17 @@ model Leave {
 
   @@index([userId, startDate])
   @@index([status, startDate])
+}
+
+/// Phụ thuộc kiểu "kết thúc → bắt đầu": `taskId` chỉ bắt đầu được sau khi `dependsOnId` xong
+model TaskDependency {
+  taskId      Int
+  dependsOnId Int
+  createdAt   DateTime @default(now())
+
+  task      Task @relation("DependencyTask", fields: [taskId], references: [id], onDelete: Cascade)
+  dependsOn Task @relation("DependencyOn", fields: [dependsOnId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, dependsOnId])
+  @@index([dependsOnId])
 }

@@ -3,12 +3,13 @@ import { StorageModule } from '../attachments/storage.module';
 import { ProjectsModule } from '../projects/projects.module';
 import { StatusesModule } from '../statuses/statuses.module';
 import { TasksController } from './tasks.controller';
+import { TaskDependenciesService } from './task-dependencies.service';
 import { TasksService } from './tasks.service';
 
 @Module({
   imports: [ProjectsModule, StatusesModule, StorageModule],
   controllers: [TasksController],
-  providers: [TasksService],
+  providers: [TasksService, TaskDependenciesService],
   exports: [TasksService],
 })
 export class TasksModule {}

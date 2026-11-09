@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { Bell, CalendarCheck, CalendarOff, FolderArchive, FolderKanban, LayoutDashboard, ListChecks, LogOut, UserRound, Users, UsersRound } from 'lucide-react';
+import { Bell, CalendarCheck, CalendarDays, CalendarOff, FolderArchive, FolderKanban, LayoutDashboard, ListChecks, LogOut, UserRound, Users, UsersRound } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { to: '/projects', label: 'Dự án', icon: FolderKanban, end: false },
   { to: '/tasks', label: 'Công việc', icon: ListChecks, end: false },
   { to: '/files', label: 'Kho tài liệu', icon: FolderArchive, end: false },
+  { to: '/calendar', label: 'Lịch', icon: CalendarDays, end: false },
   { to: '/leave', label: 'Nghỉ phép', icon: CalendarOff, end: false },
   { to: '/teams', label: 'Nhóm', icon: UsersRound, end: false },
   { to: '/members', label: 'Thành viên', icon: Users, end: false },

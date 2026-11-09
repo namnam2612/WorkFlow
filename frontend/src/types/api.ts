@@ -99,6 +99,7 @@ export interface Task {
   statusId: number;
   status: StatusRef;
   storyPoints: number | null;
+  startDate: string | null;
   sprintId: number | null;
   sprint: { id: number; name: string; status: SprintStatus } | null;
   epicId: number | null;
@@ -127,6 +128,10 @@ export interface TaskDetail extends Task {
   project: { id: number; name: string; createdById: number };
   parent: { id: number; title: string; assigneeIds: number[] } | null;
   subtasks: Task[];
+  /** Phải chờ những việc này xong */
+  dependsOn: DependencyRef[];
+  /** Những việc đang chờ công việc này */
+  blocking: DependencyRef[];
 }
 
 export interface Comment {
@@ -425,3 +430,24 @@ export interface Capacity {
 }
 
 export type SprintCapacity = Capacity & { sprintId: number; plannedPoints: number; committedPoints: number | null };
+
+export interface CalendarData {
+  from: string;
+  to: string;
+  tasks: Task[];
+  sprints: { id: number; projectId: number; name: string; status: SprintStatus; startDate: string | null; endDate: string | null }[];
+  leaves: Leave[];
+}
+
+export interface GanttData {
+  tasks: Task[];
+  dependencies: { taskId: number; dependsOnId: number }[];
+  sprints: { id: number; name: string; status: SprintStatus; startDate: string | null; endDate: string | null }[];
+}
+
+export interface DependencyRef {
+  id: number;
+  title: string;
+  status: StatusRef;
+  deadline?: string | null;
+}

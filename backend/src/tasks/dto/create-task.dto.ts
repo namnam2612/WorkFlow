@@ -71,6 +71,11 @@ export class CreateTaskDto {
   @IsEnum(Priority, { message: 'Mức ưu tiên không hợp lệ' })
   priority?: Priority;
 
+  /** Ngày bắt đầu dự kiến (cho Gantt/Calendar); phải trước hoặc bằng deadline */
+  @IsOptional()
+  @IsDateString({}, { message: 'Ngày bắt đầu không hợp lệ' })
+  startDate?: string | null;
+
   @IsOptional()
   @IsDateString({}, { message: 'Deadline không hợp lệ' })
   deadline?: string | null;

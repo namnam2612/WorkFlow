@@ -10,7 +10,7 @@ import { useSprints } from '../../hooks/useSprints';
 import { useCreateTask, useTasks, useUpdateTask } from '../../hooks/useTasks';
 import { getErrorMessage } from '../../lib/api';
 import { ENVIRONMENT_LABEL, ENVIRONMENTS, PRIORITIES, PRIORITY_META, SEVERITIES, SEVERITY_META, TYPE_LABEL, TYPES } from '../../lib/constants';
-import { isoToVnDateTimeInput, vnDateTimeInputToIso } from '../../lib/format';
+import { isoToVnDateInput, isoToVnDateTimeInput, vnDateInputToIso, vnDateTimeInputToIso } from '../../lib/format';
 import { canManageProject } from '../../lib/permissions';
 import { inputClass, labelClass } from '../../lib/styles';
 import type { Priority, Task, TaskType, UserBrief } from '../../types/api';
@@ -42,6 +42,7 @@ const schema = z.object({
   severity: z.enum(['', 'minor', 'major', 'critical', 'blocker']),
   environment: z.enum(['', 'dev', 'staging', 'prod']),
   priority: z.enum(['low', 'medium', 'high', 'urgent']),
+  startDate: z.string(),
   deadline: z.string(),
   estimatedHours: hoursField,
   actualHours: hoursField,
@@ -96,6 +97,7 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
       severity: task?.severity ?? '',
       environment: task?.environment ?? '',
       priority: task?.priority ?? 'medium',
+      startDate: task?.startDate ? isoToVnDateInput(task.startDate) : '',
       deadline: isoToVnDateTimeInput(task?.deadline),
       estimatedHours: task?.estimatedHours != null ? String(task.estimatedHours) : '',
       actualHours: task?.actualHours != null ? String(task.actualHours) : '',
@@ -144,6 +146,7 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
       ...(showPlacement ? { sprintId: values.sprintId ? Number(values.sprintId) : null, epicId: values.epicId ? Number(values.epicId) : null } : {}),
       ...(values.type === 'bug' ? { severity: values.severity || null, environment: values.environment || null } : {}),
       priority: values.priority,
+      startDate: vnDateInputToIso(values.startDate),
       deadline: vnDateTimeInputToIso(values.deadline),
       estimatedHours: toNumberOrNull(values.estimatedHours),
       actualHours: toNumberOrNull(values.actualHours),
@@ -295,6 +298,9 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
                 </option>
               ))}
             </select>
+          </Field>
+          <Field label="Ngày bắt đầu" htmlFor="task-start" error={errors.startDate?.message}>
+            <input id="task-start" type="date" className={inputClass} {...register('startDate')} />
           </Field>
           <Field label="Deadline (giờ Việt Nam)" htmlFor="task-deadline" error={errors.deadline?.message}>
             <input id="task-deadline" type="datetime-local" className={inputClass} {...register('deadline')} />

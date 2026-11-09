@@ -7,6 +7,8 @@ import { ListTasksQueryDto } from './dto/list-tasks-query.dto';
 import { MoveTaskDto } from './dto/move-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { TasksService } from './tasks.service';
+import { TaskDependenciesService } from './task-dependencies.service';
+import { AddDependencyDto } from './dto/dependency.dto';
 
 /**
  * Quyền chi tiết (leader của dự án / người được giao) được kiểm tra trong TasksService
@@ -14,7 +16,10 @@ import { TasksService } from './tasks.service';
  */
 @Controller('tasks')
 export class TasksController {
-  constructor(private readonly tasks: TasksService) {}
+  constructor(
+    private readonly tasks: TasksService,
+    private readonly dependencies: TaskDependenciesService,
+  ) {}
 
   @Get()
   list(@CurrentUser() user: AuthUser, @Query() query: ListTasksQueryDto) {
@@ -50,6 +55,18 @@ export class TasksController {
   @Patch(':id/move')
   move(@CurrentUser() user: AuthUser, @Param('id', ParseIntPipe) id: number, @Body() dto: MoveTaskDto) {
     return this.tasks.move(user, id, dto);
+  }
+
+  @Post(':id/dependencies')
+  async addDependency(@CurrentUser() user: AuthUser, @Param('id', ParseIntPipe) id: number, @Body() dto: AddDependencyDto) {
+    await this.dependencies.add(user, id, dto.dependsOnId);
+    return this.tasks.get(user, id);
+  }
+
+  @Delete(':id/dependencies/:dependsOnId')
+  async removeDependency(@CurrentUser() user: AuthUser, @Param('id', ParseIntPipe) id: number, @Param('dependsOnId', ParseIntPipe) dependsOnId: number) {
+    await this.dependencies.remove(user, id, dependsOnId);
+    return this.tasks.get(user, id);
   }
 
   @Delete(':id')
