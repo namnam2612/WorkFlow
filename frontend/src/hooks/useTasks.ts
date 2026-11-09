@@ -15,6 +15,8 @@ export interface TaskInput {
   startDate?: string | null;
   sprintId?: number | null;
   epicId?: number | null;
+  fixReleaseId?: number | null;
+  foundReleaseId?: number | null;
   severity?: BugSeverity | null;
   environment?: Environment | null;
   priority?: Priority;

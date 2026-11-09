@@ -11,6 +11,7 @@ export interface PrismaMock {
   project: Record<'findUnique' | 'findMany' | 'findUniqueOrThrow' | 'create' | 'update', MockFn>;
   notification: Record<'findFirst', MockFn>;
   projectStatus: Record<'findMany' | 'findFirst' | 'findUnique' | 'create' | 'createMany' | 'update' | 'delete' | 'aggregate', MockFn>;
+  release: Record<'findUnique' | 'findMany' | 'findFirst' | 'create' | 'update' | 'delete', MockFn>;
   leave: Record<'findUnique' | 'findMany' | 'create' | 'update', MockFn>;
   team: Record<'findUnique' | 'findFirst' | 'findMany' | 'create' | 'update' | 'delete', MockFn>;
   teamMember: Record<'findUnique' | 'findMany' | 'create' | 'update' | 'delete' | 'upsert', MockFn>;
@@ -34,6 +35,7 @@ export function createPrismaMock(): PrismaMock {
     project: { findUnique: jest.fn(), findMany: jest.fn(), findUniqueOrThrow: jest.fn(), create: jest.fn(), update: jest.fn() },
     notification: { findFirst: jest.fn() },
     projectStatus: { findMany: jest.fn(), findFirst: jest.fn(), findUnique: jest.fn(), create: jest.fn(), createMany: jest.fn(), update: jest.fn(), delete: jest.fn(), aggregate: jest.fn() },
+    release: { findUnique: jest.fn(), findMany: jest.fn(), findFirst: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
     leave: { findUnique: jest.fn(), findMany: jest.fn(), create: jest.fn(), update: jest.fn() },
     team: { findUnique: jest.fn(), findFirst: jest.fn(), findMany: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
     teamMember: { findUnique: jest.fn(), findMany: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn(), upsert: jest.fn() },

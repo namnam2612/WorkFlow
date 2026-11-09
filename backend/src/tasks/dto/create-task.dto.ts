@@ -52,6 +52,16 @@ export class CreateTaskDto {
   @IsInt()
   sprintId?: number | null;
 
+  /** Phiên bản phát hành chứa việc này (Bug: phiên bản sửa); null = bỏ gắn */
+  @IsOptional()
+  @IsInt()
+  fixReleaseId?: number | null;
+
+  /** Chỉ Bug: phiên bản phát hiện lỗi */
+  @IsOptional()
+  @IsInt()
+  foundReleaseId?: number | null;
+
   /** Epic của dự án mà story/công việc này thuộc về; null = không thuộc epic */
   @IsOptional()
   @IsInt()

@@ -13,6 +13,8 @@ export const taskInclude = {
   status: { select: STATUS_SELECT },
   sprint: { select: { id: true, name: true, status: true } },
   epic: { select: { id: true, title: true } },
+  fixRelease: { select: { id: true, version: true } },
+  foundRelease: { select: { id: true, version: true } },
   project: { select: { id: true, name: true } },
   subtasks: { select: { status: { select: { category: true } } } },
   _count: { select: { comments: true, attachments: true } },

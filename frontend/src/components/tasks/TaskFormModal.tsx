@@ -6,6 +6,7 @@ import { useAuth } from '../../auth/useAuth';
 import { useFormAttachments } from '../../hooks/useFormAttachments';
 import { useProject, useProjects } from '../../hooks/useProjects';
 import { statusesOf, useProjectStatuses } from '../../hooks/useStatuses';
+import { useReleases } from '../../hooks/useReleases';
 import { useSprints } from '../../hooks/useSprints';
 import { useCreateTask, useTasks, useUpdateTask } from '../../hooks/useTasks';
 import { getErrorMessage } from '../../lib/api';
@@ -39,6 +40,8 @@ const schema = z.object({
   storyPoints: pointsField,
   sprintId: z.string(),
   epicId: z.string(),
+  fixReleaseId: z.string(),
+  foundReleaseId: z.string(),
   severity: z.enum(['', 'minor', 'major', 'critical', 'blocker']),
   environment: z.enum(['', 'dev', 'staging', 'prod']),
   priority: z.enum(['low', 'medium', 'high', 'urgent']),
@@ -94,6 +97,8 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
       storyPoints: task?.storyPoints != null ? String(task.storyPoints) : '',
       sprintId: task?.sprintId != null ? String(task.sprintId) : defaultSprintId ? String(defaultSprintId) : '',
       epicId: task?.epicId != null ? String(task.epicId) : '',
+      fixReleaseId: task?.fixReleaseId != null ? String(task.fixReleaseId) : '',
+      foundReleaseId: task?.foundReleaseId != null ? String(task.foundReleaseId) : '',
       severity: task?.severity ?? '',
       environment: task?.environment ?? '',
       priority: task?.priority ?? 'medium',
@@ -122,6 +127,7 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
   // Sprint/Epic: chỉ leader/admin xếp, và chỉ cho công việc cấp cao không phải Epic
   const showPlacement = canAssignOthers && !isSubtask && type !== 'epic';
   const sprintsQuery = useSprints(showPlacement ? projectId : undefined);
+  const releasesQuery = useReleases(showPlacement ? projectId : undefined);
   const epicsQuery = useTasks({ projectId, types: ['epic'], pageSize: 100 }, showPlacement && projectId !== undefined);
   const sprintOptions = (sprintsQuery.data ?? []).filter((s) => s.status !== 'completed' || String(s.id) === watch('sprintId'));
   const statusValue = watch('statusId');
@@ -143,7 +149,14 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
       // Trạng thái không thuộc bộ của loại đã chọn (vd đổi sang Bug) thì để server chọn trạng thái tương ứng
       statusId: values.statusId && statusOptions.some((s) => String(s.id) === values.statusId) ? Number(values.statusId) : undefined,
       storyPoints: values.storyPoints === '' ? null : Number(values.storyPoints),
-      ...(showPlacement ? { sprintId: values.sprintId ? Number(values.sprintId) : null, epicId: values.epicId ? Number(values.epicId) : null } : {}),
+      ...(showPlacement
+        ? {
+            sprintId: values.sprintId ? Number(values.sprintId) : null,
+            epicId: values.epicId ? Number(values.epicId) : null,
+            fixReleaseId: values.fixReleaseId ? Number(values.fixReleaseId) : null,
+            ...(values.type === 'bug' ? { foundReleaseId: values.foundReleaseId ? Number(values.foundReleaseId) : null } : {}),
+          }
+        : {}),
       ...(values.type === 'bug' ? { severity: values.severity || null, environment: values.environment || null } : {}),
       priority: values.priority,
       startDate: vnDateInputToIso(values.startDate),
@@ -249,6 +262,29 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
                   ))}
                 </select>
               </Field>
+              <Field label={type === 'bug' ? 'Sửa trong phiên bản' : 'Phiên bản phát hành'} htmlFor="task-fix-release">
+                <select id="task-fix-release" className={inputClass} {...register('fixReleaseId')}>
+                  <option value="">Chưa gắn phiên bản</option>
+                  {(releasesQuery.data ?? []).map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.version}
+                      {r.status === 'released' ? ' (đã phát hành)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              {type === 'bug' && (
+                <Field label="Phát hiện ở phiên bản" htmlFor="task-found-release">
+                  <select id="task-found-release" className={inputClass} {...register('foundReleaseId')}>
+                    <option value="">Không rõ</option>
+                    {(releasesQuery.data ?? []).map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.version}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              )}
               <Field label="Epic" htmlFor="task-epic">
                 <select id="task-epic" className={inputClass} {...register('epicId')}>
                   <option value="">Không thuộc epic</option>

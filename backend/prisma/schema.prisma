@@ -43,6 +43,11 @@ enum LeaveStatus {
   cancelled
 }
 
+enum ReleaseStatus {
+  planned
+  released
+}
+
 enum SprintStatus {
   planned
   active
@@ -162,6 +167,7 @@ model Project {
   members     ProjectMember[]
   statuses    ProjectStatus[]
   sprints     Sprint[]
+  releases    Release[]
   tasks       Task[]
   attachments Attachment[]
 
@@ -211,6 +217,10 @@ model Task {
   /// Ngày bắt đầu dự kiến (Gantt/Calendar); deadline là ngày kết thúc
   startDate      DateTime?
   sprintId       Int?
+  /// Phiên bản mà việc này được phát hành / Bug được sửa
+  fixReleaseId   Int?
+  /// Phiên bản mà Bug được phát hiện
+  foundReleaseId Int?
   /// Epic (task type = epic) mà story/task này thuộc về
   epicId         Int?
   /// Chỉ dùng cho type = bug
@@ -228,6 +238,8 @@ model Task {
   project      Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
   status       ProjectStatus    @relation(fields: [statusId], references: [id], onDelete: Restrict)
   sprint       Sprint?          @relation(fields: [sprintId], references: [id], onDelete: SetNull)
+  fixRelease   Release?         @relation("ReleaseFixes", fields: [fixReleaseId], references: [id], onDelete: SetNull)
+  foundRelease Release?         @relation("ReleaseFound", fields: [foundReleaseId], references: [id], onDelete: SetNull)
   epic         Task?            @relation("EpicChildren", fields: [epicId], references: [id], onDelete: SetNull)
   epicChildren Task[]           @relation("EpicChildren")
   workLogs     WorkLog[]
@@ -250,6 +262,8 @@ model Task {
   @@index([statusId])
   @@index([projectId, type])
   @@index([sprintId])
+  @@index([fixReleaseId])
+  @@index([foundReleaseId])
   @@index([epicId])
   @@index([parentId])
 }
@@ -437,4 +451,25 @@ model TaskDependency {
 
   @@id([taskId, dependsOnId])
   @@index([dependsOnId])
+}
+
+/// Phiên bản phát hành (v1.1.0): gom việc đã làm và Bug đã sửa, để lập release notes
+model Release {
+  id          Int           @id @default(autoincrement())
+  projectId   Int
+  /// Chuẩn hóa dạng vMAJOR.MINOR.PATCH[-pre]
+  version     String        @db.VarChar(40)
+  name        String?       @db.VarChar(160)
+  description String?       @db.Text
+  status      ReleaseStatus @default(planned)
+  releasedAt  DateTime?
+  createdById Int
+  createdAt   DateTime      @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  fixes   Task[]  @relation("ReleaseFixes")
+  found   Task[]  @relation("ReleaseFound")
+
+  @@unique([projectId, version])
+  @@index([projectId, status])
 }

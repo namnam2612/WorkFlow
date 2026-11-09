@@ -73,6 +73,8 @@ function buildTask(overrides: Partial<Task> & { assigneeIds?: number[] } = {}): 
     startDate: null,
     sprintId: null,
     epicId: null,
+    fixReleaseId: null,
+    foundReleaseId: null,
     severity: null,
     environment: null,
     priority: 'medium',
@@ -872,6 +874,33 @@ describe('TasksService', () => {
       prisma.task.findUnique.mockResolvedValue(buildTask({ startDate: new Date('2026-12-01T00:00:00Z') }));
       await service.update(owner, 5, { startDate: '2026-12-03T00:00:00Z' });
       expect(activity.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'start_date_changed' }), prisma);
+    });
+  });
+  describe('phiên bản phát hành và môi trường Bug', () => {
+    const release = (over: object = {}) => ({ id: 4, projectId: 1, version: 'v1.1.0', ...over });
+    beforeEach(() => prisma.release.findUnique.mockResolvedValue(release()));
+
+    it('Bug gắn phiên bản phát hiện và phiên bản sửa trong cùng dự án', async () => {
+      await service.create(owner, { projectId: 1, title: 'Lỗi', type: 'bug', environment: 'prod', foundReleaseId: 4, fixReleaseId: 4 });
+      expect(callArg(prisma.task.create)).toMatchObject({ data: { environment: 'prod', foundReleaseId: 4, fixReleaseId: 4 } });
+    });
+
+    it('phiên bản phát hiện chỉ cho Bug; phiên bản của dự án khác bị từ chối', async () => {
+      await expect(service.create(owner, { projectId: 1, title: 'Việc', foundReleaseId: 4 })).rejects.toBeInstanceOf(BadRequestException);
+      prisma.release.findUnique.mockResolvedValue(release({ projectId: 2 }));
+      await expect(service.create(owner, { projectId: 1, title: 'Việc', fixReleaseId: 4 })).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('đổi Bug thành task thì tự gỡ phiên bản phát hiện; đổi phiên bản ghi lịch sử', async () => {
+      prisma.task.findUnique.mockResolvedValue(buildTask({ type: 'bug', statusId: 11, foundReleaseId: 4, fixReleaseId: null }));
+      await service.update(owner, 5, { type: 'task' });
+      expect(callArg(prisma.task.update)).toMatchObject({ data: { foundReleaseId: null } });
+      expect(activity.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'release_changed' }), prisma);
+    });
+
+    it('người được giao không đổi được phiên bản', async () => {
+      prisma.task.findUnique.mockResolvedValue(buildTask());
+      await expect(service.update(assignee, 5, { fixReleaseId: 4 })).rejects.toBeInstanceOf(ForbiddenException);
     });
   });
 });

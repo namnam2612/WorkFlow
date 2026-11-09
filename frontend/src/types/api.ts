@@ -104,6 +104,10 @@ export interface Task {
   sprint: { id: number; name: string; status: SprintStatus } | null;
   epicId: number | null;
   epic: { id: number; title: string } | null;
+  fixReleaseId: number | null;
+  fixRelease: { id: number; version: string } | null;
+  foundReleaseId: number | null;
+  foundRelease: { id: number; version: string } | null;
   severity: BugSeverity | null;
   environment: Environment | null;
   priority: Priority;
@@ -170,6 +174,9 @@ export interface TaskFilters {
   statusId?: number;
   sprintId?: number;
   epicId?: number;
+  fixReleaseId?: number;
+  foundReleaseId?: number;
+  environment?: Environment;
   statusCategory?: StatusCategory;
   types?: TaskType[];
   priority?: Priority;
@@ -450,4 +457,30 @@ export interface DependencyRef {
   title: string;
   status: StatusRef;
   deadline?: string | null;
+}
+
+export interface ReleaseStats {
+  items: number;
+  doneItems: number;
+  bugsFixed: number;
+  openBugsFound: number;
+}
+
+export interface Release {
+  id: number;
+  projectId: number;
+  version: string;
+  name: string | null;
+  description: string | null;
+  status: 'planned' | 'released';
+  releasedAt: string | null;
+  createdAt: string;
+  stats: ReleaseStats;
+}
+
+export interface ReleaseDetail extends Release {
+  fixes: Task[];
+  found: Task[];
+  /** Release notes dạng Markdown tự tạo từ các việc trong phiên bản */
+  notes: string;
 }

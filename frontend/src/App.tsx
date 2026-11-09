@@ -14,6 +14,8 @@ import DashboardPage from './pages/DashboardPage';
 import BacklogPage from './pages/BacklogPage';
 import LeavePage from './pages/LeavePage';
 import MyWorkPage from './pages/MyWorkPage';
+import ReleaseDetailPage from './pages/ReleaseDetailPage';
+import ReleasesPage from './pages/ReleasesPage';
 import ReportsPage from './pages/ReportsPage';
 import TeamDetailPage from './pages/TeamDetailPage';
 import TeamsPage from './pages/TeamsPage';
@@ -58,6 +60,8 @@ function AppRoutes() {
           <Route path="projects/:id/board" element={<KanbanPage />} />
           <Route path="projects/:id/backlog" element={<BacklogPage />} />
           <Route path="projects/:id/gantt" element={<GanttPage />} />
+          <Route path="projects/:id/releases" element={<ReleasesPage />} />
+          <Route path="projects/:id/releases/:releaseId" element={<ReleaseDetailPage />} />
           <Route path="calendar" element={<CalendarPage />} />
           <Route path="projects/:id/reports" element={<ReportsPage />} />
           <Route path="tasks" element={<TasksPage />} />

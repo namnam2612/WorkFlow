@@ -10,6 +10,7 @@ export type ActivityAction =
   | 'story_points_changed'
   | 'bug_info_changed'
   | 'sprint_changed'
+  | 'release_changed'
   | 'start_date_changed'
   | 'dependency_changed'
   | 'epic_changed'

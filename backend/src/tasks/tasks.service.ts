@@ -23,6 +23,10 @@ import { assigneesInclude, taskInclude, toTaskView } from './task-view';
 const detailInclude = {
   assignees: assigneesInclude,
   status: { select: STATUS_SELECT },
+  sprint: { select: { id: true, name: true, status: true } },
+  epic: { select: { id: true, title: true } },
+  fixRelease: { select: { id: true, version: true } },
+  foundRelease: { select: { id: true, version: true } },
   creator: { select: USER_BRIEF_SELECT },
   project: { select: { id: true, name: true, createdById: true } },
   parent: { select: { id: true, title: true, assignees: { select: { userId: true } } } },
@@ -62,6 +66,9 @@ export class TasksService {
     if (query.assigneeIds?.length) filters.push({ assignees: { some: { userId: { in: query.assigneeIds } } } });
     if (query.sprintId !== undefined) filters.push({ sprintId: query.sprintId });
     if (query.epicId !== undefined) filters.push({ epicId: query.epicId });
+    if (query.fixReleaseId !== undefined) filters.push({ fixReleaseId: query.fixReleaseId });
+    if (query.foundReleaseId !== undefined) filters.push({ foundReleaseId: query.foundReleaseId });
+    if (query.environment) filters.push({ environment: query.environment });
     if (query.statusId !== undefined) filters.push({ statusId: query.statusId });
     if (query.statusCategory) filters.push({ status: { category: query.statusCategory } });
     if (query.types?.length) filters.push({ type: { in: query.types } });
@@ -181,6 +188,7 @@ export class TasksService {
     this.assertDateOrder(dto.startDate, dto.deadline);
     const status = await this.statuses.resolve(dto.projectId, scopeOfType(type), dto.statusId);
     const placement = await this.resolvePlacement(dto.projectId, type, parent?.id ?? null, dto.sprintId, dto.epicId);
+    const releases = await this.resolveReleases(dto.projectId, type, dto.fixReleaseId, dto.foundReleaseId);
     const created = await this.prisma.$transaction(async (tx) => {
       const position = await this.nextPosition(tx, dto.projectId, status.id, parent?.id ?? null);
       const task = await tx.task.create({
@@ -196,6 +204,8 @@ export class TasksService {
           storyPoints: dto.storyPoints ?? null,
           sprintId: placement.sprintId,
           epicId: placement.epicId,
+          fixReleaseId: releases.fixReleaseId,
+          foundReleaseId: releases.foundReleaseId,
           severity: type === 'bug' ? (dto.severity ?? 'major') : null,
           environment: type === 'bug' ? (dto.environment ?? null) : null,
           priority: dto.priority ?? 'medium',
@@ -305,6 +315,17 @@ export class TasksService {
         )
       : { sprintId: task.sprintId, epicId: task.epicId };
 
+    // Phiên bản: foundRelease chỉ dành cho Bug (đổi khỏi Bug thì tự gỡ)
+    const releasesTouched = dto.fixReleaseId !== undefined || dto.foundReleaseId !== undefined || (typeChanged && nextType !== 'bug');
+    const releases = releasesTouched
+      ? await this.resolveReleases(
+          task.projectId,
+          nextType,
+          dto.fixReleaseId === undefined ? task.fixReleaseId : dto.fixReleaseId,
+          nextType !== 'bug' ? null : dto.foundReleaseId === undefined ? task.foundReleaseId : dto.foundReleaseId,
+        )
+      : { fixReleaseId: task.fixReleaseId, foundReleaseId: task.foundReleaseId };
+
     const data: Prisma.TaskUncheckedUpdateInput = {};
     const logs: { action: Parameters<ActivityService['log']>[0]['action']; detail: Prisma.InputJsonValue }[] = [];
 
@@ -367,6 +388,17 @@ export class TasksService {
     if (placement.sprintId !== task.sprintId) {
       data.sprintId = placement.sprintId;
       logs.push({ action: 'sprint_changed', detail: { from: await this.sprintRef(task.sprintId), to: await this.sprintRef(placement.sprintId) } });
+    }
+    if (releases.fixReleaseId !== task.fixReleaseId || releases.foundReleaseId !== task.foundReleaseId) {
+      data.fixReleaseId = releases.fixReleaseId;
+      data.foundReleaseId = releases.foundReleaseId;
+      logs.push({
+        action: 'release_changed',
+        detail: {
+          fix: { from: await this.releaseRef(task.fixReleaseId), to: await this.releaseRef(releases.fixReleaseId) },
+          found: { from: await this.releaseRef(task.foundReleaseId), to: await this.releaseRef(releases.foundReleaseId) },
+        },
+      });
     }
     if (placement.epicId !== task.epicId) {
       data.epicId = placement.epicId;
@@ -566,6 +598,27 @@ export class TasksService {
     if (start && deadline && new Date(start).getTime() > new Date(deadline).getTime()) {
       throw new BadRequestException('Ngày bắt đầu phải trước hoặc bằng deadline');
     }
+  }
+
+  /** Phiên bản sửa/phát hiện phải thuộc đúng dự án; "phát hiện ở" chỉ dành cho Bug */
+  private async resolveReleases(
+    projectId: number,
+    type: TaskType,
+    fixId: number | null | undefined,
+    foundId: number | null | undefined,
+  ): Promise<{ fixReleaseId: number | null; foundReleaseId: number | null }> {
+    if (foundId !== undefined && foundId !== null && type !== 'bug') throw new BadRequestException('Phiên bản phát hiện chỉ dùng cho Bug');
+    if (fixId !== undefined && fixId !== null && type === 'epic') throw new BadRequestException('Epic không gắn vào phiên bản phát hành');
+    for (const id of [fixId, foundId]) {
+      if (id === undefined || id === null) continue;
+      const release = await this.prisma.release.findUnique({ where: { id }, select: { projectId: true } });
+      if (!release || release.projectId !== projectId) throw new BadRequestException('Phiên bản không thuộc dự án này');
+    }
+    return { fixReleaseId: fixId ?? null, foundReleaseId: foundId ?? null };
+  }
+
+  private async releaseRef(id: number | null): Promise<{ id: number; version: string } | null> {
+    return id === null ? null : this.prisma.release.findUnique({ where: { id }, select: { id: true, version: true } });
   }
 
   private async sprintRef(id: number | null): Promise<{ id: number; name: string } | null> {

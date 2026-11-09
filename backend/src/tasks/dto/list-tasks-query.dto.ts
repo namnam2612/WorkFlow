@@ -1,4 +1,4 @@
-import { Priority, StatusCategory, TaskType } from '@prisma/client';
+import { Environment, Priority, StatusCategory, TaskType } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
 import { ArrayMaxSize, IsArray, IsBoolean, IsDateString, IsEnum, IsIn, IsInt, IsOptional, IsString, MaxLength } from 'class-validator';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
@@ -40,6 +40,21 @@ export class ListTasksQueryDto extends PaginationQueryDto {
   @Type(() => Number)
   @IsInt()
   epicId?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  fixReleaseId?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  foundReleaseId?: number;
+
+  /** Môi trường của Bug (dev/staging/prod) */
+  @IsOptional()
+  @IsEnum(Environment)
+  environment?: Environment;
 
   @IsOptional()
   @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.split(',').filter(Boolean) : value))

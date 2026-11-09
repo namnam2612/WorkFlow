@@ -241,6 +241,20 @@ export default function TaskDetailPage() {
                   </Link>
                 </MetaRow>
               )}
+              {task.fixRelease && (
+                <MetaRow label={task.type === 'bug' ? 'Sửa trong' : 'Phiên bản'}>
+                  <Link to={`/projects/${task.projectId}/releases/${task.fixRelease.id}`} className="font-medium text-brand-600 hover:text-brand-700">
+                    {task.fixRelease.version}
+                  </Link>
+                </MetaRow>
+              )}
+              {task.foundRelease && (
+                <MetaRow label="Phát hiện ở">
+                  <Link to={`/projects/${task.projectId}/releases/${task.foundRelease.id}`} className="font-medium text-brand-600 hover:text-brand-700">
+                    {task.foundRelease.version}
+                  </Link>
+                </MetaRow>
+              )}
               {task.epic && (
                 <MetaRow label="Epic">
                   <Link to={`/tasks/${task.epic.id}`} className="font-medium text-brand-600 hover:text-brand-700">

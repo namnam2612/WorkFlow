@@ -78,6 +78,15 @@ export function describeActivity(entry: ActivityLogEntry): string {
       const name = (v: unknown) => (v && typeof v === 'object' && 'name' in v ? String((v as { name: unknown }).name) : 'Backlog');
       return `đã chuyển sprint từ "${name(detail.from)}" sang "${name(detail.to)}"`;
     }
+    case 'release_changed': {
+      const v = (x: unknown) => (x && typeof x === 'object' && 'version' in x ? String((x as { version: unknown }).version) : 'không có');
+      const fix = detail.fix as { from?: unknown; to?: unknown } | undefined;
+      const found = detail.found as { from?: unknown; to?: unknown } | undefined;
+      const parts: string[] = [];
+      if (fix && v(fix.from) !== v(fix.to)) parts.push(`phiên bản phát hành ${v(fix.from)} → ${v(fix.to)}`);
+      if (found && v(found.from) !== v(found.to)) parts.push(`phiên bản phát hiện ${v(found.from)} → ${v(found.to)}`);
+      return `đã đổi ${parts.join(', ') || 'phiên bản'}`;
+    }
     case 'epic_changed': {
       const title = (v: unknown) => (v && typeof v === 'object' && 'title' in v ? String((v as { title: unknown }).title) : 'không có');
       return `đã đổi epic từ "${title(detail.from)}" sang "${title(detail.to)}"`;
