@@ -8,9 +8,12 @@ import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { validateEnv } from './config/env.validation';
+import { CommentsModule } from './comments/comments.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProjectsModule } from './projects/projects.module';
+import { RealtimeModule } from './realtime/realtime.module';
+import { SchedulerModule } from './scheduler/scheduler.module';
 import { TasksModule } from './tasks/tasks.module';
 import { UsersModule } from './users/users.module';
 
@@ -22,10 +25,13 @@ import { UsersModule } from './users/users.module';
     PrismaModule,
     ActivityModule,
     NotificationsModule,
+    RealtimeModule,
+    SchedulerModule,
     AuthModule,
     UsersModule,
     ProjectsModule,
     TasksModule,
+    CommentsModule,
   ],
   providers: [
     // Thứ tự quan trọng: throttle -> xác thực JWT -> kiểm tra vai trò

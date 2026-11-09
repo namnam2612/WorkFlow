@@ -5,6 +5,7 @@ import { Paginated, toPaginated } from '../common/dto/pagination-query.dto';
 import { AuthUser } from '../common/types/auth-user';
 import { USER_BRIEF_SELECT } from '../common/utils/user-brief';
 import { NewNotification, NotificationsService } from '../notifications/notifications.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProjectAccessService, ProjectRef } from '../projects/project-access.service';
 import { BoardQueryDto } from './dto/board-query.dto';
@@ -53,6 +54,7 @@ export class TasksService {
     private readonly access: ProjectAccessService,
     private readonly activity: ActivityService,
     private readonly notifications: NotificationsService,
+    private readonly realtime: RealtimeService,
   ) {}
 
   // ---------------------------------------------------------------- queries
@@ -155,8 +157,9 @@ export class TasksService {
     });
 
     if (created.assigneeId !== null && created.assigneeId !== user.id) {
-      await this.notifications.notify([this.assignedNotification(created.assigneeId, created.title, parent?.id ?? created.id)]);
+      await this.notifications.notify([this.assignedNotification(created.assigneeId, created.title, created.id)]);
     }
+    this.realtime.taskChanged(created.projectId, created.id);
     return this.get(user, created.id);
   }
 
@@ -240,7 +243,7 @@ export class TasksService {
 
     const notices: NewNotification[] = [];
     if (assigneeChanged && updated.assigneeId !== null && updated.assigneeId !== user.id) {
-      notices.push(this.assignedNotification(updated.assigneeId, updated.title, task.parentId ?? id));
+      notices.push(this.assignedNotification(updated.assigneeId, updated.title, id));
     }
     if (statusChanged && dto.status) notices.push(...this.statusNotifications(user, project, updated, dto.status));
     if (dto.deadline !== undefined && updated.deadline?.getTime() !== task.deadline?.getTime()) {
@@ -254,6 +257,7 @@ export class TasksService {
       }
     }
     await this.notifications.notify(notices);
+    this.realtime.taskChanged(task.projectId, id);
     return this.get(user, id);
   }
 
@@ -300,6 +304,7 @@ export class TasksService {
     });
 
     if (statusChanged) await this.notifications.notify(this.statusNotifications(user, project, updated, dto.status));
+    this.realtime.taskChanged(task.projectId, id);
     return this.get(user, id);
   }
 
@@ -307,6 +312,7 @@ export class TasksService {
     const task = await this.findTaskOrThrow(id);
     await this.access.assertCanManage(user, task.projectId);
     await this.prisma.task.delete({ where: { id } });
+    this.realtime.taskChanged(task.projectId, id);
   }
 
   // ---------------------------------------------------------------- helpers
@@ -354,8 +360,8 @@ export class TasksService {
     return new Map(users.map((u) => [u.id, u.name]));
   }
 
-  private taskLink(task: Pick<Task, 'id' | 'parentId'>): string {
-    return `/tasks/${task.parentId ?? task.id}`;
+  private taskLink(task: Pick<Task, 'id'>): string {
+    return `/tasks/${task.id}`;
   }
 
   private assignedNotification(userId: number, title: string, linkTaskId: number): NewNotification {
