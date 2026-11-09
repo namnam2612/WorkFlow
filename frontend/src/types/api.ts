@@ -531,3 +531,29 @@ export interface TestResultView {
 }
 
 export type TestRunDetail = TestRunSummary & { results: TestResultView[] };
+
+export interface WikiNode {
+  id: number;
+  parentId: number | null;
+  title: string;
+  slug: string;
+  position: number;
+  updatedAt: string;
+}
+
+export interface WikiPageDetail extends WikiNode {
+  projectId: number;
+  content: string;
+  createdAt: string;
+  createdBy: UserBrief | null;
+  updatedBy: UserBrief | null;
+}
+
+export interface WikiRevisionView {
+  id: number;
+  pageId: number;
+  title: string;
+  content: string;
+  createdAt: string;
+  author: UserBrief | null;
+}

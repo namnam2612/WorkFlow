@@ -18,6 +18,7 @@ import QaPage from './pages/QaPage';
 import ReleaseDetailPage from './pages/ReleaseDetailPage';
 import ReleasesPage from './pages/ReleasesPage';
 import ReportsPage from './pages/ReportsPage';
+import WikiPage from './pages/WikiPage';
 import TestRunPage from './pages/TestRunPage';
 import TeamDetailPage from './pages/TeamDetailPage';
 import TeamsPage from './pages/TeamsPage';
@@ -62,6 +63,8 @@ function AppRoutes() {
           <Route path="projects/:id/board" element={<KanbanPage />} />
           <Route path="projects/:id/backlog" element={<BacklogPage />} />
           <Route path="projects/:id/gantt" element={<GanttPage />} />
+          <Route path="projects/:id/wiki" element={<WikiPage />} />
+          <Route path="projects/:id/wiki/:pageId" element={<WikiPage />} />
           <Route path="projects/:id/qa" element={<QaPage />} />
           <Route path="projects/:id/qa/runs/:runId" element={<TestRunPage />} />
           <Route path="projects/:id/releases" element={<ReleasesPage />} />
