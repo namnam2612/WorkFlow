@@ -14,15 +14,7 @@ import { ListTasksQueryDto } from './dto/list-tasks-query.dto';
 import { MoveTaskDto } from './dto/move-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { STATUS_LABEL_VI } from './task-labels';
-
-const taskInclude = {
-  assignee: { select: USER_BRIEF_SELECT },
-  project: { select: { id: true, name: true } },
-  subtasks: { select: { status: true } },
-  _count: { select: { comments: true } },
-} satisfies Prisma.TaskInclude;
-
-type TaskWithRelations = Prisma.TaskGetPayload<{ include: typeof taskInclude }>;
+import { taskInclude, toTaskView } from './task-view';
 
 const detailInclude = {
   assignee: { select: USER_BRIEF_SELECT },
@@ -32,17 +24,6 @@ const detailInclude = {
   subtasks: { include: taskInclude, orderBy: [{ position: 'asc' }, { id: 'asc' }] },
   _count: { select: { comments: true } },
 } satisfies Prisma.TaskInclude;
-
-/** Chuẩn hóa task trả về: thêm số subtask/bình luận, bỏ dữ liệu thô */
-function toTaskView(task: TaskWithRelations) {
-  const { subtasks, _count, ...rest } = task;
-  return {
-    ...rest,
-    subtaskTotal: subtasks.length,
-    subtaskDone: subtasks.filter((s) => s.status === 'done').length,
-    commentCount: _count.comments,
-  };
-}
 
 /** Các trường mà người được giao (không phải leader/admin) được phép sửa */
 const ASSIGNEE_EDITABLE_FIELDS: ReadonlySet<string> = new Set(['status', 'actualHours']);

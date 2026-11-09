@@ -5,6 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { ActivityModule } from './activity/activity.module';
 import { AuthModule } from './auth/auth.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { validateEnv } from './config/env.validation';
@@ -32,6 +33,7 @@ import { UsersModule } from './users/users.module';
     ProjectsModule,
     TasksModule,
     CommentsModule,
+    DashboardModule,
   ],
   providers: [
     // Thứ tự quan trọng: throttle -> xác thực JWT -> kiểm tra vai trò

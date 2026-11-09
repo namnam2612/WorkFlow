@@ -25,8 +25,8 @@
 - [x] Cron mỗi giờ quét sắp hạn (<=24h)/quá hạn, chống trùng; admin chạy tay: POST /notifications/scan-deadlines
 
 ## Giai đoạn 6 — Dashboard & Thành viên
-- [ ] API thống kê
-- [ ] Dashboard (Recharts), trang thành viên
+- [x] API thống kê (GET /dashboard: theo trạng thái, sắp hạn 3 ngày, quá hạn, tiến độ dự án, workload)
+- [x] Dashboard (Recharts, bảng thay thế), trang thành viên (đã làm ở giai đoạn 3)
 
 ## Giai đoạn 7 — Hoàn thiện
 - [ ] Unit test auth + tasks
@@ -54,3 +54,5 @@
 - Bình luận: leader/admin của dự án bình luận mọi task; member chỉ trên task được giao cho mình; xóa: tác giả hoặc leader/admin của dự án.
 - Thông báo phát sinh khi: được giao việc, đổi trạng thái (báo người tạo/leader/assignee, trừ người thao tác), bình luận, đổi deadline, thêm vào dự án, task sắp hạn (<=24h) và quá hạn (cron).
 - Socket.IO: sự kiện `notification` (riêng từng user) và `task:changed` (thành viên dự án + admin) để Kanban/danh sách tự làm mới.
+- Dashboard: member luôn xem số liệu "của tôi"; leader/admin chuyển được giữa "Cả nhóm" và "Của tôi". Biểu đồ workload và tiến độ dự án tính trên mọi dự án người xem được thấy.
+- Màu biểu đồ theo trạng thái dùng bảng màu phân loại đã qua `validate_palette` (kèm legend, nhãn số, khe 2px, tooltip, bảng thay thế).

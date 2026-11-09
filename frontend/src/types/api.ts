@@ -129,10 +129,13 @@ export interface TaskFilters {
 export type StatusCounts = Record<TaskStatus, number>;
 
 export interface DashboardData {
+  scope: 'mine' | 'team';
   statusCounts: StatusCounts;
   totalTasks: number;
   upcoming: Task[];
+  upcomingCount: number;
   overdue: Task[];
+  overdueCount: number;
   projectProgress: { projectId: number; name: string; total: number; done: number; progress: number }[];
   workload: { userId: number; name: string; todo: number; in_progress: number; review: number; blocked: number; done: number; overdue: number }[];
 }
