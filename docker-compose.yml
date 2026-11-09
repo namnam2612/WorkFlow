@@ -43,6 +43,10 @@ services:
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
       TRUST_PROXY: 1
       SEED_DEFAULT_PASSWORD: ${SEED_DEFAULT_PASSWORD:-Password123!}
+      UPLOAD_DIR: /app/uploads
+      MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-20971520}
+    volumes:
+      - uploads_data:/app/uploads
     ports:
       - "${BACKEND_PORT:-3000}:3000"
 
@@ -57,3 +61,4 @@ services:
 
 volumes:
   mysql_data:
+  uploads_data:

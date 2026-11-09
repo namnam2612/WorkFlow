@@ -4,6 +4,7 @@ import { ProtectedRoute } from './auth/ProtectedRoute';
 import { LoadingScreen } from './components/fx/LoadingScreen';
 import { ParticleBackground } from './components/fx/ParticleBackground';
 import { Layout } from './components/layout/Layout';
+import DocumentsPage from './pages/DocumentsPage';
 import DashboardPage from './pages/DashboardPage';
 import KanbanPage from './pages/KanbanPage';
 import LoginPage from './pages/LoginPage';
@@ -12,6 +13,7 @@ import MembersPage from './pages/MembersPage';
 import NotFoundPage from './pages/NotFoundPage';
 import NotificationsPage from './pages/NotificationsPage';
 import RegisterPage from './pages/RegisterPage';
+import ProfilePage from './pages/ProfilePage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 import ProjectsPage from './pages/ProjectsPage';
 import TaskDetailPage from './pages/TaskDetailPage';
@@ -41,8 +43,10 @@ function AppRoutes() {
           <Route path="projects/:id" element={<ProjectDetailPage />} />
           <Route path="projects/:id/board" element={<KanbanPage />} />
           <Route path="tasks" element={<TasksPage />} />
+          <Route path="documents" element={<DocumentsPage />} />
           <Route path="tasks/:id" element={<TaskDetailPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
+          <Route path="profile" element={<ProfilePage />} />
           <Route path="members" element={<MembersPage />} />
           <Route path="members/:id" element={<MemberDetailPage />} />
           <Route path="*" element={<NotFoundPage />} />

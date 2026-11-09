@@ -46,6 +46,10 @@ export function describeActivity(entry: ActivityLogEntry): string {
     }
     case 'comment_added':
       return 'đã bình luận';
+    case 'attachment_added':
+      return `đã đính kèm file ${String(detail.name ?? '')}`;
+    case 'attachment_removed':
+      return `đã xóa file đính kèm ${String(detail.name ?? '')}`;
     case 'subtask_added':
       return `đã thêm công việc con "${String(detail.title ?? '')}"`;
     default:

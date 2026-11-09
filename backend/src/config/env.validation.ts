@@ -28,6 +28,18 @@ class EnvironmentVariables {
   @Max(5)
   TRUST_PROXY?: number;
 
+  /** Thư mục lưu file đính kèm (mặc định ./uploads) */
+  @IsOptional()
+  @IsString()
+  UPLOAD_DIR?: string;
+
+  /** Dung lượng tối đa mỗi file đính kèm, đơn vị byte (mặc định 20971520 = 20MB) */
+  @IsOptional()
+  @IsInt()
+  @Min(1024)
+  @Max(1024 * 1024 * 1024)
+  MAX_UPLOAD_SIZE?: number;
+
   @IsString()
   @MinLength(1)
   DATABASE_URL: string;

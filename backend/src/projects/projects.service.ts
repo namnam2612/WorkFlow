@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { AttachmentCleanupService } from '../attachments/attachment-cleanup.service';
 import { ActivityService } from '../activity/activity.service';
 import { AuthUser } from '../common/types/auth-user';
 import { USER_BRIEF_SELECT } from '../common/utils/user-brief';
@@ -29,6 +30,7 @@ export class ProjectsService {
     private readonly access: ProjectAccessService,
     private readonly notifications: NotificationsService,
     private readonly activity: ActivityService,
+    private readonly attachmentCleanup: AttachmentCleanupService,
   ) {}
 
   async list(user: AuthUser, search?: string) {
@@ -102,7 +104,9 @@ export class ProjectsService {
 
   async remove(user: AuthUser, id: number): Promise<void> {
     await this.access.assertCanManage(user, id);
+    const files = await this.attachmentCleanup.collectProjectFiles(id);
     await this.prisma.project.delete({ where: { id } });
+    await this.attachmentCleanup.deleteFiles(files);
   }
 
   async addMember(user: AuthUser, projectId: number, userId: number) {

@@ -57,4 +57,6 @@ export const ACTION_LABEL: Record<string, string> = {
   hours_changed: 'đã cập nhật giờ làm',
   comment_added: 'đã bình luận',
   subtask_added: 'đã thêm công việc con',
+  attachment_added: 'đã đính kèm file',
+  attachment_removed: 'đã xóa file đính kèm',
 };

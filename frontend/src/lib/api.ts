@@ -84,17 +84,20 @@ function refreshOnce(): Promise<boolean> {
 
 async function send(path: string, options: RequestOptions): Promise<Response> {
   const headers: Record<string, string> = {};
-  if (options.body !== undefined) headers['Content-Type'] = 'application/json';
+  const isForm = options.body instanceof FormData;
+  // FormData: để trình duyệt tự đặt Content-Type (kèm boundary)
+  if (options.body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
   const access = tokenStore.getAccess();
   if (access) headers.Authorization = `Bearer ${access}`;
   return fetch(buildUrl(path, options.query), {
     method: options.method ?? 'GET',
     headers,
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    body: options.body === undefined ? undefined : isForm ? (options.body as FormData) : JSON.stringify(options.body),
   });
 }
 
-export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+/** Gửi request có xác thực, tự refresh token khi 401; ném ApiError nếu không thành công */
+async function requestResponse(path: string, options: RequestOptions = {}): Promise<Response> {
   let response = await send(path, options);
 
   if (response.status === 401 && !options.skipAuthRefresh && tokenStore.getRefresh()) {
@@ -108,8 +111,65 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   }
 
   if (!response.ok) throw await toApiError(response);
+  return response;
+}
+
+export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const response = await requestResponse(path, options);
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
+}
+
+/** Tải nội dung nhị phân (file đính kèm) bằng request có xác thực — thẻ <img>/<a> không gửi được header Authorization */
+export async function fetchBlob(path: string): Promise<Blob> {
+  return (await requestResponse(path)).blob();
+}
+
+function uploadOnce<T>(path: string, form: FormData, onProgress: (percent: number) => void): Promise<{ status: number; body: T | { message?: string | string[] } }> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', buildUrl(path));
+    const access = tokenStore.getAccess();
+    if (access) xhr.setRequestHeader('Authorization', `Bearer ${access}`);
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress(Math.round((event.loaded / event.total) * 100));
+    };
+    xhr.onerror = () => reject(new ApiError(0, 'Không kết nối được máy chủ, vui lòng thử lại'));
+    xhr.onload = () => {
+      let body: unknown = {};
+      try {
+        body = JSON.parse(xhr.responseText) as unknown;
+      } catch {
+        /* phản hồi không phải JSON */
+      }
+      resolve({ status: xhr.status, body: body as T });
+    };
+    xhr.send(form);
+  });
+}
+
+/** Tải file lên (multipart) có báo tiến trình 0–100. Dùng XMLHttpRequest vì fetch chưa có tiến trình upload. */
+export async function uploadFiles<T>(path: string, files: File[], onProgress: (percent: number) => void): Promise<T> {
+  const build = () => {
+    const form = new FormData();
+    for (const file of files) form.append('files', file, file.name);
+    return form;
+  };
+  let result = await uploadOnce<T>(path, build(), onProgress);
+  if (result.status === 401 && tokenStore.getRefresh()) {
+    if (await refreshOnce()) {
+      result = await uploadOnce<T>(path, build(), onProgress);
+    } else {
+      tokenStore.clear();
+      window.dispatchEvent(new Event(AUTH_LOGOUT_EVENT));
+    }
+  }
+  if (result.status < 200 || result.status >= 300) {
+    const message = (result.body as { message?: string | string[] }).message;
+    const details = Array.isArray(message) ? message : [];
+    throw new ApiError(result.status, (Array.isArray(message) ? message[0] : message) ?? 'Đã có lỗi xảy ra, vui lòng thử lại', details);
+  }
+  return result.body as T;
 }
 
 export const api = {
@@ -117,6 +177,7 @@ export const api = {
   post: <T>(path: string, body?: unknown, skipAuthRefresh = false) =>
     request<T>(path, { method: 'POST', body: body ?? {}, skipAuthRefresh }),
   patch: <T>(path: string, body: unknown) => request<T>(path, { method: 'PATCH', body }),
+  put: <T>(path: string, body: unknown) => request<T>(path, { method: 'PUT', body }),
   delete: <T = void>(path: string) => request<T>(path, { method: 'DELETE' }),
 };
 

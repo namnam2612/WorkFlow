@@ -38,6 +38,18 @@ model User {
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
 
+  // Hồ sơ cá nhân (tất cả tùy chọn)
+  jobTitle     String?  @db.VarChar(120)
+  phone        String?  @db.VarChar(20)
+  contactEmail String?  @db.VarChar(190)
+  bio          String?  @db.VarChar(500)
+  githubUrl    String?  @db.VarChar(255)
+  linkedinUrl  String?  @db.VarChar(255)
+  facebookUrl  String?  @db.VarChar(255)
+
+  avatar          UserAvatar?
+  attachments     Attachment[]
+
   createdProjects Project[]       @relation("ProjectCreator")
   memberships     ProjectMember[]
   assignedTasks   Task[]          @relation("TaskAssignee")
@@ -46,6 +58,16 @@ model User {
   activityLogs    ActivityLog[]
   notifications   Notification[]
   refreshTokens   RefreshToken[]
+}
+
+/// Ảnh đại diện đã tải lên (lưu trong DB để không phụ thuộc ổ đĩa của container)
+model UserAvatar {
+  userId    Int      @id
+  mime      String   @db.VarChar(20)
+  data      Bytes    @db.MediumBlob
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model RefreshToken {
@@ -114,12 +136,36 @@ model Task {
 
   comments     Comment[]
   activityLogs ActivityLog[]
+  attachments  Attachment[]
 
   @@index([assigneeId, status])
   @@index([deadline])
   @@index([projectId])
   @@index([projectId, status, position])
   @@index([parentId])
+}
+
+/// File đính kèm của task. File thật nằm ở UPLOAD_DIR (qua StorageService), bảng này chỉ giữ metadata.
+model Attachment {
+  id           Int      @id @default(autoincrement())
+  taskId       Int
+  uploaderId   Int
+  /// Tên gốc người dùng đặt (hiển thị và dùng khi tải về)
+  originalName String   @db.VarChar(255)
+  /// Tên lưu trên ổ đĩa: UUID + đuôi file, không lộ tên gốc
+  storedName   String   @db.VarChar(100)
+  mimeType     String   @db.VarChar(120)
+  size         Int
+  /// Đường dẫn tương đối so với UPLOAD_DIR (vd 2026/11/<uuid>.pdf)
+  path         String   @db.VarChar(255)
+  createdAt    DateTime @default(now())
+
+  task     Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploader User @relation(fields: [uploaderId], references: [id], onDelete: Restrict)
+
+  @@index([taskId])
+  @@index([uploaderId])
+  @@index([createdAt])
 }
 
 model Comment {

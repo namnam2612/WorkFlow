@@ -40,6 +40,10 @@ services:
       ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-true}
       # 2 reverse proxy phía trước: nginx của máy chủ -> nginx trong container frontend
       TRUST_PROXY: 2
+      UPLOAD_DIR: /app/uploads
+      MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-20971520}
+    volumes:
+      - uploads_data:/app/uploads
 
   frontend:
     build: ../frontend
@@ -51,3 +55,4 @@ services:
 
 volumes:
   mysql_data:
+  uploads_data:

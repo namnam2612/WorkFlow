@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { ArrowDown, ArrowUp, ListChecks, MessageSquare } from 'lucide-react';
+import { ArrowDown, ArrowUp, ListChecks, MessageSquare, Paperclip } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { isOverdue } from '../../lib/format';
 import type { Task, TaskFilters } from '../../types/api';
@@ -61,6 +61,12 @@ export function TaskTable({ tasks, showProject = true, sortBy, order, onSort }: 
                     <span className="inline-flex items-center gap-1">
                       <ListChecks className="h-3.5 w-3.5" />
                       {task.subtaskDone}/{task.subtaskTotal}
+                    </span>
+                  )}
+                  {task.attachmentCount > 0 && (
+                    <span className="inline-flex items-center gap-1" title={`${task.attachmentCount} file đính kèm`}>
+                      <Paperclip className="h-3.5 w-3.5" />
+                      {task.attachmentCount}
                     </span>
                   )}
                   {task.commentCount > 0 && (

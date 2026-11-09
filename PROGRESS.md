@@ -34,8 +34,16 @@
 - [x] Dockerfile backend + frontend (nginx proxy /api + /socket.io), compose chạy full stack — đã kiểm thử từ DB trống
 - [x] Kiểm tra cuối, README
 
+## Giai đoạn 8 — File đính kèm & Kho tài liệu
+- [x] Prisma `Attachment` (+ migration), `StorageService` (local, UUID, `UPLOAD_DIR`), Multer 20MB/file (`MAX_UPLOAD_SIZE`), chặn file thực thi
+- [x] API upload/list theo task, Kho tài liệu `GET /attachments` (tìm tên, dự án, người gửi, loại, ngày, sắp xếp, phân trang), download (tên tiếng Việt), preview ảnh/PDF, xóa; phân quyền theo dự án; ActivityLog
+- [x] Frontend: khu "File đính kèm" trong chi tiết task (kéo thả, tiến trình), trang Kho tài liệu (bảng/lưới, link tới task, "Người gửi"), xem trước trong modal, số file 📎 trên Kanban và danh sách task
+- [x] Kho tài liệu tách tab Tài liệu/Ảnh, nhóm theo ngày; xem trước thêm txt/md/csv/json/xml/yaml/html/docx/xlsx/pptx/svg (migration backfill mimeType cho file cũ)
+- [x] Seed có file mẫu do nhiều người gửi; test phân quyền AttachmentsService; docker volume `uploads_data`, nginx cho phép body lớn
+
 ## Quyết định thiết kế
 - MySQL của dự án map ra cổng host **3307** vì máy đã có MySQL khác ở 3306.
+- Hồ sơ cá nhân (`/profile`): chức danh, SĐT, email liên hệ, giới thiệu, link GitHub/LinkedIn/Facebook (kiểm tra tên miền ở backend). Ảnh đại diện lưu trong DB (bảng `UserAvatar`, MEDIUMBLOB) để không phụ thuộc ổ đĩa container; trình duyệt tự cắt vuông 256px trước khi gửi, backend nhận tối đa 1MB và kiểm tra JPEG/PNG/WebP bằng chữ ký file. `GET /users/:id/avatar` công khai (thẻ <img> không gửi được header Authorization).
 - Ghim phiên bản major ổn định: NestJS 11, Prisma 6, TypeScript 5.9, ESLint 9, Vite 7, Tailwind 4, Jest 29.
 
 ## Vấn đề / ghi chú

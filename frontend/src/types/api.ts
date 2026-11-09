@@ -10,6 +10,14 @@ export interface User {
   avatarUrl: string | null;
   isActive: boolean;
   createdAt: string;
+  /** Hồ sơ cá nhân (tùy chọn) */
+  jobTitle: string | null;
+  phone: string | null;
+  contactEmail: string | null;
+  bio: string | null;
+  githubUrl: string | null;
+  linkedinUrl: string | null;
+  facebookUrl: string | null;
 }
 
 export interface UserBrief {
@@ -74,6 +82,7 @@ export interface Task {
   subtaskTotal: number;
   subtaskDone: number;
   commentCount: number;
+  attachmentCount: number;
 }
 
 export interface TaskDetail extends Task {
@@ -148,4 +157,42 @@ export interface UserStats {
 
 export interface UserProfile extends User {
   stats: UserStats;
+}
+
+export type FileCategory = 'image' | 'pdf' | 'document' | 'spreadsheet' | 'other';
+
+/** File đính kèm; `uploader` là người gửi (người đã tải file lên) */
+export interface Attachment {
+  id: number;
+  taskId: number;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  createdAt: string;
+  uploader: UserBrief;
+  task: { id: number; title: string; status: TaskStatus };
+  project: { id: number; name: string };
+  /** Ảnh/PDF xem trực tiếp được */
+  previewable: boolean;
+  /** Người xem có quyền xóa file này không (người gửi, leader dự án, admin) */
+  canDelete: boolean;
+}
+
+/** Số file theo loại (cùng bộ lọc trừ loại); `file` = mọi thứ không phải ảnh */
+export type AttachmentCounts = Record<FileCategory | 'all' | 'file', number>;
+
+export type AttachmentPage = Paginated<Attachment> & { counts: AttachmentCounts };
+
+export interface AttachmentFilters {
+  search?: string;
+  projectId?: number;
+  uploaderId?: number;
+  /** `file` = mọi thứ không phải ảnh (tab Tài liệu) */
+  type?: FileCategory | 'file';
+  from?: string;
+  to?: string;
+  sortBy?: 'createdAt' | 'name' | 'size';
+  order?: 'asc' | 'desc';
+  page?: number;
+  pageSize?: number;
 }

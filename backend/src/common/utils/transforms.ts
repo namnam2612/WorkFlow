@@ -5,6 +5,13 @@ export function toBoolean({ value }: { value: unknown }): unknown {
   return value;
 }
 
+/** Chuỗi rỗng (sau khi trim) => null: cho phép người dùng xóa một trường hồ sơ */
+export function emptyToNull({ value }: { value: unknown }): unknown {
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  return trimmed === '' ? null : trimmed;
+}
+
 export function trimString({ value }: { value: unknown }): unknown {
   return typeof value === 'string' ? value.trim() : value;
 }

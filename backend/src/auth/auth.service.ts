@@ -16,6 +16,13 @@ export interface PublicUser {
   avatarUrl: string | null;
   isActive: boolean;
   createdAt: Date;
+  jobTitle: string | null;
+  phone: string | null;
+  contactEmail: string | null;
+  bio: string | null;
+  githubUrl: string | null;
+  linkedinUrl: string | null;
+  facebookUrl: string | null;
 }
 
 export interface AuthTokens {
@@ -58,6 +65,13 @@ export class AuthService {
       avatarUrl: user.avatarUrl,
       isActive: user.isActive,
       createdAt: user.createdAt,
+      jobTitle: user.jobTitle,
+      phone: user.phone,
+      contactEmail: user.contactEmail,
+      bio: user.bio,
+      githubUrl: user.githubUrl,
+      linkedinUrl: user.linkedinUrl,
+      facebookUrl: user.facebookUrl,
     };
   }
 

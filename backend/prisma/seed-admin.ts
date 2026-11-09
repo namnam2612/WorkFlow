@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { clearAttachments } from './seed-files';
 
 /**
  * Tạo (hoặc cập nhật) duy nhất tài khoản admin.
@@ -17,6 +18,7 @@ async function main(): Promise<void> {
 
   if (reset) {
     console.log('XÓA TOÀN BỘ dữ liệu...');
+    await clearAttachments(prisma); // xóa cả file trên ổ đĩa
     await prisma.notification.deleteMany();
     await prisma.activityLog.deleteMany();
     await prisma.comment.deleteMany();

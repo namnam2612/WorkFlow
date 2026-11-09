@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { ListChecks, MessageSquare } from 'lucide-react';
+import { ListChecks, MessageSquare, Paperclip } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PRIORITY_META } from '../../lib/constants';
 import { isOverdue } from '../../lib/format';
@@ -50,6 +50,12 @@ export function KanbanCard({ task, overlay = false, dimmed = false, locked = fal
             <span className="inline-flex items-center gap-0.5 text-[11px] text-slate-500">
               <ListChecks className="h-3 w-3" />
               {task.subtaskDone}/{task.subtaskTotal}
+            </span>
+          )}
+          {task.attachmentCount > 0 && (
+            <span className="inline-flex items-center gap-0.5 text-[11px] text-slate-500" title={`${task.attachmentCount} file đính kèm`}>
+              <Paperclip className="h-3 w-3" />
+              {task.attachmentCount}
             </span>
           )}
           {task.commentCount > 0 && (

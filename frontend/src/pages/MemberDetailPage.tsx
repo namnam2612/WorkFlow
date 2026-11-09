@@ -2,6 +2,8 @@ import clsx from 'clsx';
 import { ArrowLeft } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { ContactInfo } from '../components/profile/ContactInfo';
+import { Card } from '../components/ui/Card';
 import { TaskTable } from '../components/tasks/TaskTable';
 import { Avatar } from '../components/ui/Avatar';
 import { EmptyState, ErrorState, PageLoader } from '../components/ui/States';
@@ -54,7 +56,7 @@ export default function MemberDetailPage() {
         <Avatar name={member.name} avatarUrl={member.avatarUrl} size="lg" />
         <div className="min-w-0">
           <h1 className="truncate text-xl font-semibold text-slate-900">{member.name}</h1>
-          <p className="truncate text-sm text-slate-500">{member.email}</p>
+          <p className="truncate text-sm text-slate-500">{member.jobTitle ?? member.email}</p>
           <span className="mt-1.5 inline-block rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">{ROLE_LABEL[member.role]}</span>
         </div>
         <div className="ml-auto hidden text-right sm:block">
@@ -62,6 +64,10 @@ export default function MemberDetailPage() {
           <p className="text-xs text-slate-500">công việc được giao</p>
         </div>
       </div>
+
+      <Card title="Thông tin liên hệ" className="mb-6">
+        <ContactInfo user={member} />
+      </Card>
 
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {TABS.map((t) => (

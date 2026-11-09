@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
 import { DeadlineText } from '../components/tasks/DeadlineText';
 import { SubtaskRow } from '../components/tasks/SubtaskRow';
+import { AttachmentSection } from '../components/attachments/AttachmentSection';
 import { TaskDiscussion } from '../components/tasks/TaskDiscussion';
 import { TaskFormModal } from '../components/tasks/TaskFormModal';
 import { Avatar } from '../components/ui/Avatar';
@@ -165,6 +166,8 @@ export default function TaskDetailPage() {
               )}
             </Card>
           )}
+
+          <AttachmentSection taskId={task.id} />
 
           <TaskDiscussion taskId={task.id} canComment={canComment} canModerate={canManage} />
         </div>

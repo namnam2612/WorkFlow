@@ -7,3 +7,6 @@ coverage/
 .DS_Store
 .vite/
 *.tsbuildinfo
+
+# File đính kèm do người dùng tải lên
+uploads/

@@ -18,6 +18,16 @@ export interface UserStats {
   total: number;
 }
 
+export const MAX_AVATAR_BYTES = 1024 * 1024;
+
+/** Nhận diện JPEG/PNG/WebP qua chữ ký (magic bytes) */
+export function detectImageMime(buf: Buffer): 'image/jpeg' | 'image/png' | 'image/webp' | null {
+  if (buf.length >= 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return 'image/jpeg';
+  if (buf.length >= 8 && buf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return 'image/png';
+  if (buf.length >= 12 && buf.subarray(0, 4).toString('ascii') === 'RIFF' && buf.subarray(8, 12).toString('ascii') === 'WEBP') return 'image/webp';
+  return null;
+}
+
 const emptyCounts = (): StatusCounts => ({ todo: 0, in_progress: 0, review: 0, done: 0, blocked: 0 });
 
 @Injectable()
@@ -104,6 +114,13 @@ export class UsersService {
     const data: Prisma.UserUpdateInput = {
       name: dto.name,
       avatarUrl: dto.avatarUrl,
+      jobTitle: dto.jobTitle,
+      phone: dto.phone,
+      contactEmail: dto.contactEmail,
+      bio: dto.bio,
+      githubUrl: dto.githubUrl,
+      linkedinUrl: dto.linkedinUrl,
+      facebookUrl: dto.facebookUrl,
       role: dto.role,
       isActive: dto.isActive,
     };
@@ -119,6 +136,47 @@ export class UsersService {
       return result;
     });
     return AuthService.toPublicUser(updated);
+  }
+
+  /** Tải ảnh đại diện (chỉ chính chủ hoặc admin). Kiểm tra định dạng bằng chữ ký file, không tin Content-Type do client gửi. */
+  async setAvatar(actor: AuthUser, id: number, file: { buffer: Buffer } | undefined): Promise<PublicUser> {
+    this.assertCanEditAvatar(actor, id);
+    if (!file || file.buffer.length === 0) throw new BadRequestException('Vui lòng chọn ảnh');
+    if (file.buffer.length > MAX_AVATAR_BYTES) throw new BadRequestException('Ảnh quá lớn (tối đa 1MB)');
+    const mime = detectImageMime(file.buffer);
+    if (!mime) throw new BadRequestException('Chỉ hỗ trợ ảnh JPEG, PNG hoặc WebP');
+    if (!(await this.prisma.user.findUnique({ where: { id }, select: { id: true } }))) throw new NotFoundException('Không tìm thấy người dùng');
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      await tx.userAvatar.upsert({
+        where: { userId: id },
+        create: { userId: id, mime, data: Uint8Array.from(file.buffer) },
+        update: { mime, data: Uint8Array.from(file.buffer) },
+      });
+      // ?v= đổi theo mỗi lần tải lên để trình duyệt không dùng ảnh cũ trong cache
+      return tx.user.update({ where: { id }, data: { avatarUrl: `/api/users/${id}/avatar?v=${Date.now()}` } });
+    });
+    return AuthService.toPublicUser(updated);
+  }
+
+  async removeAvatar(actor: AuthUser, id: number): Promise<PublicUser> {
+    this.assertCanEditAvatar(actor, id);
+    if (!(await this.prisma.user.findUnique({ where: { id }, select: { id: true } }))) throw new NotFoundException('Không tìm thấy người dùng');
+    const updated = await this.prisma.$transaction(async (tx) => {
+      await tx.userAvatar.deleteMany({ where: { userId: id } });
+      return tx.user.update({ where: { id }, data: { avatarUrl: null } });
+    });
+    return AuthService.toPublicUser(updated);
+  }
+
+  async getAvatar(id: number): Promise<{ mime: string; data: Buffer }> {
+    const avatar = await this.prisma.userAvatar.findUnique({ where: { userId: id } });
+    if (!avatar) throw new NotFoundException('Không có ảnh đại diện');
+    return { mime: avatar.mime, data: Buffer.from(avatar.data) };
+  }
+
+  private assertCanEditAvatar(actor: AuthUser, id: number): void {
+    if (actor.role !== 'admin' && actor.id !== id) throw new ForbiddenException('Bạn chỉ được đổi ảnh đại diện của chính mình');
   }
 
   /** Thống kê task cấp cao theo trạng thái + quá hạn; chỉ tính trong các dự án người xem được phép thấy */

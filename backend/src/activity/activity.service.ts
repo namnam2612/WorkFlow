@@ -13,7 +13,9 @@ export type ActivityAction =
   | 'description_changed'
   | 'hours_changed'
   | 'comment_added'
-  | 'subtask_added';
+  | 'subtask_added'
+  | 'attachment_added'
+  | 'attachment_removed';
 
 type Db = PrismaService | Prisma.TransactionClient;
 
