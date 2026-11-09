@@ -7,6 +7,7 @@ import { FileIcon } from './FileIcon';
 export function Thumbnail({ attachment }: { attachment: Attachment }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [near, setNear] = useState(false);
+  // SVG hiển thị qua <img> (script không chạy); các ảnh khác như thường
   const isImage = attachment.previewable && attachment.mimeType.startsWith('image/');
   const { url } = usePreviewUrl(attachment.id, isImage && near);
 

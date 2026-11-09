@@ -2,7 +2,7 @@ import { Download } from 'lucide-react';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { downloadAttachment, usePreviewBlob } from '../../hooks/useAttachments';
 import { getErrorMessage } from '../../lib/api';
-import { formatBytes, MAX_OFFICE_PREVIEW_BYTES, previewKind } from '../../lib/files';
+import { formatBytes, MAX_HTML_PREVIEW_BYTES, MAX_OFFICE_PREVIEW_BYTES, previewKind } from '../../lib/files';
 import type { Attachment } from '../../types/api';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
@@ -13,6 +13,8 @@ import { useToast } from '../ui/useToast';
 const TextPreview = lazy(() => import('./previews/TextPreview'));
 const CsvPreview = lazy(() => import('./previews/CsvPreview'));
 const DocxPreview = lazy(() => import('./previews/DocxPreview'));
+const HtmlPreview = lazy(() => import('./previews/HtmlPreview'));
+const PptxPreview = lazy(() => import('./previews/PptxPreview'));
 const XlsxPreview = lazy(() => import('./previews/XlsxPreview'));
 
 /** Blob URL cho ảnh/PDF; tự giải phóng khi đổi file hoặc đóng */
@@ -31,14 +33,15 @@ function useObjectUrl(blob: Blob | null): string | null {
 export function FilePreviewModal({ attachment, onClose }: { attachment: Attachment | null; onClose: () => void }) {
   const toast = useToast();
   const kind = attachment ? previewKind(attachment.mimeType) : null;
-  const tooBig = attachment !== null && (kind === 'docx' || kind === 'xlsx') && attachment.size > MAX_OFFICE_PREVIEW_BYTES;
+  const limit = kind === 'html' ? MAX_HTML_PREVIEW_BYTES : MAX_OFFICE_PREVIEW_BYTES;
+  const tooBig = attachment !== null && (kind === 'docx' || kind === 'xlsx' || kind === 'pptx' || kind === 'html') && attachment.size > limit;
   const preview = usePreviewBlob(attachment?.id ?? null, attachment?.previewable === true && kind !== null && !tooBig);
   const url = useObjectUrl(kind === 'image' || kind === 'pdf' ? preview.blob : null);
   if (!attachment) return null;
 
   const download = () => void downloadAttachment(attachment).catch((error: unknown) => toast.show(getErrorMessage(error), 'error'));
   const message = tooBig
-    ? `File lớn hơn ${formatBytes(MAX_OFFICE_PREVIEW_BYTES)} nên không xem nhanh được, hãy tải về.`
+    ? `File lớn hơn ${formatBytes(limit)} nên không xem nhanh được, hãy tải về.`
     : preview.error
       ? getErrorMessage(preview.error)
       : kind === null
@@ -62,7 +65,9 @@ export function FilePreviewModal({ attachment, onClose }: { attachment: Attachme
       <Suspense fallback={<PageLoader />}>
         {kind === 'text' && <TextPreview blob={preview.blob} />}
         {kind === 'csv' && <CsvPreview blob={preview.blob} />}
+        {kind === 'html' && <HtmlPreview blob={preview.blob} />}
         {kind === 'docx' && <DocxPreview blob={preview.blob} />}
+        {kind === 'pptx' && <PptxPreview blob={preview.blob} />}
         {kind === 'xlsx' && <XlsxPreview blob={preview.blob} />}
       </Suspense>
     );

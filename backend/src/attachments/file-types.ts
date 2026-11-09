@@ -27,6 +27,13 @@ const BY_EXTENSION: Record<string, TypeInfo> = {
   rtf: { mime: 'application/rtf', category: 'document' },
   txt: { mime: 'text/plain', category: 'document' },
   md: { mime: 'text/markdown', category: 'document' },
+  html: { mime: 'text/html', category: 'document' },
+  htm: { mime: 'text/html', category: 'document' },
+  json: { mime: 'application/json', category: 'document' },
+  xml: { mime: 'application/xml', category: 'document' },
+  yaml: { mime: 'application/yaml', category: 'document' },
+  yml: { mime: 'application/yaml', category: 'document' },
+  log: { mime: 'text/plain', category: 'document' },
   ppt: { mime: 'application/vnd.ms-powerpoint', category: 'document' },
   pptx: { mime: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', category: 'document' },
   odp: { mime: 'application/vnd.oasis.opendocument.presentation', category: 'document' },
@@ -71,19 +78,24 @@ export function allKnownNonOtherMimes(): string[] {
 
 const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-const TEXT_PREVIEW = new Set(['text/plain', 'text/markdown', 'text/csv']);
+const PPTX = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
+const TEXT_PREVIEW = new Set(['text/plain', 'text/markdown', 'text/csv', 'text/html', 'application/json', 'application/xml', 'application/yaml']);
+const ZIP_PREVIEW = new Set([DOCX, XLSX, PPTX]);
 
 /**
- * Xem trực tiếp trên web: ảnh raster (SVG bị loại vì có thể chứa script), PDF, văn bản thuần/Markdown/CSV,
- * Word (.docx) và Excel (.xlsx). Giao diện tự dựng bản xem trước ở trình duyệt, không gửi file cho dịch vụ bên thứ ba.
+ * Xem trực tiếp trên web: ảnh (kể cả SVG — giao diện chỉ hiển thị qua thẻ <img> nên script trong SVG không chạy),
+ * PDF, văn bản/Markdown/CSV/JSON/XML/YAML, HTML (khung sandbox không script), Word, Excel, PowerPoint.
+ * Giao diện tự dựng bản xem trước ở trình duyệt, không gửi file cho dịch vụ bên thứ ba.
  */
-const PREVIEWABLE = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf', DOCX, XLSX, ...TEXT_PREVIEW]);
+const PREVIEWABLE = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/svg+xml', 'application/pdf', ...ZIP_PREVIEW, ...TEXT_PREVIEW]);
 export const isPreviewableMime = (mime: string): boolean => PREVIEWABLE.has(mime);
 
 /** Nội dung thật có khớp loại khai báo không (không tin đuôi file). `head` = vài trăm byte đầu. */
 export function matchesPreviewSignature(mime: string, head: Buffer): boolean {
   if (TEXT_PREVIEW.has(mime)) return head.length > 0 && !head.includes(0); // văn bản thuần không chứa byte NUL
-  if (mime === DOCX || mime === XLSX) return head.length >= 4 && head[0] === 0x50 && head[1] === 0x4b && head[2] === 0x03 && head[3] === 0x04; // ZIP
+  if (mime === 'image/svg+xml') return /<svg[\s>]|<\?xml/i.test(head.toString('utf8')) && !head.includes(0);
+  if (mime === 'image/bmp') return head.length >= 2 && head[0] === 0x42 && head[1] === 0x4d;
+  if (ZIP_PREVIEW.has(mime)) return head.length >= 4 && head[0] === 0x50 && head[1] === 0x4b && head[2] === 0x03 && head[3] === 0x04; // ZIP (docx/xlsx/pptx)
   return sniffMime(head) === mime;
 }
 

@@ -30,7 +30,7 @@ cp .env.example .env && docker compose up -d mysql     # MySQL ở localhost:330
 cd backend && npm i && cp .env.example .env
 npx prisma migrate deploy && npm run seed
 npm run start:dev                          # API http://localhost:3000/api
-npm run build && npm run lint && npm test  # 158 unit test
+npm run build && npm run lint && npm test  # 163 unit test
 cd ../frontend && npm i && npm run dev     # http://localhost:5173 (proxy /api, /socket.io)
 npm run build && npm run lint
 docker compose up -d --build               # toàn bộ stack: web http://localhost:8080

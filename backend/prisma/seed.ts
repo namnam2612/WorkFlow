@@ -1,6 +1,6 @@
 import { PrismaClient, Priority, Role, TaskStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { clearAttachments, makeDocx, makePdf, makePng, makeXlsx, writeSample } from './seed-files';
+import { clearAttachments, makeDocx, makePdf, makePng, makePptx, makeXlsx, writeSample } from './seed-files';
 
 const prisma = new PrismaClient();
 
@@ -225,6 +225,23 @@ async function main(): Promise<void> {
             mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             data: makeXlsx('Kế hoạch', [['Hạng mục', 'Người phụ trách', 'Số giờ'], ['Thiết kế', 'Cường', 8], ['Lập trình', 'Dung', 16], ['Kiểm thử', 'Em', 6]]),
             by: uploaders[2],
+            ago: 4,
+          },
+          {
+            name: `Thuyết trình ${index + 1}.pptx`,
+            mime: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            data: makePptx([
+              { title: t.title, lines: ['Mục tiêu và phạm vi', 'Người phụ trách và mốc thời gian'] },
+              { title: 'Tiến độ và rủi ro', lines: ['Đã hoàn thành phần thiết kế', 'Đang chờ phản hồi từ đối tác'] },
+            ]),
+            by: uploaders[1],
+            ago: 5,
+          },
+          {
+            name: `Báo giá ${index + 1}.html`,
+            mime: 'text/html',
+            data: Buffer.from(`<!doctype html><meta charset="utf-8"><h1>Báo giá ${index + 1}</h1><table border="1"><tr><th>Hạng mục</th><th>Đơn giá</th></tr><tr><td>Thiết kế</td><td>8.000.000đ</td></tr></table><script>document.title='x'</script>`, 'utf8'),
+            by: uploaders[0],
             ago: 4,
           },
           { name: `Số liệu ${index + 1}.csv`, mime: 'text/csv', data: Buffer.from('Hạng mục,Số giờ\nThiết kế,8\nLập trình,16\nKiểm thử,6\n', 'utf8'), by: uploaders[0], ago: 2 },

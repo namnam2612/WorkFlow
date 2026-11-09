@@ -1,4 +1,4 @@
-import { File as FileIcon, FileArchive, FileImage, FileSpreadsheet, FileText, type LucideIcon } from 'lucide-react';
+import { File as FileIcon, FileArchive, FileCode, FileImage, FileSpreadsheet, FileText, Presentation, type LucideIcon } from 'lucide-react';
 import type { FileCategory } from '../types/api';
 
 /** Khớp phân nhóm ở backend (attachments/file-types.ts) */
@@ -10,6 +10,10 @@ const DOCUMENT = new Set([
   'application/rtf',
   'text/plain',
   'text/markdown',
+  'text/html',
+  'application/json',
+  'application/xml',
+  'application/yaml',
   'application/vnd.ms-powerpoint',
   'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   'application/vnd.oasis.opendocument.presentation',
@@ -33,8 +37,13 @@ export const CATEGORY_LABEL: Record<FileCategory, string> = {
 };
 export const CATEGORIES = Object.keys(CATEGORY_LABEL) as FileCategory[];
 
+const CODE = new Set(['text/html', 'application/json', 'application/xml', 'application/yaml']);
+const SLIDES = new Set(['application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/vnd.oasis.opendocument.presentation']);
+
 export function iconFor(mime: string): LucideIcon {
   if (ARCHIVE.has(mime)) return FileArchive;
+  if (CODE.has(mime)) return FileCode;
+  if (SLIDES.has(mime)) return Presentation;
   switch (categoryOf(mime)) {
     case 'image':
       return FileImage;
@@ -48,23 +57,29 @@ export function iconFor(mime: string): LucideIcon {
   }
 }
 
-export type PreviewKind = 'image' | 'pdf' | 'text' | 'csv' | 'docx' | 'xlsx';
+export type PreviewKind = 'image' | 'pdf' | 'text' | 'csv' | 'html' | 'docx' | 'xlsx' | 'pptx';
 
 const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+const PPTX_MIME = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
 
 /** Cách dựng bản xem trước theo loại file; null = không xem trực tiếp được (khớp danh sách ở backend) */
 export function previewKind(mime: string): PreviewKind | null {
-  if (['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(mime)) return 'image';
+  if (['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/svg+xml'].includes(mime)) return 'image';
   if (mime === 'application/pdf') return 'pdf';
-  if (mime === 'text/plain' || mime === 'text/markdown') return 'text';
+  if (['text/plain', 'text/markdown', 'application/json', 'application/xml', 'application/yaml'].includes(mime)) return 'text';
+  if (mime === 'text/html') return 'html';
   if (mime === 'text/csv') return 'csv';
   if (mime === DOCX_MIME) return 'docx';
   if (mime === XLSX_MIME) return 'xlsx';
+  if (mime === PPTX_MIME) return 'pptx';
   return null;
 }
 
-/** Word/Excel được dựng ngay trong trình duyệt nên giới hạn dung lượng để không treo trang */
+/** HTML được hiển thị trong khung sandbox: giới hạn để không treo trang */
+export const MAX_HTML_PREVIEW_BYTES = 2 * 1024 * 1024;
+
+/** Word/Excel/PowerPoint được dựng ngay trong trình duyệt nên giới hạn dung lượng để không treo trang */
 export const MAX_OFFICE_PREVIEW_BYTES = 10 * 1024 * 1024;
 
 export function formatBytes(bytes: number): string {

@@ -126,12 +126,10 @@ describe('AttachmentsService', () => {
     });
 
     it('từ chối loại không xem được (doc cũ, pptx, zip, svg...) và file có đuôi giả (nội dung không khớp)', async () => {
-      for (const mimeType of ['application/msword', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/zip']) {
+      for (const mimeType of ['application/msword', 'application/vnd.ms-powerpoint', 'application/zip']) {
         prisma.attachment.findUnique.mockResolvedValue(row({ mimeType }));
         await expect(service.openPreview(teammate, 5)).rejects.toBeInstanceOf(BadRequestException);
       }
-      prisma.attachment.findUnique.mockResolvedValue(row({ mimeType: 'image/svg+xml' }));
-      await expect(service.openPreview(teammate, 5)).rejects.toBeInstanceOf(BadRequestException);
       // khai báo là png nhưng nội dung thật là PDF
       prisma.attachment.findUnique.mockResolvedValue(row({ mimeType: 'image/png' }));
       await expect(service.openPreview(teammate, 5)).rejects.toBeInstanceOf(BadRequestException);
@@ -143,7 +141,13 @@ describe('AttachmentsService', () => {
     const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
     const ZIP = Buffer.from([0x50, 0x4b, 0x03, 0x04, 0, 0, 0, 0]);
 
+    const PPTX = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
     it.each([
+      ['text/html', Buffer.from('<!doctype html><p>báo giá</p>', 'utf8')],
+      ['application/json', Buffer.from('{"a":1}')],
+      ['image/svg+xml', Buffer.from('<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg"/>')],
+      ['image/bmp', Buffer.from([0x42, 0x4d, 0, 0])],
+      [PPTX, ZIP],
       ['text/plain', Buffer.from('xin chào', 'utf8')],
       ['text/csv', Buffer.from('a,b\n1,2\n')],
       [DOCX, ZIP],
