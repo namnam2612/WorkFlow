@@ -1,8 +1,5 @@
 # Tự deploy lên server mỗi khi push vào main (hoặc bấm "Run workflow" trong tab Actions).
 # Cần tạo các secret trong GitHub: Settings → Secrets and variables → Actions
-#   DEPLOY_SSH_KEY   : private key SSH (dành riêng cho CI) đã được thêm vào authorized_keys trên server
-#   DEPLOY_TARGET    : vd root@103.175.146.251
-#   LE_EMAIL         : email đăng ký chứng chỉ Let's Encrypt
 # Tuỳ chọn (Variables): DOMAIN, APP_DIR
 name: Deploy
 

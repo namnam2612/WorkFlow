@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 # Deploy lên máy chủ qua SSH. Chạy từ máy bạn:
-#   ./deploy/deploy.sh user@103.175.146.251
-# Tuỳ chọn (biến môi trường): DOMAIN, APP_DIR, LE_EMAIL, ADMIN_EMAIL, ADMIN_PASSWORD
 # Mã nguồn lấy từ commit HEAD hiện tại và gửi qua SSH (không cần server truy cập GitHub/repo private).
 set -euo pipefail
 cd "$(dirname "$0")/.."
