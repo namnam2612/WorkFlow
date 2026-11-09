@@ -12,6 +12,9 @@ BRANCH="${BRANCH:-taskflow}"
 LE_EMAIL="${LE_EMAIL:?Đặt LE_EMAIL=<email> để đăng ký chứng chỉ HTTPS}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-admin@hopphu.vn}"
 
-SUDO=""; [[ "${TARGET%%@*}" == "root" ]] || SUDO="sudo -E"
+SUDO=""; [[ "${TARGET%%@*}" == "root" ]] || SUDO="sudo"
+
+# Copy script lên server rồi chạy với tty (-t) để sudo hỏi được mật khẩu nếu cần
+scp -q deploy/remote-setup.sh "$TARGET:/tmp/taskflow-remote-setup.sh"
 # shellcheck disable=SC2029
-ssh "$TARGET" "$SUDO env DOMAIN='$DOMAIN' REPO_URL='$REPO_URL' BRANCH='$BRANCH' LE_EMAIL='$LE_EMAIL' ADMIN_EMAIL='$ADMIN_EMAIL' ADMIN_PASSWORD='${ADMIN_PASSWORD:-}' bash -s" < deploy/remote-setup.sh
+ssh -t "$TARGET" "$SUDO env DOMAIN='$DOMAIN' REPO_URL='$REPO_URL' BRANCH='$BRANCH' LE_EMAIL='$LE_EMAIL' ADMIN_EMAIL='$ADMIN_EMAIL' ADMIN_PASSWORD='${ADMIN_PASSWORD:-}' bash /tmp/taskflow-remote-setup.sh; rc=\$?; rm -f /tmp/taskflow-remote-setup.sh; exit \$rc"
