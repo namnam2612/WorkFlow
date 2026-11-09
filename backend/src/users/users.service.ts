@@ -6,6 +6,7 @@ import { Paginated, toPaginated } from '../common/dto/pagination-query.dto';
 import { AuthUser } from '../common/types/auth-user';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProjectAccessService } from '../projects/project-access.service';
+import { assigneeStats } from '../tasks/assignee-stats';
 import { CreateUserDto } from './dto/create-user.dto';
 import { ListUsersQueryDto } from './dto/list-users-query.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -186,31 +187,15 @@ export class UsersService {
     for (const id of userIds) result.set(id, this.emptyStats());
 
     const visibleProjectIds = await this.access.visibleProjectIds(viewer);
-    const scope: Prisma.TaskWhereInput = {
-      assigneeId: { in: userIds },
-      parentId: null,
-      ...(visibleProjectIds ? { projectId: { in: visibleProjectIds } } : {}),
-    };
-
-    const [byStatus, overdue] = await Promise.all([
-      this.prisma.task.groupBy({ by: ['assigneeId', 'status'], where: scope, _count: { _all: true } }),
-      this.prisma.task.groupBy({
-        by: ['assigneeId'],
-        where: { ...scope, status: { not: 'done' }, deadline: { lt: new Date() } },
-        _count: { _all: true },
-      }),
-    ]);
-    for (const row of byStatus) {
-      if (row.assigneeId === null) continue;
-      const entry = result.get(row.assigneeId);
+    // Task cấp cao trong các dự án người xem được thấy; task giao cho nhiều người được tính cho từng người
+    const task: Prisma.TaskWhereInput = { parentId: null, ...(visibleProjectIds ? { projectId: { in: visibleProjectIds } } : {}) };
+    const stats = await assigneeStats(this.prisma, { userId: { in: userIds }, task });
+    for (const [userId, stat] of stats) {
+      const entry = result.get(userId);
       if (!entry) continue;
-      entry.counts[row.status] = row._count._all;
-      entry.total += row._count._all;
-    }
-    for (const row of overdue) {
-      if (row.assigneeId === null) continue;
-      const entry = result.get(row.assigneeId);
-      if (entry) entry.overdue = row._count._all;
+      entry.counts = stat.counts;
+      entry.overdue = stat.overdue;
+      entry.total = Object.values(stat.counts).reduce((sum, n) => sum + n, 0);
     }
     return result;
   }

@@ -10,8 +10,9 @@ import { getErrorMessage } from '../../lib/api';
 import { PRIORITIES, PRIORITY_META, STATUSES, STATUS_META } from '../../lib/constants';
 import { isoToVnDateTimeInput, vnDateTimeInputToIso } from '../../lib/format';
 import { canManageProject } from '../../lib/permissions';
-import { inputClass } from '../../lib/styles';
-import type { Priority, Task, TaskStatus } from '../../types/api';
+import { inputClass, labelClass } from '../../lib/styles';
+import type { Priority, Task, TaskStatus, UserBrief } from '../../types/api';
+import { AssigneePicker } from '../assignees/AssigneePicker';
 import { AttachmentPicker } from '../attachments/AttachmentPicker';
 import { FormUploadPhase } from '../attachments/FormUploadPhase';
 import { Button } from '../ui/Button';
@@ -28,7 +29,6 @@ const schema = z.object({
   title: z.string().trim().min(1, 'Vui lòng nhập tiêu đề').max(255, 'Tối đa 255 ký tự'),
   description: z.string().max(10000, 'Tối đa 10000 ký tự'),
   projectId: z.string().min(1, 'Vui lòng chọn dự án'),
-  assigneeId: z.string(),
   status: z.enum(['todo', 'in_progress', 'review', 'done', 'blocked']),
   priority: z.enum(['low', 'medium', 'high', 'urgent']),
   deadline: z.string(),
@@ -58,6 +58,8 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
   const update = useUpdateTask(task?.id ?? 0);
   const projectsQuery = useProjects();
   const [serverError, setServerError] = useState<string | null>(null);
+  // Nhiều người cùng thực hiện; giữ ngoài react-hook-form vì là danh sách đối tượng
+  const [assignees, setAssignees] = useState<UserBrief[]>(task?.assignees ?? []);
   const attach = useFormAttachments('task');
   const savedTaskId = useRef<number | null>(null);
   const busy = create.isPending || update.isPending || attach.uploading;
@@ -66,7 +68,6 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
     register,
     handleSubmit,
     watch,
-    setValue,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -74,7 +75,6 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
       title: task?.title ?? '',
       description: task?.description ?? '',
       projectId: String(task?.projectId ?? defaultProjectId ?? ''),
-      assigneeId: task?.assigneeId ? String(task.assigneeId) : '',
       status: task?.status ?? defaultStatus ?? 'todo',
       priority: task?.priority ?? 'medium',
       deadline: isoToVnDateTimeInput(task?.deadline),
@@ -88,7 +88,9 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
   const manageableProjects = (projectsQuery.data ?? []).filter((p) => canManageProject(user, p));
   // Thành viên (không phải leader/admin của dự án) chỉ được giao việc con cho chính mình
   const canAssignOthers = canManageProject(user, projectQuery.data);
-  const members = (projectQuery.data?.members ?? []).filter((m) => canAssignOthers || m.id === user?.id);
+  const members: UserBrief[] = (projectQuery.data?.members ?? []).filter((m) => canAssignOthers || m.id === user?.id);
+  // Người khác đã được giao từ trước không bị thành viên gỡ ra (backend cũng chặn)
+  const lockedIds = canAssignOthers ? [] : assignees.filter((a) => a.id !== user?.id).map((a) => a.id);
   const isEdit = task !== undefined;
   const isSubtask = parentId !== undefined || task?.parentId != null;
 
@@ -103,7 +105,7 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
     const payload = {
       title: values.title,
       description: values.description.trim() || null,
-      assigneeId: values.assigneeId ? Number(values.assigneeId) : null,
+      assigneeIds: assignees.map((a) => a.id),
       status: values.status,
       priority: values.priority,
       deadline: vnDateTimeInputToIso(values.deadline),
@@ -164,22 +166,12 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
               id="task-project"
               className={inputClass}
               disabled={isEdit || parentId !== undefined || defaultProjectId !== undefined}
-              {...register('projectId', { onChange: () => setValue('assigneeId', '') })}
+              {...register('projectId', { onChange: () => setAssignees([]) })}
             >
               <option value="">— Chọn dự án —</option>
               {(isEdit || parentId !== undefined || defaultProjectId !== undefined ? (projectsQuery.data ?? []) : manageableProjects).map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Người thực hiện" htmlFor="task-assignee" hint={!canAssignOthers && projectId ? 'Bạn chỉ có thể giao công việc con cho chính mình' : undefined}>
-            <select id="task-assignee" className={inputClass} disabled={!projectId} {...register('assigneeId')}>
-              <option value="">— Chưa giao —</option>
-              {members.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
                 </option>
               ))}
             </select>
@@ -193,6 +185,11 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
               ))}
             </select>
           </Field>
+          <div className="sm:col-span-2">
+            <p className={labelClass}>Người thực hiện{assignees.length > 1 ? ` (${assignees.length})` : ''}</p>
+            <AssigneePicker options={members} selected={assignees} onChange={setAssignees} lockedIds={lockedIds} disabled={!projectId || busy} emptyLabel={projectId ? 'Chưa giao cho ai' : 'Chọn dự án trước'} />
+            <p className="mt-1 text-xs text-slate-500">{!canAssignOthers && projectId ? 'Bạn chỉ có thể giao công việc con cho chính mình' : 'Có thể giao cho nhiều người cùng làm.'}</p>
+          </div>
           <Field label="Mức ưu tiên" htmlFor="task-priority">
             <select id="task-priority" className={inputClass} {...register('priority')}>
               {PRIORITIES.map((p: Priority) => (

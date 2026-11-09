@@ -15,16 +15,20 @@ import { MoveTaskDto } from './dto/move-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { STATUS_LABEL_VI } from './task-labels';
 import { AttachmentCleanupService } from '../attachments/attachment-cleanup.service';
-import { taskInclude, toTaskView } from './task-view';
+import { assigneesInclude, taskInclude, toTaskView } from './task-view';
 
 const detailInclude = {
-  assignee: { select: USER_BRIEF_SELECT },
+  assignees: assigneesInclude,
   creator: { select: USER_BRIEF_SELECT },
   project: { select: { id: true, name: true, createdById: true } },
-  parent: { select: { id: true, title: true, assigneeId: true } },
+  parent: { select: { id: true, title: true, assignees: { select: { userId: true } } } },
   subtasks: { include: taskInclude, orderBy: [{ position: 'asc' }, { id: 'asc' }] },
   _count: { select: { comments: true, attachments: true } },
 } satisfies Prisma.TaskInclude;
+
+/** Task kèm id những người được giao (đủ để kiểm tra quyền và so sánh thay đổi) */
+type TaskRow = Task & { assignees: { userId: number }[] };
+const withAssigneeIds = { assignees: { select: { userId: true } } } satisfies Prisma.TaskInclude;
 
 /** Các trường mà người được giao (không phải leader/admin) được phép sửa */
 const ASSIGNEE_EDITABLE_FIELDS: ReadonlySet<string> = new Set(['status', 'actualHours']);
@@ -48,7 +52,7 @@ export class TasksService {
     const filters: Prisma.TaskWhereInput[] = [];
     if (user.role !== 'admin') filters.push({ project: this.access.visibleProjectWhere(user) });
     if (query.projectId !== undefined) filters.push({ projectId: query.projectId });
-    if (query.assigneeId !== undefined) filters.push({ assigneeId: query.assigneeId });
+    if (query.assigneeIds?.length) filters.push({ assignees: { some: { userId: { in: query.assigneeIds } } } });
     if (query.status) filters.push({ status: query.status });
     if (query.priority) filters.push({ priority: query.priority });
     if (!query.includeSubtasks) filters.push({ parentId: null });
@@ -78,7 +82,7 @@ export class TasksService {
       where: {
         projectId: query.projectId,
         parentId: null,
-        ...(query.assigneeId !== undefined ? { assigneeId: query.assigneeId } : {}),
+        ...(query.assigneeIds?.length ? { assignees: { some: { userId: { in: query.assigneeIds } } } } : {}),
         ...(query.priority ? { priority: query.priority } : {}),
       },
       include: taskInclude,
@@ -92,9 +96,12 @@ export class TasksService {
     if (!task) throw new NotFoundException('Không tìm thấy công việc');
     await this.access.assertCanView(user, task.projectId);
 
-    const { subtasks, _count, ...rest } = task;
+    const { subtasks, _count, assignees, parent, ...rest } = task;
     return {
       ...rest,
+      assignees: assignees.map((a) => a.user),
+      // Người được giao của task cha (chỉ id) để frontend biết quyền thêm/bình luận công việc con
+      parent: parent ? { id: parent.id, title: parent.title, assigneeIds: parent.assignees.map((a) => a.userId) } : null,
       subtasks: subtasks.map(toTaskView),
       subtaskTotal: subtasks.length,
       subtaskDone: subtasks.filter((s) => s.status === 'done').length,
@@ -113,13 +120,14 @@ export class TasksService {
       throw new ForbiddenException('Chỉ trưởng nhóm của dự án hoặc quản trị viên mới tạo được công việc mới');
     }
     const parent = dto.parentId ? await this.assertValidParent(dto.parentId, dto.projectId) : null;
+    const assigneeIds = [...new Set(dto.assigneeIds ?? [])];
     if (!canManage && parent) {
-      if (parent.assigneeId !== user.id) {
+      if (!this.isAssigned(parent, user.id)) {
         throw new ForbiddenException('Bạn chỉ được thêm công việc con vào công việc được giao cho mình');
       }
-      this.assertSelfAssignment(user, dto.assigneeId);
+      this.assertSelfAssignment(user, assigneeIds, []);
     }
-    await this.assertValidAssignee(project, dto.assigneeId);
+    await this.assertValidAssignees(project, assigneeIds);
 
     const status = dto.status ?? 'todo';
     const created = await this.prisma.$transaction(async (tx) => {
@@ -130,7 +138,7 @@ export class TasksService {
           parentId: parent?.id ?? null,
           title: dto.title,
           description: dto.description ?? null,
-          assigneeId: dto.assigneeId ?? null,
+          assignees: { create: assigneeIds.map((userId) => ({ userId })) },
           creatorId: user.id,
           status,
           priority: dto.priority ?? 'medium',
@@ -142,6 +150,12 @@ export class TasksService {
         },
       });
       await this.activity.log({ taskId: task.id, userId: user.id, action: 'task_created', detail: { title: task.title } }, tx);
+      if (assigneeIds.length > 0) {
+        await this.activity.log(
+          { taskId: task.id, userId: user.id, action: 'assignee_changed', detail: { added: await this.userRefs(assigneeIds, tx), removed: [] } },
+          tx,
+        );
+      }
       if (parent) {
         await this.activity.log(
           { taskId: parent.id, userId: user.id, action: 'subtask_added', detail: { subtaskId: task.id, title: task.title } },
@@ -151,10 +165,9 @@ export class TasksService {
       return task;
     });
 
-    const notices: NewNotification[] = [];
-    if (created.assigneeId !== null && created.assigneeId !== user.id) {
-      notices.push(this.assignedNotification(created.assigneeId, created.title, created.id));
-    }
+    const notices: NewNotification[] = assigneeIds
+      .filter((id) => id !== user.id)
+      .map((id) => this.assignedNotification(id, created.title, created.id));
     // Thành viên thêm công việc con: báo cho trưởng nhóm dự án nắm
     if (!canManage && parent && project.createdById !== user.id) {
       notices.push({
@@ -177,7 +190,8 @@ export class TasksService {
     const canEditAll = canManage || this.isSubtaskCreator(user, task);
 
     if (!canEditAll) {
-      if (task.assigneeId !== user.id) {
+      // Người được giao là MỘT trong những người trong danh sách (không cần là người duy nhất)
+      if (!this.isAssigned(task, user.id)) {
         throw new ForbiddenException('Bạn chỉ được cập nhật công việc được giao cho mình');
       }
       const disallowed = Object.entries(dto).filter(([key, value]) => value !== undefined && !ASSIGNEE_EDITABLE_FIELDS.has(key));
@@ -185,8 +199,18 @@ export class TasksService {
         throw new ForbiddenException('Thành viên chỉ được cập nhật trạng thái và giờ làm của công việc được giao');
       }
     }
-    if (!canManage && dto.assigneeId !== undefined) this.assertSelfAssignment(user, dto.assigneeId);
-    if (dto.assigneeId !== undefined) await this.assertValidAssignee(project, dto.assigneeId);
+
+    // `assigneeIds` thay TOÀN BỘ danh sách: so với danh sách hiện tại để biết ai được thêm / bị bớt
+    const currentIds = task.assignees.map((a) => a.userId);
+    const nextIds = dto.assigneeIds === undefined ? currentIds : [...new Set(dto.assigneeIds)];
+    const addedIds = nextIds.filter((uid) => !currentIds.includes(uid));
+    const removedIds = currentIds.filter((uid) => !nextIds.includes(uid));
+    const assigneesChanged = addedIds.length > 0 || removedIds.length > 0;
+    if (assigneesChanged) {
+      if (!canManage) this.assertSelfAssignment(user, addedIds, removedIds);
+      // Chỉ kiểm tra người MỚI thêm: người đã được giao từ trước giữ nguyên dù sau đó rời dự án
+      await this.assertValidAssignees(project, addedIds);
+    }
 
     const data: Prisma.TaskUncheckedUpdateInput = {};
     const logs: { action: Parameters<ActivityService['log']>[0]['action']; detail: Prisma.InputJsonValue }[] = [];
@@ -218,18 +242,12 @@ export class TasksService {
       data.actualHours = dto.actualHours ?? null;
       logs.push({ action: 'hours_changed', detail: { field: 'actualHours', from: task.actualHours, to: dto.actualHours ?? null } });
     }
-
-    let assigneeChanged = false;
-    if (dto.assigneeId !== undefined && (dto.assigneeId ?? null) !== task.assigneeId) {
-      assigneeChanged = true;
-      data.assigneeId = dto.assigneeId ?? null;
-      const names = await this.userNames([task.assigneeId, dto.assigneeId ?? null]);
+    if (assigneesChanged) {
+      data.updatedAt = new Date(); // chỉ đổi người được giao vẫn làm "mới cập nhật"
+      const names = await this.userRefs([...addedIds, ...removedIds]);
       logs.push({
         action: 'assignee_changed',
-        detail: {
-          from: task.assigneeId === null ? null : { id: task.assigneeId, name: names.get(task.assigneeId) ?? null },
-          to: dto.assigneeId == null ? null : { id: dto.assigneeId, name: names.get(dto.assigneeId) ?? null },
-        },
+        detail: { added: names.filter((u) => addedIds.includes(u.id)), removed: names.filter((u) => removedIds.includes(u.id)) },
       });
     }
 
@@ -243,6 +261,8 @@ export class TasksService {
         logs.push({ action: 'status_changed', detail: { from: task.status, to: dto.status } });
       }
       if (Object.keys(data).length === 0) return task;
+      if (removedIds.length > 0) await tx.taskAssignee.deleteMany({ where: { taskId: id, userId: { in: removedIds } } });
+      if (addedIds.length > 0) await tx.taskAssignee.createMany({ data: addedIds.map((userId) => ({ taskId: id, userId })) });
       const result = await tx.task.update({ where: { id }, data });
       for (const entry of logs) {
         await this.activity.log({ taskId: id, userId: user.id, action: entry.action, detail: entry.detail }, tx);
@@ -250,15 +270,13 @@ export class TasksService {
       return result;
     });
 
-    const notices: NewNotification[] = [];
-    if (assigneeChanged && updated.assigneeId !== null && updated.assigneeId !== user.id) {
-      notices.push(this.assignedNotification(updated.assigneeId, updated.title, id));
-    }
-    if (statusChanged && dto.status) notices.push(...this.statusNotifications(user, project, updated, dto.status));
+    // Chỉ người MỚI được thêm nhận thông báo "được giao"; người giữ nguyên không bị báo lại
+    const notices: NewNotification[] = addedIds.filter((uid) => uid !== user.id).map((uid) => this.assignedNotification(uid, updated.title, id));
+    if (statusChanged && dto.status) notices.push(...this.statusNotifications(user, project, updated, dto.status, nextIds));
     if (dto.deadline !== undefined && updated.deadline?.getTime() !== task.deadline?.getTime()) {
-      if (updated.assigneeId !== null && updated.assigneeId !== user.id) {
+      for (const uid of nextIds.filter((x) => x !== user.id)) {
         notices.push({
-          userId: updated.assigneeId,
+          userId: uid,
           type: 'deadline_changed',
           message: `Deadline của "${updated.title}" đã được thay đổi`,
           link: this.taskLink(updated),
@@ -273,7 +291,7 @@ export class TasksService {
   async move(user: AuthUser, id: number, dto: MoveTaskDto) {
     const task = await this.findTaskOrThrow(id);
     const project = await this.access.assertCanView(user, task.projectId);
-    if (!this.access.canManage(user, project) && task.assigneeId !== user.id) {
+    if (!this.access.canManage(user, project) && !this.isAssigned(task, user.id)) {
       throw new ForbiddenException('Bạn chỉ được di chuyển công việc được giao cho mình');
     }
 
@@ -312,7 +330,9 @@ export class TasksService {
       return moved;
     });
 
-    if (statusChanged) await this.notifications.notify(this.statusNotifications(user, project, updated, dto.status));
+    if (statusChanged) {
+      await this.notifications.notify(this.statusNotifications(user, project, updated, dto.status, task.assignees.map((a) => a.userId)));
+    }
     this.realtime.taskChanged(task.projectId, id);
     return this.get(user, id);
   }
@@ -336,21 +356,25 @@ export class TasksService {
     return task.parentId !== null && task.creatorId === user.id;
   }
 
-  /** Thành viên chỉ được giao việc cho chính mình hoặc để trống */
-  private assertSelfAssignment(user: AuthUser, assigneeId: number | null | undefined): void {
-    if (assigneeId !== null && assigneeId !== undefined && assigneeId !== user.id) {
+  private isAssigned(task: { assignees: { userId: number }[] }, userId: number): boolean {
+    return task.assignees.some((a) => a.userId === userId);
+  }
+
+  /** Thành viên chỉ được thêm/bớt CHÍNH MÌNH khỏi danh sách người được giao (không đụng tới người khác) */
+  private assertSelfAssignment(user: AuthUser, addedIds: number[], removedIds: number[]): void {
+    if ([...addedIds, ...removedIds].some((uid) => uid !== user.id)) {
       throw new ForbiddenException('Thành viên chỉ được giao công việc con cho chính mình');
     }
   }
 
-  private async findTaskOrThrow(id: number): Promise<Task> {
-    const task = await this.prisma.task.findUnique({ where: { id } });
+  private async findTaskOrThrow(id: number): Promise<TaskRow> {
+    const task = await this.prisma.task.findUnique({ where: { id }, include: withAssigneeIds });
     if (!task) throw new NotFoundException('Không tìm thấy công việc');
     return task;
   }
 
-  private async assertValidParent(parentId: number, projectId: number): Promise<Task> {
-    const parent = await this.prisma.task.findUnique({ where: { id: parentId } });
+  private async assertValidParent(parentId: number, projectId: number): Promise<TaskRow> {
+    const parent = await this.prisma.task.findUnique({ where: { id: parentId }, include: withAssigneeIds });
     if (!parent || parent.projectId !== projectId) {
       throw new BadRequestException('Công việc cha không tồn tại trong dự án này');
     }
@@ -360,13 +384,14 @@ export class TasksService {
     return parent;
   }
 
-  /** Người thực hiện phải là thành viên đang hoạt động của dự án */
-  private async assertValidAssignee(project: ProjectRef, assigneeId: number | null | undefined): Promise<void> {
-    if (assigneeId === null || assigneeId === undefined) return;
-    const assignee = await this.prisma.user.findUnique({ where: { id: assigneeId }, select: { isActive: true } });
-    if (!assignee?.isActive) throw new BadRequestException('Người thực hiện không tồn tại hoặc đã bị vô hiệu hóa');
-    const isMember = assigneeId === project.createdById || (await this.access.isMember(project.id, assigneeId));
-    if (!isMember) throw new BadRequestException('Người thực hiện phải là thành viên của dự án');
+  /** Mọi người thực hiện phải là thành viên đang hoạt động của dự án */
+  private async assertValidAssignees(project: ProjectRef, assigneeIds: number[]): Promise<void> {
+    for (const assigneeId of assigneeIds) {
+      const assignee = await this.prisma.user.findUnique({ where: { id: assigneeId }, select: { isActive: true } });
+      if (!assignee?.isActive) throw new BadRequestException('Người thực hiện không tồn tại hoặc đã bị vô hiệu hóa');
+      const isMember = assigneeId === project.createdById || (await this.access.isMember(project.id, assigneeId));
+      if (!isMember) throw new BadRequestException('Người thực hiện phải là thành viên của dự án');
+    }
   }
 
   private async nextPosition(
@@ -379,11 +404,11 @@ export class TasksService {
     return (max._max.position ?? -1) + 1;
   }
 
-  private async userNames(ids: (number | null)[]): Promise<Map<number, string>> {
-    const unique = [...new Set(ids.filter((id): id is number => id !== null))];
-    if (unique.length === 0) return new Map();
-    const users = await this.prisma.user.findMany({ where: { id: { in: unique } }, select: { id: true, name: true } });
-    return new Map(users.map((u) => [u.id, u.name]));
+  /** {id, name} của các người dùng (để ghi lịch sử đọc được cả khi người đó bị xóa sau này) */
+  private async userRefs(ids: number[], tx?: Prisma.TransactionClient): Promise<{ id: number; name: string }[]> {
+    const unique = [...new Set(ids)];
+    if (unique.length === 0) return [];
+    return (tx ?? this.prisma).user.findMany({ where: { id: { in: unique } }, select: { id: true, name: true } });
   }
 
   private taskLink(task: Pick<Task, 'id'>): string {
@@ -395,9 +420,8 @@ export class TasksService {
   }
 
   /** Báo cho người tạo task và trưởng nhóm dự án (trừ người thao tác) khi đổi trạng thái */
-  private statusNotifications(actor: AuthUser, project: ProjectRef, task: Task, status: TaskStatus): NewNotification[] {
-    const recipients = new Set<number>([task.creatorId, project.createdById]);
-    if (task.assigneeId !== null) recipients.add(task.assigneeId);
+  private statusNotifications(actor: AuthUser, project: ProjectRef, task: Task, status: TaskStatus, assigneeIds: number[]): NewNotification[] {
+    const recipients = new Set<number>([task.creatorId, project.createdById, ...assigneeIds]);
     recipients.delete(actor.id);
     return [...recipients].map((userId) => ({
       userId,

@@ -17,6 +17,7 @@ import { ArrowLeft, Plus, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
+import { AssigneeFilter } from '../components/assignees/AssigneeFilter';
 import { KanbanCard } from '../components/kanban/KanbanCard';
 import { KanbanColumn } from '../components/kanban/KanbanColumn';
 import { TaskFormModal } from '../components/tasks/TaskFormModal';
@@ -28,7 +29,7 @@ import { useBoard, useMoveTask } from '../hooks/useTasks';
 import { getErrorMessage } from '../lib/api';
 import { PRIORITIES, PRIORITY_META, STATUSES } from '../lib/constants';
 import { columnDroppableId } from '../lib/kanban';
-import { canManageProject } from '../lib/permissions';
+import { canManageProject, isAssignee } from '../lib/permissions';
 import { inputClass } from '../lib/styles';
 import type { Priority, Task, TaskStatus } from '../types/api';
 
@@ -61,7 +62,8 @@ export default function KanbanPage() {
   const [columns, setColumns] = useState<Columns>(emptyColumns);
   const [activeId, setActiveId] = useState<number | null>(null);
   const dragStart = useRef<{ status: TaskStatus; index: number } | null>(null);
-  const [assigneeFilter, setAssigneeFilter] = useState('');
+  const [assigneeFilter, setAssigneeFilter] = useState<number[]>([]);
+  const [unassignedFilter, setUnassignedFilter] = useState(false);
   const [priorityFilter, setPriorityFilter] = useState<Priority | ''>('');
   const [creatingIn, setCreatingIn] = useState<TaskStatus | null>(null);
 
@@ -78,16 +80,19 @@ export default function KanbanPage() {
 
   const project = projectQuery.data;
   const canManage = canManageProject(user, project);
-  const canDrag = (task: Task) => canManage || task.assigneeId === user?.id;
+  const canDrag = (task: Task) => canManage || isAssignee(user, task);
 
   const visible = useMemo(() => {
-    const matches = (task: Task) =>
-      (assigneeFilter === '' || (assigneeFilter === 'none' ? task.assigneeId === null : task.assigneeId === Number(assigneeFilter))) &&
-      (priorityFilter === '' || task.priority === priorityFilter);
+    // Lọc người: task có BẤT KỲ người nào được chọn, hoặc "Chưa giao" khi task không có ai
+    const byAssignee = (task: Task) =>
+      (assigneeFilter.length === 0 && !unassignedFilter) ||
+      task.assignees.some((a) => assigneeFilter.includes(a.id)) ||
+      (unassignedFilter && task.assignees.length === 0);
+    const matches = (task: Task) => byAssignee(task) && (priorityFilter === '' || task.priority === priorityFilter);
     const result = emptyColumns();
     for (const status of STATUSES) result[status] = columns[status].filter(matches);
     return result;
-  }, [columns, assigneeFilter, priorityFilter]);
+  }, [columns, assigneeFilter, unassignedFilter, priorityFilter]);
 
   const findContainer = (itemId: UniqueIdentifier): TaskStatus | undefined => {
     if (isColumnId(itemId)) return STATUSES.find((s) => columnDroppableId(s) === itemId);
@@ -167,7 +172,7 @@ export default function KanbanPage() {
   if (projectQuery.isError || !project) return <ErrorState error={projectQuery.error} onRetry={() => void projectQuery.refetch()} />;
   if (boardQuery.isError) return <ErrorState error={boardQuery.error} onRetry={() => void boardQuery.refetch()} />;
 
-  const hasFilter = assigneeFilter !== '' || priorityFilter !== '';
+  const hasFilter = assigneeFilter.length > 0 || unassignedFilter || priorityFilter !== '';
 
   return (
     <>
@@ -180,15 +185,14 @@ export default function KanbanPage() {
           <p className="text-sm text-slate-500">Kéo thả thẻ để đổi trạng thái và thứ tự{!canManage && ' (bạn chỉ kéo được công việc của mình)'}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <select aria-label="Lọc theo người thực hiện" value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value)} className={`${inputClass} w-auto!`}>
-            <option value="">Mọi người</option>
-            <option value="none">Chưa giao</option>
-            {project.members.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-              </option>
-            ))}
-          </select>
+          <AssigneeFilter
+            users={project.members}
+            value={assigneeFilter}
+            onChange={setAssigneeFilter}
+            unassigned={unassignedFilter}
+            onUnassignedChange={setUnassignedFilter}
+            className="w-56"
+          />
           <select aria-label="Lọc theo ưu tiên" value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value as Priority | '')} className={`${inputClass} w-auto!`}>
             <option value="">Mọi ưu tiên</option>
             {PRIORITIES.map((p) => (
@@ -203,7 +207,8 @@ export default function KanbanPage() {
               size="sm"
               icon={<X className="h-4 w-4" />}
               onClick={() => {
-                setAssigneeFilter('');
+                setAssigneeFilter([]);
+                setUnassignedFilter(false);
                 setPriorityFilter('');
               }}
             >

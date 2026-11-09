@@ -35,7 +35,7 @@ export default function MemberDetailPage() {
 
   const userQuery = useUser(userId);
   const tasksQuery = useTasks(
-    { assigneeId: userId, pageSize: 50, sortBy: 'deadline', order: tab === 'done' ? 'desc' : 'asc', ...TAB_FILTERS[tab] },
+    { assigneeIds: [userId], pageSize: 50, sortBy: 'deadline', order: tab === 'done' ? 'desc' : 'asc', ...TAB_FILTERS[tab] },
     !Number.isNaN(userId),
   );
 

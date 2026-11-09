@@ -19,6 +19,26 @@ function personName(value: unknown): string {
   return 'không ai';
 }
 
+function names(value: unknown): string[] {
+  return Array.isArray(value) ? value.map(personName) : [];
+}
+
+/**
+ * "đã giao việc cho B, C" / "đã bỏ A khỏi công việc" / cả hai.
+ * Hỗ trợ cả dòng log cũ (một người: from/to) lẫn mới (nhiều người: added/removed).
+ */
+export function describeAssigneeChange(detail: Record<string, unknown>): string {
+  if (!('added' in detail) && !('removed' in detail)) {
+    return `đã đổi người thực hiện từ ${personName(detail.from)} sang ${personName(detail.to)}`;
+  }
+  const added = names(detail.added);
+  const removed = names(detail.removed);
+  const parts: string[] = [];
+  if (added.length > 0) parts.push(`đã giao việc cho ${added.join(', ')}`);
+  if (removed.length > 0) parts.push(detail.reason === 'removed_from_project' ? `đã gỡ ${removed.join(', ')} khỏi công việc (rời dự án)` : `đã bỏ ${removed.join(', ')} khỏi công việc`);
+  return parts.length > 0 ? parts.join('; ') : 'đã cập nhật người thực hiện';
+}
+
 /** Diễn giải một dòng activity log thành câu tiếng Việt (không gồm tên người thực hiện) */
 export function describeActivity(entry: ActivityLogEntry): string {
   const detail = entry.detail ?? {};
@@ -28,7 +48,7 @@ export function describeActivity(entry: ActivityLogEntry): string {
     case 'status_changed':
       return `đã đổi trạng thái từ "${statusLabel(detail.from)}" sang "${statusLabel(detail.to)}"`;
     case 'assignee_changed':
-      return `đã đổi người thực hiện từ ${personName(detail.from)} sang ${personName(detail.to)}`;
+      return describeAssigneeChange(detail);
     case 'priority_changed':
       return `đã đổi mức ưu tiên từ "${priorityLabel(detail.from)}" sang "${priorityLabel(detail.to)}"`;
     case 'deadline_changed': {

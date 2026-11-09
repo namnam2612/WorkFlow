@@ -1,6 +1,7 @@
 import { Priority } from '@prisma/client';
-import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import { ArrayMaxSize, IsArray, IsEnum, IsInt, IsOptional } from 'class-validator';
+import { toNumberList } from '../../common/utils/transforms';
 
 export class BoardQueryDto {
   @Type(() => Number)
@@ -8,9 +9,11 @@ export class BoardQueryDto {
   projectId: number;
 
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  assigneeId?: number;
+  @Transform(toNumberList)
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsInt({ each: true, message: 'Mã người được giao không hợp lệ' })
+  assigneeIds?: number[];
 
   @IsOptional()
   @IsEnum(Priority)

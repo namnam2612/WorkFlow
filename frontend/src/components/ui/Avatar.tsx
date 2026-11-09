@@ -8,11 +8,11 @@ const COLORS = ['bg-white/[0.08]', 'bg-white/[0.11]', 'bg-white/[0.14]', 'bg-whi
 interface AvatarProps {
   name: string;
   avatarUrl?: string | null;
-  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'xs' | 'stack' | 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
 }
 
-const SIZES = { xs: 'h-5 w-5 text-[9px]', sm: 'h-7 w-7 text-[11px]', md: 'h-9 w-9 text-xs', lg: 'h-16 w-16 text-xl', xl: 'h-28 w-28 text-3xl' };
+const SIZES = { xs: 'h-5 w-5 text-[9px]', stack: 'h-6 w-6 text-[9px]', sm: 'h-7 w-7 text-[11px]', md: 'h-9 w-9 text-xs', lg: 'h-16 w-16 text-xl', xl: 'h-28 w-28 text-3xl' };
 
 export function Avatar({ name, avatarUrl, size = 'md', className }: AvatarProps) {
   const color = COLORS[[...name].reduce((sum, ch) => sum + ch.charCodeAt(0), 0) % COLORS.length];

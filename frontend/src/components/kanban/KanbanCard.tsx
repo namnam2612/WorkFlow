@@ -5,7 +5,7 @@ import { PRIORITY_META } from '../../lib/constants';
 import { isOverdue } from '../../lib/format';
 import type { Task } from '../../types/api';
 import { DeadlineText } from '../tasks/DeadlineText';
-import { Avatar } from '../ui/Avatar';
+import { AssigneeStack } from '../assignees/AssigneeStack';
 
 const PRIORITY_BAR: Record<Task['priority'], string> = {
   low: 'bg-slate-300',
@@ -65,7 +65,7 @@ export function KanbanCard({ task, overlay = false, dimmed = false, locked = fal
             </span>
           )}
         </div>
-        {task.assignee && <Avatar name={task.assignee.name} avatarUrl={task.assignee.avatarUrl} size="xs" />}
+        <AssigneeStack assignees={task.assignees} />
       </div>
       {task.deadline && (
         <div className="mt-2">

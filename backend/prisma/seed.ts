@@ -13,8 +13,8 @@ type TaskSeed = {
   priority: Priority;
   /** Số ngày so với hiện tại (âm = đã qua), null = không có deadline */
   deadline: number | null;
-  /** Chỉ số trong danh sách thành viên của dự án, null = chưa giao */
-  assignee: number | null;
+  /** Chỉ số trong danh sách thành viên của dự án (mảng = giao cho nhiều người), null = chưa giao */
+  assignee: number | number[] | null;
   estimated?: number;
   actual?: number;
   subtasks?: string[];
@@ -42,9 +42,9 @@ const PROJECTS: ProjectSeed[] = [
       { title: 'Thiết kế wireframe trang chủ', status: 'done', priority: 'high', deadline: -30, assignee: 0, estimated: 12, actual: 14 },
       { title: 'Thiết kế cơ sở dữ liệu sản phẩm', status: 'done', priority: 'high', deadline: -25, assignee: 1, estimated: 8, actual: 7 },
       { title: 'API danh mục và sản phẩm', status: 'done', priority: 'medium', deadline: -15, assignee: 1, estimated: 20, actual: 22 },
-      { title: 'Giao diện danh sách sản phẩm', status: 'review', priority: 'medium', deadline: 2, assignee: 0, estimated: 16, actual: 15, subtasks: ['Bộ lọc theo giá', 'Phân trang và sắp xếp'] },
-      { title: 'Chức năng giỏ hàng', status: 'in_progress', priority: 'high', deadline: 4, assignee: 2, estimated: 24, actual: 10, subtasks: ['Thêm/xóa sản phẩm', 'Tính tổng tiền và khuyến mãi'] },
-      { title: 'Tích hợp cổng thanh toán VNPay', status: 'in_progress', priority: 'urgent', deadline: -2, assignee: 3, estimated: 30, actual: 18 },
+      { title: 'Giao diện danh sách sản phẩm', status: 'review', priority: 'medium', deadline: 2, assignee: [0, 1], estimated: 16, actual: 15, subtasks: ['Bộ lọc theo giá', 'Phân trang và sắp xếp'] },
+      { title: 'Chức năng giỏ hàng', status: 'in_progress', priority: 'high', deadline: 4, assignee: [2, 3], estimated: 24, actual: 10, subtasks: ['Thêm/xóa sản phẩm', 'Tính tổng tiền và khuyến mãi'] },
+      { title: 'Tích hợp cổng thanh toán VNPay', status: 'in_progress', priority: 'urgent', deadline: -2, assignee: [3, 0, 1], estimated: 30, actual: 18 },
       { title: 'Trang chi tiết sản phẩm', status: 'in_progress', priority: 'medium', deadline: 6, assignee: 0, estimated: 14, actual: 5 },
       { title: 'Gửi email xác nhận đơn hàng', status: 'todo', priority: 'medium', deadline: 9, assignee: 2, estimated: 8 },
       { title: 'Trang quản trị đơn hàng', status: 'todo', priority: 'high', deadline: 14, assignee: 1, estimated: 28 },
@@ -66,8 +66,8 @@ const PROJECTS: ProjectSeed[] = [
       { title: 'Khảo sát yêu cầu nghiệp vụ giao hàng', status: 'done', priority: 'high', deadline: -22, assignee: 0, estimated: 10, actual: 12 },
       { title: 'Thiết kế UI/UX màn hình nhận đơn', status: 'done', priority: 'medium', deadline: -12, assignee: 1, estimated: 18, actual: 20 },
       { title: 'Đăng nhập và xác thực shipper', status: 'done', priority: 'high', deadline: -8, assignee: 2, estimated: 12, actual: 10 },
-      { title: 'Màn hình danh sách đơn hàng', status: 'review', priority: 'high', deadline: 1, assignee: 1, estimated: 16, actual: 17 },
-      { title: 'Tích hợp bản đồ và chỉ đường', status: 'in_progress', priority: 'urgent', deadline: 3, assignee: 0, estimated: 32, actual: 14, subtasks: ['Hiển thị vị trí shipper', 'Tính quãng đường tối ưu'] },
+      { title: 'Màn hình danh sách đơn hàng', status: 'review', priority: 'high', deadline: 1, assignee: [1, 2], estimated: 16, actual: 17 },
+      { title: 'Tích hợp bản đồ và chỉ đường', status: 'in_progress', priority: 'urgent', deadline: 3, assignee: [0, 1, 2], estimated: 32, actual: 14, subtasks: ['Hiển thị vị trí shipper', 'Tính quãng đường tối ưu'] },
       { title: 'Chụp ảnh xác nhận giao hàng', status: 'in_progress', priority: 'medium', deadline: -1, assignee: 2, estimated: 14, actual: 9 },
       { title: 'Thông báo đẩy khi có đơn mới', status: 'todo', priority: 'high', deadline: 8, assignee: 2, estimated: 20 },
       { title: 'Chế độ offline và đồng bộ', status: 'todo', priority: 'medium', deadline: 20, assignee: null, estimated: 36 },
@@ -88,9 +88,9 @@ const PROJECTS: ProjectSeed[] = [
     tasks: [
       { title: 'Thu thập yêu cầu báo cáo từ các phòng ban', status: 'done', priority: 'high', deadline: -14, assignee: 0, estimated: 8, actual: 9 },
       { title: 'Thiết kế mô hình dữ liệu kho báo cáo', status: 'done', priority: 'high', deadline: -9, assignee: 1, estimated: 14, actual: 16 },
-      { title: 'ETL dữ liệu doanh thu hằng ngày', status: 'in_progress', priority: 'urgent', deadline: 2, assignee: 1, estimated: 26, actual: 15, subtasks: ['Đọc dữ liệu từ hệ thống bán hàng', 'Chuẩn hóa và nạp vào kho'] },
+      { title: 'ETL dữ liệu doanh thu hằng ngày', status: 'in_progress', priority: 'urgent', deadline: 2, assignee: [1, 0], estimated: 26, actual: 15, subtasks: ['Đọc dữ liệu từ hệ thống bán hàng', 'Chuẩn hóa và nạp vào kho'] },
       { title: 'Biểu đồ doanh thu theo tháng', status: 'in_progress', priority: 'medium', deadline: 5, assignee: 0, estimated: 12, actual: 6 },
-      { title: 'Báo cáo nhân sự và chấm công', status: 'review', priority: 'medium', deadline: 0, assignee: 2, estimated: 18, actual: 18 },
+      { title: 'Báo cáo nhân sự và chấm công', status: 'review', priority: 'medium', deadline: 0, assignee: [2, 0, 1], estimated: 18, actual: 18 },
       { title: 'Xuất báo cáo ra PDF và Excel', status: 'todo', priority: 'medium', deadline: 12, assignee: 2, estimated: 14 },
       { title: 'Phân quyền xem báo cáo theo phòng ban', status: 'todo', priority: 'high', deadline: 10, assignee: 0, estimated: 16 },
       { title: 'Gửi báo cáo tuần qua email tự động', status: 'todo', priority: 'low', deadline: 22, assignee: null, estimated: 10 },
@@ -123,6 +123,7 @@ async function main(): Promise<void> {
   await prisma.notification.deleteMany();
   await prisma.activityLog.deleteMany();
   await prisma.comment.deleteMany();
+  await prisma.taskAssignee.deleteMany();
   await prisma.task.deleteMany({ where: { parentId: { not: null } } });
   await prisma.task.deleteMany();
   await prisma.projectMember.deleteMany();
@@ -204,7 +205,9 @@ async function main(): Promise<void> {
     };
 
     for (const [index, t] of def.tasks.entries()) {
-      const assigneeId = t.assignee === null ? null : memberIds[t.assignee];
+      // Một task có thể giao cho nhiều người; `assigneeId` (người đầu tiên) chỉ dùng để chọn người gửi file / bình luận mẫu
+      const assigneeIds = (t.assignee === null ? [] : Array.isArray(t.assignee) ? t.assignee : [t.assignee]).map((i) => memberIds[i]);
+      const assigneeId = assigneeIds[0] ?? null;
       const deadline = t.deadline === null ? null : daysFromNow(t.deadline);
       const completedAt =
         t.status === 'done' ? daysFromNow(t.deadline === null ? -1 : Math.min(t.deadline, -1) + 0.5) : null;
@@ -214,7 +217,7 @@ async function main(): Promise<void> {
           projectId: project.id,
           title: t.title,
           description: `Mô tả chi tiết cho công việc "${t.title}".`,
-          assigneeId,
+          assignees: { create: assigneeIds.map((userId) => ({ userId, assignedAt: daysFromNow(def.startOffset + index) })) },
           creatorId: leader.id,
           status: t.status,
           priority: t.priority,
@@ -231,6 +234,16 @@ async function main(): Promise<void> {
       await prisma.activityLog.create({
         data: { taskId: task.id, userId: leader.id, action: 'task_created', detail: { title: t.title } },
       });
+      if (assigneeIds.length > 0) {
+        await prisma.activityLog.create({
+          data: {
+            taskId: task.id,
+            userId: leader.id,
+            action: 'assignee_changed',
+            detail: { added: assigneeIds.map((id) => ({ id, name: [...users.values()].find((u) => u.id === id)?.name ?? '' })), removed: [] },
+          },
+        });
+      }
 
       // File đính kèm mẫu: vài task trong mỗi dự án, do nhiều người gửi khác nhau (người được giao, leader, đồng đội)
       if (index % 3 === 0) {
@@ -301,7 +314,7 @@ async function main(): Promise<void> {
             projectId: project.id,
             parentId: task.id,
             title: subtaskTitle,
-            assigneeId,
+            assignees: { create: assigneeIds.map((userId) => ({ userId })) },
             creatorId: leader.id,
             status: subDone ? 'done' : 'todo',
             priority: t.priority,

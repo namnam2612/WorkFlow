@@ -11,7 +11,7 @@ Web app để Leader giao việc và theo dõi tiến độ/deadline; thành vi�
 - Frontend: React 19 + Vite + TS + Tailwind 4, React Router 7, TanStack Query, dnd-kit, Recharts, react-hook-form + zod
 
 ## Phân quyền
-- `admin`: toàn hệ thống. `leader`: quản lý dự án mình tạo (task, thành viên). `member`: xem task của dự án mình tham gia; cập nhật status/actualHours/bình luận task được giao cho mình; thêm công việc con vào task lớn được giao cho mình (giao cho chính mình hoặc để trống) và sửa/xóa công việc con do mình tạo.
+- Một task giao được cho NHIỀU người (`TaskAssignee`, API `assigneeIds`); "người được giao" = một trong số họ. `admin`: toàn hệ thống. `leader`: quản lý dự án mình tạo (task, thành viên). `member`: xem task của dự án mình tham gia; cập nhật status/actualHours/bình luận task được giao cho mình; thêm công việc con vào task lớn được giao cho mình (giao cho chính mình hoặc để trống) và sửa/xóa công việc con do mình tạo.
 - Kiểm tra ở backend (Guard `JwtAuthGuard`, `RolesGuard`, + kiểm tra truy cập dự án trong service). Frontend chỉ ẩn nút thêm cho UX.
 
 ## Quy ước
@@ -30,7 +30,8 @@ cp .env.example .env && docker compose up -d mysql     # MySQL ở localhost:330
 cd backend && npm i && cp .env.example .env
 npx prisma migrate deploy && npm run seed
 npm run start:dev                          # API http://localhost:3000/api
-npm run build && npm run lint && npm test  # 174 unit test
+npm run build && npm run lint && npm test  # 223 unit test
+VERIFY_DATABASE_URL=mysql://.../taskflow_migtest npm run verify:assignee-migration  # diễn tập migration trên DB tạm
 cd ../frontend && npm i && npm run dev     # http://localhost:5173 (proxy /api, /socket.io)
 npm run build && npm run lint
 docker compose up -d --build               # toàn bộ stack: web http://localhost:8080

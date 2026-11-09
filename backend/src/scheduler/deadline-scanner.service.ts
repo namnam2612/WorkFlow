@@ -43,7 +43,7 @@ export class DeadlineScannerService {
         id: true,
         title: true,
         deadline: true,
-        assigneeId: true,
+        assignees: { select: { userId: true } },
         project: { select: { createdById: true } },
       },
     });
@@ -56,7 +56,7 @@ export class DeadlineScannerService {
       const type = isOverdue ? 'task_overdue' : 'deadline_soon';
       const link = `/tasks/${task.id}`;
       const recipients = new Set<number>();
-      if (task.assigneeId !== null) recipients.add(task.assigneeId);
+      for (const assignee of task.assignees) recipients.add(assignee.userId);
       // Task quá hạn: báo thêm cho trưởng nhóm dự án
       if (isOverdue) recipients.add(task.project.createdById);
 

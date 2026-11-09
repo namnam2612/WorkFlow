@@ -7,7 +7,8 @@ export interface TaskInput {
   parentId?: number | null;
   title?: string;
   description?: string | null;
-  assigneeId?: number | null;
+  /** Thay TOÀN BỘ danh sách người được giao (người đã có giữ nguyên, người mới thêm được báo) */
+  assigneeIds?: number[];
   status?: TaskStatus;
   priority?: Priority;
   deadline?: string | null;

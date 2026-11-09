@@ -3,7 +3,7 @@ import { ArrowDown, ArrowUp, ListChecks, MessageSquare, Paperclip } from 'lucide
 import { Link } from 'react-router-dom';
 import { isOverdue } from '../../lib/format';
 import type { Task, TaskFilters } from '../../types/api';
-import { Avatar } from '../ui/Avatar';
+import { AssigneeStack } from '../assignees/AssigneeStack';
 import { PriorityBadge, StatusBadge } from '../ui/Badges';
 import { DeadlineText } from './DeadlineText';
 
@@ -78,10 +78,10 @@ export function TaskTable({ tasks, showProject = true, sortBy, order, onSort }: 
                 </div>
               </td>
               <td className="px-4 py-3">
-                {task.assignee ? (
-                  <div className="flex items-center gap-2">
-                    <Avatar name={task.assignee.name} avatarUrl={task.assignee.avatarUrl} size="sm" />
-                    <span className="whitespace-nowrap text-sm text-slate-700">{task.assignee.name}</span>
+                {task.assignees.length > 0 ? (
+                  <div className="flex items-center gap-2" title={task.assignees.map((a) => a.name).join(', ')}>
+                    <AssigneeStack assignees={task.assignees} size="sm" />
+                    {task.assignees.length === 1 && <span className="whitespace-nowrap text-sm text-slate-700">{task.assignees[0]?.name}</span>}
                   </div>
                 ) : (
                   <span className="text-sm text-slate-400">Chưa giao</span>

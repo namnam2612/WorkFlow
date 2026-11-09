@@ -16,7 +16,8 @@
     "migrate:deploy": "prisma migrate deploy",
     "seed": "ts-node prisma/seed.ts",
     "seed:admin": "ts-node prisma/seed-admin.ts",
-    "reset": "ts-node prisma/seed-admin.ts --reset"
+    "reset": "ts-node prisma/seed-admin.ts --reset",
+    "verify:assignee-migration": "ts-node scripts/verify-assignee-migration.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.2.8",

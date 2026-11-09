@@ -2,7 +2,7 @@ import clsx from 'clsx';
 import { Link } from 'react-router-dom';
 import type { Task } from '../../types/api';
 import { DeadlineText } from '../tasks/DeadlineText';
-import { Avatar } from '../ui/Avatar';
+import { AssigneeStack } from '../assignees/AssigneeStack';
 
 export function TaskMiniList({ tasks, tone }: { tasks: Task[]; tone: 'danger' | 'warning' }) {
   return (
@@ -17,7 +17,7 @@ export function TaskMiniList({ tasks, tone }: { tasks: Task[]; tone: 'danger' | 
             <p className="truncate text-xs text-slate-500">{task.project?.name}</p>
           </div>
           <DeadlineText task={task} />
-          {task.assignee && <Avatar name={task.assignee.name} avatarUrl={task.assignee.avatarUrl} size="sm" />}
+          <AssigneeStack assignees={task.assignees} size="sm" />
         </li>
       ))}
     </ul>

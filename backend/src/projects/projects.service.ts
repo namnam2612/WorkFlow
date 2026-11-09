@@ -133,13 +133,19 @@ export class ProjectsService {
     if (!exists) throw new BadRequestException('Người dùng không thuộc dự án');
 
     await this.prisma.$transaction(async (tx) => {
-      // Gỡ giao việc của người này trong dự án để task không bị "mồ côi" về mặt phân quyền
-      const assigned = await tx.task.findMany({ where: { projectId, assigneeId: userId }, select: { id: true } });
+      // Gỡ người này khỏi danh sách người được giao của mọi task trong dự án (task vẫn giữ những người khác)
+      const assigned = await tx.taskAssignee.findMany({ where: { userId, task: { projectId } }, select: { taskId: true } });
       if (assigned.length > 0) {
-        await tx.task.updateMany({ where: { projectId, assigneeId: userId }, data: { assigneeId: null } });
-        for (const task of assigned) {
+        const removedUser = await tx.user.findUnique({ where: { id: userId }, select: { id: true, name: true } });
+        await tx.taskAssignee.deleteMany({ where: { userId, task: { projectId } } });
+        for (const { taskId } of assigned) {
           await this.activity.log(
-            { taskId: task.id, userId: user.id, action: 'assignee_changed', detail: { from: userId, to: null, reason: 'removed_from_project' } },
+            {
+              taskId,
+              userId: user.id,
+              action: 'assignee_changed',
+              detail: { added: [], removed: removedUser ? [removedUser] : [], reason: 'removed_from_project' },
+            },
             tx,
           );
         }

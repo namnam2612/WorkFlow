@@ -6,6 +6,7 @@ export function canManageProject(user: User | null, project: { createdById: numb
   return user.role === 'admin' || (user.role === 'leader' && project.createdById === user.id);
 }
 
-export function isAssignee(user: User | null, task: Pick<Task, 'assigneeId'>): boolean {
-  return !!user && task.assigneeId === user.id;
+/** Người dùng là MỘT trong những người được giao */
+export function isAssignee(user: User | null, task: Pick<Task, 'assignees'>): boolean {
+  return !!user && task.assignees.some((a) => a.id === user.id);
 }

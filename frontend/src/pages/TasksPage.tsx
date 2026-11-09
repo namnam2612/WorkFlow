@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
 import { TaskFormModal } from '../components/tasks/TaskFormModal';
+import { AssigneeFilter } from '../components/assignees/AssigneeFilter';
 import { TaskTable } from '../components/tasks/TaskTable';
 import { Button } from '../components/ui/Button';
 import { PageHeader } from '../components/ui/Card';
@@ -41,7 +42,8 @@ export default function TasksPage() {
   const searchTimer = useRef<number | undefined>(undefined);
 
   const projectId = params.get('projectId') ?? '';
-  const assigneeId = params.get('assigneeId') ?? '';
+  // ?assigneeIds=1,2 (chọn nhiều người); chấp nhận cả ?assigneeId=1 của đường dẫn cũ
+  const assigneeIds = (params.get('assigneeIds') ?? params.get('assigneeId') ?? '').split(',').map(Number).filter((n) => Number.isInteger(n) && n > 0);
   const status = asEnum<TaskStatus>(params.get('status'), STATUSES);
   const priority = asEnum<Priority>(params.get('priority'), PRIORITIES);
   const from = params.get('from') ?? '';
@@ -78,7 +80,7 @@ export default function TasksPage() {
   const usersQuery = useUsers({ isActive: true });
   const filters = {
     projectId: projectId ? Number(projectId) : undefined,
-    assigneeId: assigneeId ? Number(assigneeId) : undefined,
+    assigneeIds: assigneeIds.length > 0 ? assigneeIds : undefined,
     status,
     priority,
     deadlineFrom: from ? (vnDateInputToIso(from) ?? undefined) : undefined,
@@ -93,7 +95,7 @@ export default function TasksPage() {
   const tasksQuery = useTasks(filters);
 
   const canCreate = user?.role === 'admin' || user?.role === 'leader';
-  const hasFilters = Boolean(q || projectId || assigneeId || status || priority || from || to || includeSubtasks);
+  const hasFilters = Boolean(q || projectId || assigneeIds.length > 0 || status || priority || from || to || includeSubtasks);
 
   const clearFilters = () => {
     window.clearTimeout(searchTimer.current);
@@ -134,14 +136,11 @@ export default function TasksPage() {
               </option>
             ))}
           </select>
-          <select aria-label="Người thực hiện" value={assigneeId} onChange={(e) => update({ assigneeId: e.target.value })} className={inputClass}>
-            <option value="">Tất cả người thực hiện</option>
-            {usersQuery.data?.items.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name}
-              </option>
-            ))}
-          </select>
+          <AssigneeFilter
+            users={usersQuery.data?.items ?? []}
+            value={assigneeIds}
+            onChange={(ids) => update({ assigneeIds: ids.join(','), assigneeId: null })}
+          />
           <select aria-label="Trạng thái" value={status ?? ''} onChange={(e) => update({ status: e.target.value })} className={inputClass}>
             <option value="">Mọi trạng thái</option>
             {STATUSES.map((s) => (

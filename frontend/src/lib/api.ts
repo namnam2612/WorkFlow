@@ -16,7 +16,7 @@ export class ApiError extends Error {
   }
 }
 
-type Query = Record<string, string | number | boolean | undefined | null>;
+type Query = Record<string, string | number | boolean | number[] | undefined | null>;
 
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
@@ -31,7 +31,9 @@ function buildUrl(path: string, query?: Query): string {
   if (!query) return url;
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(query)) {
-    if (value !== undefined && value !== null && value !== '') params.set(key, String(value));
+    if (Array.isArray(value)) {
+      if (value.length > 0) params.set(key, value.join(',')); // danh sách => "1,2,3"
+    } else if (value !== undefined && value !== null && value !== '') params.set(key, String(value));
   }
   const qs = params.toString();
   return qs ? `${url}?${qs}` : url;

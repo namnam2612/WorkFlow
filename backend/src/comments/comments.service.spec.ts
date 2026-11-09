@@ -16,13 +16,15 @@ const bob: AuthUser = { id: 21, email: 'b@x.vn', name: 'Bob', role: 'member' };
 const outsider: AuthUser = { id: 30, email: 'c@x.vn', name: 'Người ngoài', role: 'member' };
 const MEMBERS = new Set([10, 20, 21]);
 
-const task = (overrides: Partial<Task> = {}, parentAssigneeId: number | null = null) => ({
+/** Task giả; `assigneeIds` = những người được giao, `parentAssigneeIds` = người được giao của task cha */
+const task = (overrides: Partial<Task> & { assigneeIds?: number[] } = {}, parentAssigneeIds: number[] = []) => {
+  const { assigneeIds = [], ...rest } = overrides;
+  return {
   id: 5,
   projectId: 1,
   parentId: null,
   title: 'Task',
   description: null,
-  assigneeId: null,
   creatorId: 10,
   status: 'todo',
   priority: 'medium',
@@ -33,16 +35,20 @@ const task = (overrides: Partial<Task> = {}, parentAssigneeId: number | null = n
   completedAt: null,
   createdAt: new Date(),
   updatedAt: new Date(),
-  parent: overrides.parentId ? { assigneeId: parentAssigneeId } : null,
-  ...overrides,
-});
+  assignees: assigneeIds.map((userId) => ({ userId })),
+  parent: rest.parentId ? { assignees: parentAssigneeIds.map((userId) => ({ userId })) } : null,
+  ...rest,
+  };
+};
 
 describe('CommentsService - quyền bình luận', () => {
   let prisma: PrismaMock;
   let service: CommentsService;
+  let notify: jest.Mock;
 
   beforeEach(() => {
     prisma = createPrismaMock();
+    notify = jest.fn().mockResolvedValue(undefined);
     prisma.project.findUnique.mockResolvedValue(PROJECT);
     prisma.projectMember.findUnique.mockImplementation(({ where }: { where: { projectId_userId: { userId: number } } }) =>
       Promise.resolve(MEMBERS.has(where.projectId_userId.userId) ? { projectId: 1, userId: where.projectId_userId.userId } : null),
@@ -53,45 +59,66 @@ describe('CommentsService - quyền bình luận', () => {
       prismaService,
       new ProjectAccessService(prismaService),
       { log: jest.fn().mockResolvedValue({}) } as unknown as ActivityService,
-      { notify: jest.fn().mockResolvedValue(undefined) } as unknown as NotificationsService,
+      { notify } as unknown as NotificationsService,
       { taskChanged: jest.fn() } as unknown as RealtimeService,
     );
   });
 
   it('leader sở hữu và admin bình luận được mọi task', async () => {
-    prisma.task.findUnique.mockResolvedValue(task({ assigneeId: 20 }));
+    prisma.task.findUnique.mockResolvedValue(task({ assigneeIds: [20] }));
     await expect(service.create(owner, 5, 'ok')).resolves.toBeDefined();
     await expect(service.create(admin, 5, 'ok')).resolves.toBeDefined();
   });
 
   it('người được giao bình luận được', async () => {
-    prisma.task.findUnique.mockResolvedValue(task({ assigneeId: 20 }));
+    prisma.task.findUnique.mockResolvedValue(task({ assigneeIds: [20] }));
     await expect(service.create(alice, 5, 'ok')).resolves.toBeDefined();
   });
 
   it('member không được giao thì không bình luận được trên task lớn', async () => {
-    prisma.task.findUnique.mockResolvedValue(task({ assigneeId: 20 }));
+    prisma.task.findUnique.mockResolvedValue(task({ assigneeIds: [20] }));
     await expect(service.create(bob, 5, 'ok')).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it('người tạo công việc con bình luận được dù việc con chưa giao ai', async () => {
-    prisma.task.findUnique.mockResolvedValue(task({ id: 8, parentId: 5, creatorId: 20, assigneeId: null }, 20));
+    prisma.task.findUnique.mockResolvedValue(task({ id: 8, parentId: 5, creatorId: 20 }, [20]));
     await expect(service.create(alice, 8, 'ok')).resolves.toBeDefined();
   });
 
   it('người được giao task cha bình luận được trên công việc con do người khác tạo', async () => {
-    prisma.task.findUnique.mockResolvedValue(task({ id: 8, parentId: 5, creatorId: 10, assigneeId: null }, 20));
+    prisma.task.findUnique.mockResolvedValue(task({ id: 8, parentId: 5, creatorId: 10 }, [20]));
     await expect(service.create(alice, 8, 'ok')).resolves.toBeDefined();
   });
 
   it('member không liên quan đến công việc con thì bị chặn', async () => {
-    prisma.task.findUnique.mockResolvedValue(task({ id: 8, parentId: 5, creatorId: 10, assigneeId: null }, 20));
+    prisma.task.findUnique.mockResolvedValue(task({ id: 8, parentId: 5, creatorId: 10 }, [20]));
     await expect(service.create(bob, 8, 'ok')).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it('người ngoài dự án bị chặn kể cả là người tạo', async () => {
-    prisma.task.findUnique.mockResolvedValue(task({ id: 8, parentId: 5, creatorId: 30, assigneeId: 30 }, 30));
+    prisma.task.findUnique.mockResolvedValue(task({ id: 8, parentId: 5, creatorId: 30, assigneeIds: [30] }, [30]));
     await expect(service.create(outsider, 8, 'ok')).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  describe('task giao cho nhiều người', () => {
+    it('MỘT trong những người được giao đều bình luận được; người không có trong danh sách thì không', async () => {
+      prisma.task.findUnique.mockResolvedValue(task({ assigneeIds: [20, 21] }));
+      await expect(service.create(alice, 5, 'ok')).resolves.toBeDefined();
+      await expect(service.create(bob, 5, 'ok')).resolves.toBeDefined();
+      await expect(service.create(outsider, 5, 'ok')).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('bình luận báo cho TẤT CẢ người được giao, người tạo và leader (trừ người bình luận)', async () => {
+      prisma.task.findUnique.mockResolvedValue(task({ assigneeIds: [20, 21], creatorId: 10 }));
+      await service.create(alice, 5, 'xin chào');
+      const recipients = (notify.mock.calls[0] as [{ userId: number }[]])[0].map((n) => n.userId).sort();
+      expect(recipients).toEqual([10, 21]);
+    });
+
+    it('bất kỳ người được giao của task cha đều bình luận được việc con', async () => {
+      prisma.task.findUnique.mockResolvedValue(task({ id: 8, parentId: 5, creatorId: 10 }, [20, 21]));
+      await expect(service.create(bob, 8, 'ok')).resolves.toBeDefined();
+    });
   });
 
   it('404 khi task không tồn tại', async () => {

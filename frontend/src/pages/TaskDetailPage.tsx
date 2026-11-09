@@ -2,12 +2,12 @@ import { ArrowLeft, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
+import { TaskAssignees } from '../components/assignees/TaskAssignees';
 import { DeadlineText } from '../components/tasks/DeadlineText';
 import { SubtaskRow } from '../components/tasks/SubtaskRow';
 import { AttachmentSection } from '../components/attachments/AttachmentSection';
 import { TaskDiscussion } from '../components/tasks/TaskDiscussion';
 import { TaskFormModal } from '../components/tasks/TaskFormModal';
-import { Avatar } from '../components/ui/Avatar';
 import { PriorityBadge, StatusBadge } from '../components/ui/Badges';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -60,7 +60,7 @@ export default function TaskDetailPage() {
   // Đổi trạng thái / giờ làm: leader-admin, người được giao, hoặc người tạo công việc con
   const canUpdateProgress = canManage || isAssignee(user, task) || isSubtaskCreator;
   // Bình luận: như trên, thêm người được giao task cha khi xem công việc con
-  const canComment = canUpdateProgress || (isSubtask && task.parent?.assigneeId === user?.id);
+  const canComment = canUpdateProgress || (isSubtask && !!user && (task.parent?.assigneeIds.includes(user.id) ?? false));
 
   const changeStatus = async (status: TaskStatus) => {
     try {
@@ -180,16 +180,7 @@ export default function TaskDetailPage() {
                   {task.project.name}
                 </Link>
               </MetaRow>
-              <MetaRow label="Người thực hiện">
-                {task.assignee ? (
-                  <Link to={`/members/${task.assignee.id}`} className="inline-flex items-center gap-2 hover:text-brand-700">
-                    <Avatar name={task.assignee.name} avatarUrl={task.assignee.avatarUrl} size="xs" />
-                    {task.assignee.name}
-                  </Link>
-                ) : (
-                  <span className="text-slate-400">Chưa giao</span>
-                )}
-              </MetaRow>
+              <TaskAssignees task={task} canManage={canManage} canEditSelf={isSubtaskCreator} currentUser={user} />
               <MetaRow label="Người tạo">{task.creator.name}</MetaRow>
               <MetaRow label="Trạng thái">
                 {canUpdateProgress ? (

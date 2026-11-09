@@ -15,3 +15,10 @@ export function emptyToNull({ value }: { value: unknown }): unknown {
 export function trimString({ value }: { value: unknown }): unknown {
   return typeof value === 'string' ? value.trim() : value;
 }
+
+/** "1,2,3" hoặc ?k=1&k=2 (query string) hoặc mảng => number[]; giá trị không phải số giữ NaN để validator bắt lỗi */
+export function toNumberList({ value }: { value: unknown }): unknown {
+  if (value === undefined || value === null || value === '') return undefined;
+  const parts = Array.isArray(value) ? value : typeof value === 'string' ? value.split(',') : [value];
+  return parts.map((part) => (typeof part === 'number' ? part : typeof part === 'string' && part.trim() !== '' ? Number(part) : Number.NaN));
+}

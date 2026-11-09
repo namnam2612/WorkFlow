@@ -66,7 +66,6 @@ export interface Task {
   parentId: number | null;
   title: string;
   description: string | null;
-  assigneeId: number | null;
   creatorId: number;
   status: TaskStatus;
   priority: Priority;
@@ -77,7 +76,8 @@ export interface Task {
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;
-  assignee: UserBrief | null;
+  /** Những người cùng thực hiện (rỗng = chưa giao), theo thứ tự được giao */
+  assignees: UserBrief[];
   project?: { id: number; name: string };
   subtaskTotal: number;
   subtaskDone: number;
@@ -88,7 +88,7 @@ export interface Task {
 export interface TaskDetail extends Task {
   creator: UserBrief;
   project: { id: number; name: string; createdById: number };
-  parent: { id: number; title: string; assigneeId: number | null } | null;
+  parent: { id: number; title: string; assigneeIds: number[] } | null;
   subtasks: Task[];
 }
 
@@ -123,7 +123,8 @@ export interface AppNotification {
 
 export interface TaskFilters {
   projectId?: number;
-  assigneeId?: number;
+  /** Task có BẤT KỲ người nào trong danh sách */
+  assigneeIds?: number[];
   status?: TaskStatus;
   priority?: Priority;
   deadlineFrom?: string;

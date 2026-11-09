@@ -3,6 +3,7 @@ import { Prisma, TaskStatus } from '@prisma/client';
 import { AuthUser } from '../common/types/auth-user';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProjectAccessService } from '../projects/project-access.service';
+import { assigneeStats } from '../tasks/assignee-stats';
 import { taskInclude, toTaskView } from '../tasks/task-view';
 import { DashboardQueryDto } from './dashboard-query.dto';
 
@@ -42,7 +43,7 @@ export class DashboardService {
 
     const mine = user.role === 'member' || query.mine === true;
     const base: Prisma.TaskWhereInput = { projectId: { in: projectIds }, parentId: null };
-    const scope: Prisma.TaskWhereInput = mine ? { ...base, assigneeId: user.id } : base;
+    const scope: Prisma.TaskWhereInput = mine ? { ...base, assignees: { some: { userId: user.id } } } : base;
     const now = new Date();
     const soon = new Date(now.getTime() + UPCOMING_DAYS * DAY_MS);
     const notDone: Prisma.TaskWhereInput = { status: { not: 'done' } };
@@ -50,19 +51,15 @@ export class DashboardService {
     const upcomingWhere: Prisma.TaskWhereInput = { ...scope, ...notDone, deadline: { gte: now, lte: soon } };
     const overdueWhere: Prisma.TaskWhereInput = { ...scope, ...notDone, deadline: { lt: now } };
 
-    const [statusRows, upcoming, upcomingCount, overdue, overdueCount, projectRows, workloadRows, workloadOverdue] = await Promise.all([
+    const [statusRows, upcoming, upcomingCount, overdue, overdueCount, projectRows, workloadStats] = await Promise.all([
       this.prisma.task.groupBy({ by: ['status'], where: scope, _count: { _all: true } }),
       this.prisma.task.findMany({ where: upcomingWhere, include: taskInclude, orderBy: [{ deadline: 'asc' }, { id: 'asc' }], take: LIST_LIMIT }),
       this.prisma.task.count({ where: upcomingWhere }),
       this.prisma.task.findMany({ where: overdueWhere, include: taskInclude, orderBy: [{ deadline: 'asc' }, { id: 'asc' }], take: LIST_LIMIT }),
       this.prisma.task.count({ where: overdueWhere }),
       this.prisma.task.groupBy({ by: ['projectId', 'status'], where: base, _count: { _all: true } }),
-      this.prisma.task.groupBy({ by: ['assigneeId', 'status'], where: { ...base, assigneeId: { not: null } }, _count: { _all: true } }),
-      this.prisma.task.groupBy({
-        by: ['assigneeId'],
-        where: { ...base, ...notDone, assigneeId: { not: null }, deadline: { lt: now } },
-        _count: { _all: true },
-      }),
+      // Task giao cho nhiều người được tính cho TỪNG người
+      assigneeStats(this.prisma, { task: base }, now),
     ]);
 
     const statusCounts = Object.fromEntries(STATUSES.map((s) => [s, 0])) as Record<TaskStatus, number>;
@@ -92,11 +89,8 @@ export class DashboardService {
       }
       return row;
     };
-    for (const row of workloadRows) {
-      if (row.assigneeId !== null) rowFor(row.assigneeId)[row.status] = row._count._all;
-    }
-    for (const row of workloadOverdue) {
-      if (row.assigneeId !== null) rowFor(row.assigneeId).overdue = row._count._all;
+    for (const [userId, stat] of workloadStats) {
+      Object.assign(rowFor(userId), stat.counts, { overdue: stat.overdue });
     }
     const names = await this.prisma.user.findMany({ where: { id: { in: [...workloadMap.keys()] } }, select: { id: true, name: true } });
     for (const u of names) {

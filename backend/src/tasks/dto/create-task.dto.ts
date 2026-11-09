@@ -1,6 +1,6 @@
 import { Priority, TaskStatus } from '@prisma/client';
 import { Transform } from 'class-transformer';
-import { IsDateString, IsEnum, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { ArrayMaxSize, ArrayUnique, IsArray, IsDateString, IsEnum, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
 import { trimString } from '../../common/utils/transforms';
 
 export class CreateTaskDto {
@@ -23,9 +23,13 @@ export class CreateTaskDto {
   @MaxLength(10000)
   description?: string | null;
 
+  /** Những người cùng thực hiện (thành viên của dự án); [] hoặc bỏ trống = chưa giao. Khi sửa: thay toàn bộ danh sách. */
   @IsOptional()
-  @IsInt()
-  assigneeId?: number | null;
+  @IsArray()
+  @ArrayMaxSize(50, { message: 'Tối đa 50 người được giao' })
+  @ArrayUnique({ message: 'Danh sách người được giao bị trùng' })
+  @IsInt({ each: true, message: 'Mã người được giao không hợp lệ' })
+  assigneeIds?: number[];
 
   @IsOptional()
   @IsEnum(TaskStatus, { message: 'Trạng thái không hợp lệ' })

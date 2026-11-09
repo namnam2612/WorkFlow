@@ -34,8 +34,9 @@ export class CommentsService {
     const project = await this.access.assertCanView(user, task.projectId);
     // Leader/admin bình luận mọi task. Member: task được giao cho mình; với công việc con thì thêm
     // người tạo việc con và người được giao task cha (vì họ chịu trách nhiệm phần việc đó)
-    const isOwnSubtask = task.parentId !== null && (task.creatorId === user.id || task.parent?.assigneeId === user.id);
-    if (!this.access.canManage(user, project) && task.assigneeId !== user.id && !isOwnSubtask) {
+    const assigneeIds = task.assignees.map((a) => a.userId);
+    const isOwnSubtask = task.parentId !== null && (task.creatorId === user.id || (task.parent?.assignees ?? []).some((a) => a.userId === user.id));
+    if (!this.access.canManage(user, project) && !assigneeIds.includes(user.id) && !isOwnSubtask) {
       throw new ForbiddenException('Bạn chỉ được bình luận trên công việc được giao cho mình hoặc công việc con bạn phụ trách');
     }
 
@@ -48,8 +49,8 @@ export class CommentsService {
       return created;
     });
 
-    const recipients = new Set<number>([task.creatorId, project.createdById]);
-    if (task.assigneeId !== null) recipients.add(task.assigneeId);
+    // Báo cho TẤT CẢ người được giao, người tạo task và trưởng nhóm (trừ người bình luận)
+    const recipients = new Set<number>([task.creatorId, project.createdById, ...assigneeIds]);
     recipients.delete(user.id);
     await this.notifications.notify(
       [...recipients].map((userId) => ({
@@ -75,7 +76,8 @@ export class CommentsService {
   }
 
   private async findTaskOrThrow(taskId: number) {
-    const task = await this.prisma.task.findUnique({ where: { id: taskId }, include: { parent: { select: { assigneeId: true } } } });
+    const task = await this.prisma.task.findUnique({ where: { id: taskId }, include: { assignees: { select: { userId: true } }, parent: { select: { assignees: { select: { userId: true } } } } },
+    });
     if (!task) throw new NotFoundException('Không tìm thấy công việc');
     return task;
   }

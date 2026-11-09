@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useUpdateTask } from '../../hooks/useTasks';
 import { getErrorMessage } from '../../lib/api';
 import type { Task } from '../../types/api';
-import { Avatar } from '../ui/Avatar';
+import { AssigneeStack } from '../assignees/AssigneeStack';
 import { useToast } from '../ui/useToast';
 import { DeadlineText } from './DeadlineText';
 
@@ -40,7 +40,7 @@ export function SubtaskRow({ subtask, canToggle }: SubtaskRowProps) {
         {subtask.title}
       </Link>
       <DeadlineText task={subtask} className="hidden sm:inline-flex" />
-      {subtask.assignee && <Avatar name={subtask.assignee.name} avatarUrl={subtask.assignee.avatarUrl} size="sm" />}
+      <AssigneeStack assignees={subtask.assignees} size="sm" />
     </li>
   );
 }

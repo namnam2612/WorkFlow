@@ -22,14 +22,16 @@ const outsider: AuthUser = { id: 30, email: 'm3@x.vn', name: 'Người ngoài', 
 /** Id người dùng là thành viên của PROJECT */
 const MEMBER_IDS = new Set([10, 20, 21]);
 
-function buildTask(overrides: Partial<Task> = {}): Task {
+/** Task giả kèm danh sách người được giao (`assigneeIds`, mặc định chỉ có user 20) */
+type BuiltTask = Task & { assignees: { userId: number }[] };
+function buildTask(overrides: Partial<Task> & { assigneeIds?: number[] } = {}): BuiltTask {
+  const { assigneeIds = [20], ...rest } = overrides;
   return {
     id: 5,
     projectId: 1,
     parentId: null,
     title: 'Làm trang đăng nhập',
     description: null,
-    assigneeId: 20,
     creatorId: 10,
     status: 'todo',
     priority: 'medium',
@@ -40,7 +42,8 @@ function buildTask(overrides: Partial<Task> = {}): Task {
     completedAt: null,
     createdAt: new Date('2026-01-01T00:00:00Z'),
     updatedAt: new Date('2026-01-01T00:00:00Z'),
-    ...overrides,
+    assignees: assigneeIds.map((userId) => ({ userId })),
+    ...rest,
   };
 }
 
@@ -65,7 +68,7 @@ describe('TasksService', () => {
     prisma.user.findUnique.mockResolvedValue({ isActive: true });
     prisma.user.findMany.mockResolvedValue([]);
     prisma.task.aggregate.mockResolvedValue({ _max: { position: 2 } });
-    prisma.task.create.mockImplementation(({ data }: { data: Partial<Task> }) => Promise.resolve(buildTask({ id: 99, ...data })));
+    prisma.task.create.mockImplementation(({ data }: { data: Partial<Task> }) => Promise.resolve(buildTask({ id: 99, ...data, assigneeIds: [] })));
     prisma.task.update.mockImplementation(({ where, data }: { where: { id: number }; data: Partial<Task> }) =>
       Promise.resolve(buildTask({ id: where.id, ...data })),
     );
@@ -85,7 +88,7 @@ describe('TasksService', () => {
   });
 
   describe('create', () => {
-    const dto = { projectId: 1, title: 'Việc mới', assigneeId: 20 };
+    const dto = { projectId: 1, title: 'Việc mới', assigneeIds: [20] };
 
     it('member không được tạo task lớn (kiểm tra ở backend, không chỉ ẩn nút)', async () => {
       await expect(service.create(assignee, dto)).rejects.toBeInstanceOf(ForbiddenException);
@@ -96,23 +99,23 @@ describe('TasksService', () => {
       const subDto = { projectId: 1, parentId: 7, title: 'Việc con của tôi' };
 
       beforeEach(() => {
-        prisma.task.findUnique.mockResolvedValue(buildTask({ id: 7, assigneeId: 20, title: 'Task lớn' }));
+        prisma.task.findUnique.mockResolvedValue(buildTask({ id: 7, assigneeIds: [20], title: 'Task lớn' }));
       });
 
       it('được thêm vào task lớn được giao cho mình, mặc định không giao ai', async () => {
         await service.create(assignee, subDto);
         const arg = callArg(prisma.task.create) as { data: Partial<Task> };
-        expect(arg.data).toMatchObject({ parentId: 7, creatorId: 20, assigneeId: null });
+        expect(arg.data).toMatchObject({ parentId: 7, creatorId: 20, assignees: { create: [] } });
       });
 
       it('được tự giao cho chính mình', async () => {
-        await service.create(assignee, { ...subDto, assigneeId: 20 });
-        const arg = callArg(prisma.task.create) as { data: Partial<Task> };
-        expect(arg.data.assigneeId).toBe(20);
+        await service.create(assignee, { ...subDto, assigneeIds: [20] });
+        const arg = callArg(prisma.task.create) as { data: { assignees: { create: { userId: number }[] } } };
+        expect(arg.data.assignees.create).toEqual([{ userId: 20 }]);
       });
 
       it('không được giao việc con cho người khác', async () => {
-        await expect(service.create(assignee, { ...subDto, assigneeId: 21 })).rejects.toBeInstanceOf(ForbiddenException);
+        await expect(service.create(assignee, { ...subDto, assigneeIds: [20, 21] })).rejects.toBeInstanceOf(ForbiddenException);
         expect(prisma.task.create).not.toHaveBeenCalled();
       });
 
@@ -121,7 +124,7 @@ describe('TasksService', () => {
       });
 
       it('không được thêm vào task lớn chưa giao ai', async () => {
-        prisma.task.findUnique.mockResolvedValue(buildTask({ id: 7, assigneeId: null }));
+        prisma.task.findUnique.mockResolvedValue(buildTask({ id: 7, assigneeIds: [] }));
         await expect(service.create(assignee, subDto)).rejects.toBeInstanceOf(ForbiddenException);
       });
 
@@ -130,7 +133,7 @@ describe('TasksService', () => {
       });
 
       it('vẫn không thêm được công việc con của công việc con (chỉ 1 cấp)', async () => {
-        prisma.task.findUnique.mockResolvedValue(buildTask({ id: 7, parentId: 3, assigneeId: 20 }));
+        prisma.task.findUnique.mockResolvedValue(buildTask({ id: 7, parentId: 3, assigneeIds: [20] }));
         await expect(service.create(assignee, subDto)).rejects.toBeInstanceOf(BadRequestException);
       });
 
@@ -148,7 +151,7 @@ describe('TasksService', () => {
       await service.create(owner, dto);
 
       const arg = callArg(prisma.task.create, 0) as { data: Partial<Task> };
-      expect(arg.data).toMatchObject({ projectId: 1, title: 'Việc mới', assigneeId: 20, creatorId: 10, status: 'todo', position: 3, completedAt: null });
+      expect(arg.data).toMatchObject({ projectId: 1, title: 'Việc mới', assignees: { create: [{ userId: 20 }] }, creatorId: 10, status: 'todo', position: 3, completedAt: null });
       expect(activity.log).toHaveBeenCalledWith(expect.objectContaining({ taskId: 99, userId: 10, action: 'task_created' }), prisma);
       expect(notifications.notify).toHaveBeenCalledWith([expect.objectContaining({ userId: 20, type: 'task_assigned', link: '/tasks/99' })]);
       expect(realtime.taskChanged).toHaveBeenCalledWith(1, 99);
@@ -165,12 +168,12 @@ describe('TasksService', () => {
     });
 
     it('không tự báo cho chính mình khi tự giao việc', async () => {
-      await service.create(owner, { ...dto, assigneeId: 10 });
+      await service.create(owner, { ...dto, assigneeIds: [10] });
       expect(notifications.notify).not.toHaveBeenCalled();
     });
 
     it('từ chối người thực hiện không thuộc dự án', async () => {
-      await expect(service.create(owner, { ...dto, assigneeId: 30 })).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.create(owner, { ...dto, assigneeIds: [30] })).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('từ chối người thực hiện đã bị vô hiệu hóa', async () => {
@@ -228,7 +231,7 @@ describe('TasksService', () => {
     it.each([
       ['title', { title: 'Đổi tên' }],
       ['priority', { priority: 'urgent' as Priority }],
-      ['assigneeId', { assigneeId: 21 }],
+      ['assigneeIds', { assigneeIds: [20, 21] }],
       ['deadline', { deadline: '2026-12-01T00:00:00.000Z' }],
       ['estimatedHours', { estimatedHours: 8 }],
       ['description', { description: 'x' }],
@@ -261,7 +264,7 @@ describe('TasksService', () => {
         { id: 21, name: 'Thành viên B' },
       ]);
 
-      await service.update(owner, 5, { assigneeId: 21, deadline: '2026-12-01T00:00:00.000Z' });
+      await service.update(owner, 5, { assigneeIds: [21], deadline: '2026-12-01T00:00:00.000Z' });
 
       const actions = firstArgs(activity.log).map((call) => (call as { action: string }).action);
       expect(actions).toEqual(expect.arrayContaining(['assignee_changed', 'deadline_changed']));
@@ -286,7 +289,7 @@ describe('TasksService', () => {
     });
 
     describe('người tạo công việc con (member)', () => {
-      const ownSubtask = () => buildTask({ id: 8, parentId: 7, creatorId: 20, assigneeId: 20 });
+      const ownSubtask = () => buildTask({ id: 8, parentId: 7, creatorId: 20, assigneeIds: [20] });
 
       it('sửa được tiêu đề/ưu tiên công việc con do mình tạo', async () => {
         prisma.task.findUnique.mockResolvedValue(ownSubtask());
@@ -297,16 +300,16 @@ describe('TasksService', () => {
 
       it('không được giao công việc con cho người khác khi sửa', async () => {
         prisma.task.findUnique.mockResolvedValue(ownSubtask());
-        await expect(service.update(assignee, 8, { assigneeId: 21 })).rejects.toBeInstanceOf(ForbiddenException);
+        await expect(service.update(assignee, 8, { assigneeIds: [20, 21] })).rejects.toBeInstanceOf(ForbiddenException);
       });
 
       it('không sửa được công việc con do người khác tạo (kể cả khi được giao)', async () => {
-        prisma.task.findUnique.mockResolvedValue(buildTask({ id: 8, parentId: 7, creatorId: 10, assigneeId: 20 }));
+        prisma.task.findUnique.mockResolvedValue(buildTask({ id: 8, parentId: 7, creatorId: 10, assigneeIds: [20] }));
         await expect(service.update(assignee, 8, { title: 'x' })).rejects.toBeInstanceOf(ForbiddenException);
       });
 
       it('không sửa được task lớn dù là người tạo (chỉ áp dụng cho công việc con)', async () => {
-        prisma.task.findUnique.mockResolvedValue(buildTask({ id: 8, parentId: null, creatorId: 20, assigneeId: 20 }));
+        prisma.task.findUnique.mockResolvedValue(buildTask({ id: 8, parentId: null, creatorId: 20, assigneeIds: [20] }));
         await expect(service.update(assignee, 8, { title: 'x' })).rejects.toBeInstanceOf(ForbiddenException);
       });
     });
@@ -471,6 +474,222 @@ describe('TasksService', () => {
       expect(result.items.map((t) => t.id)).toEqual([1, 2, 3, 4, 5]);
       const secondCall = JSON.stringify(callArg(prisma.task.findMany, 1));
       expect(secondCall).toContain('"deadline":null');
+    });
+  });
+
+  describe('một công việc giao cho nhiều người', () => {
+    const names = [
+      { id: 20, name: 'Thành viên A' },
+      { id: 21, name: 'Thành viên B' },
+    ];
+
+    describe('tạo', () => {
+      it('giao cho nhiều người: lưu cả danh sách (loại trùng), ghi một dòng "giao việc cho A, B", báo từng người trừ người tạo', async () => {
+        prisma.user.findMany.mockResolvedValue(names);
+        await service.create(owner, { projectId: 1, title: 'Làm chung', assigneeIds: [20, 21, 10, 20] });
+        const arg = callArg(prisma.task.create) as { data: { assignees: { create: { userId: number }[] } } };
+        expect(arg.data.assignees.create).toEqual([{ userId: 20 }, { userId: 21 }, { userId: 10 }]);
+        expect(activity.log).toHaveBeenCalledWith(
+          expect.objectContaining({ action: 'assignee_changed', detail: { added: names, removed: [] } }),
+          prisma,
+        );
+        const notified = (callArg(notifications.notify) as { userId: number; type: string }[]).map((n) => `${n.userId}:${n.type}`).sort();
+        expect(notified).toEqual(['20:task_assigned', '21:task_assigned']);
+      });
+
+      it('từ chối nếu CHỈ MỘT trong số những người được giao không thuộc dự án (không tạo gì cả)', async () => {
+        await expect(service.create(owner, { projectId: 1, title: 'x', assigneeIds: [20, 30] })).rejects.toBeInstanceOf(BadRequestException);
+        expect(prisma.task.create).not.toHaveBeenCalled();
+      });
+
+      it('chưa giao ai: danh sách rỗng, không ghi dòng giao việc', async () => {
+        await service.create(owner, { projectId: 1, title: 'x' });
+        const arg = callArg(prisma.task.create) as { data: { assignees: { create: unknown[] } } };
+        expect(arg.data.assignees.create).toEqual([]);
+        expect(firstArgs(activity.log).map((c) => (c as { action: string }).action)).not.toContain('assignee_changed');
+      });
+    });
+
+    describe('phân quyền khi có nhiều người được giao', () => {
+      const two = () => buildTask({ assigneeIds: [20, 21] });
+
+      it.each([
+        ['người thứ nhất', assignee],
+        ['người thứ hai', otherMember],
+      ])('%s đổi được trạng thái và giờ làm', async (_n, user) => {
+        prisma.task.findUnique.mockResolvedValue(two());
+        await service.update(user, 5, { status: 'review', actualHours: 2 });
+        expect(callArg(prisma.task.update)).toMatchObject({ data: { status: 'review', actualHours: 2 } });
+      });
+
+      it('thành viên dự án KHÔNG nằm trong danh sách được giao thì bị chặn (cập nhật, kéo thẻ)', async () => {
+        prisma.task.findUnique.mockResolvedValue(two());
+        prisma.projectMember.findUnique.mockResolvedValue({ projectId: 1, userId: 11 });
+        const bystander: AuthUser = { id: 22, email: 'm4@x.vn', name: 'Người khác', role: 'member' };
+        await expect(service.update(bystander, 5, { status: 'done' })).rejects.toBeInstanceOf(ForbiddenException);
+        await expect(service.move(bystander, 5, { status: 'done', position: 0 })).rejects.toBeInstanceOf(ForbiddenException);
+      });
+
+      it('người được giao thứ hai kéo được thẻ trên Kanban', async () => {
+        prisma.task.findUnique.mockResolvedValue(two());
+        prisma.task.findMany.mockResolvedValue([]);
+        await expect(service.move(otherMember, 5, { status: 'review', position: 0 })).resolves.toBeDefined();
+      });
+
+      it('người được giao (member) vẫn không được tự đổi danh sách người được giao', async () => {
+        prisma.task.findUnique.mockResolvedValue(two());
+        await expect(service.update(otherMember, 5, { assigneeIds: [20] })).rejects.toBeInstanceOf(ForbiddenException);
+        expect(prisma.taskAssignee.deleteMany).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('thêm / bớt người khi sửa', () => {
+      beforeEach(() => {
+        prisma.user.findMany.mockResolvedValue(names);
+      });
+
+      it('thêm người mới: chỉ tạo dòng cho người mới, giữ nguyên người cũ, chỉ báo "được giao" cho người mới', async () => {
+        prisma.task.findUnique.mockResolvedValue(buildTask({ assigneeIds: [20] }));
+        await service.update(owner, 5, { assigneeIds: [20, 21] });
+        expect(prisma.taskAssignee.deleteMany).not.toHaveBeenCalled();
+        expect(callArg(prisma.taskAssignee.createMany)).toEqual({ data: [{ taskId: 5, userId: 21 }] });
+        const notified = (callArg(notifications.notify) as { userId: number; type: string }[]).map((n) => `${n.userId}:${n.type}`);
+        expect(notified).toEqual(['21:task_assigned']);
+        expect(activity.log).toHaveBeenCalledWith(
+          expect.objectContaining({ action: 'assignee_changed', detail: { added: [names[1]], removed: [] } }),
+          prisma,
+        );
+      });
+
+      it('bớt người: xóa dòng của người bị bớt, ghi lịch sử, không báo "được giao"', async () => {
+        prisma.task.findUnique.mockResolvedValue(buildTask({ assigneeIds: [20, 21] }));
+        await service.update(owner, 5, { assigneeIds: [21] });
+        expect(callArg(prisma.taskAssignee.deleteMany)).toEqual({ where: { taskId: 5, userId: { in: [20] } } });
+        expect(prisma.taskAssignee.createMany).not.toHaveBeenCalled();
+        expect(activity.log).toHaveBeenCalledWith(
+          expect.objectContaining({ action: 'assignee_changed', detail: { added: [], removed: [names[0]] } }),
+          prisma,
+        );
+        expect(notifications.notify).toHaveBeenCalledWith([]);
+      });
+
+      it('thay người: vừa bớt vừa thêm trong một lần', async () => {
+        prisma.task.findUnique.mockResolvedValue(buildTask({ assigneeIds: [20] }));
+        await service.update(owner, 5, { assigneeIds: [21, 10] });
+        expect(callArg(prisma.taskAssignee.deleteMany)).toEqual({ where: { taskId: 5, userId: { in: [20] } } });
+        expect(callArg(prisma.taskAssignee.createMany)).toEqual({
+          data: [
+            { taskId: 5, userId: 21 },
+            { taskId: 5, userId: 10 },
+          ],
+        });
+        // leader tự thêm mình thì không tự báo cho mình
+        expect((callArg(notifications.notify) as { userId: number }[]).map((n) => n.userId)).toEqual([21]);
+      });
+
+      it('xóa hết người được giao bằng danh sách rỗng', async () => {
+        prisma.task.findUnique.mockResolvedValue(buildTask({ assigneeIds: [20, 21] }));
+        await service.update(owner, 5, { assigneeIds: [] });
+        expect(callArg(prisma.taskAssignee.deleteMany)).toEqual({ where: { taskId: 5, userId: { in: [20, 21] } } });
+      });
+
+      it('gửi lại đúng danh sách cũ (kể cả khác thứ tự) thì không thay đổi gì', async () => {
+        prisma.task.findUnique.mockResolvedValue(buildTask({ assigneeIds: [20, 21] }));
+        await service.update(owner, 5, { assigneeIds: [21, 20] });
+        expect(prisma.task.update).not.toHaveBeenCalled();
+        expect(prisma.taskAssignee.deleteMany).not.toHaveBeenCalled();
+        expect(prisma.taskAssignee.createMany).not.toHaveBeenCalled();
+        expect(activity.log).not.toHaveBeenCalled();
+      });
+
+      it('chỉ đổi người được giao vẫn cập nhật updatedAt của task', async () => {
+        prisma.task.findUnique.mockResolvedValue(buildTask({ assigneeIds: [20] }));
+        await service.update(owner, 5, { assigneeIds: [20, 21] });
+        expect((callArg(prisma.task.update) as { data: { updatedAt: Date } }).data.updatedAt).toBeInstanceOf(Date);
+      });
+
+      it('từ chối người mới thêm không thuộc dự án / bị vô hiệu hóa; không thay đổi gì', async () => {
+        prisma.task.findUnique.mockResolvedValue(buildTask({ assigneeIds: [20] }));
+        await expect(service.update(owner, 5, { assigneeIds: [20, 30] })).rejects.toBeInstanceOf(BadRequestException);
+        prisma.user.findUnique.mockResolvedValue({ isActive: false });
+        await expect(service.update(owner, 5, { assigneeIds: [20, 21] })).rejects.toBeInstanceOf(BadRequestException);
+        expect(prisma.task.update).not.toHaveBeenCalled();
+        expect(prisma.taskAssignee.createMany).not.toHaveBeenCalled();
+      });
+
+      it('người đã được giao từ trước không bị kiểm tra lại (đã rời dự án vẫn giữ nguyên khi thêm người khác)', async () => {
+        prisma.task.findUnique.mockResolvedValue(buildTask({ assigneeIds: [30] })); // 30 không còn là thành viên
+        await service.update(owner, 5, { assigneeIds: [30, 21] });
+        expect(callArg(prisma.taskAssignee.createMany)).toEqual({ data: [{ taskId: 5, userId: 21 }] });
+        expect(prisma.taskAssignee.deleteMany).not.toHaveBeenCalled();
+      });
+
+      it('member (người tạo công việc con) chỉ thêm/bớt được CHÍNH MÌNH, không đụng người khác', async () => {
+        const sub = () => buildTask({ id: 8, parentId: 7, creatorId: 20, assigneeIds: [21] });
+        prisma.task.findUnique.mockResolvedValue(sub());
+        await expect(service.update(assignee, 8, { assigneeIds: [21, 20] })).resolves.toBeDefined();
+        expect(callArg(prisma.taskAssignee.createMany)).toEqual({ data: [{ taskId: 8, userId: 20 }] });
+        prisma.taskAssignee.createMany.mockClear();
+        await expect(service.update(assignee, 8, { assigneeIds: [] })).rejects.toBeInstanceOf(ForbiddenException); // bớt người khác
+        await expect(service.update(assignee, 8, { assigneeIds: [21, 10] })).rejects.toBeInstanceOf(ForbiddenException); // thêm người khác
+        expect(prisma.taskAssignee.createMany).not.toHaveBeenCalled();
+      });
+
+      it('member sửa công việc con mà không đổi người được giao thì không bị chặn vì người khác trong danh sách', async () => {
+        prisma.task.findUnique.mockResolvedValue(buildTask({ id: 8, parentId: 7, creatorId: 20, assigneeIds: [20, 21] }));
+        await expect(service.update(assignee, 8, { title: 'Tên mới', assigneeIds: [20, 21] })).resolves.toBeDefined();
+      });
+    });
+
+    describe('thông báo gửi cho tất cả người được giao', () => {
+      it('đổi trạng thái: báo mọi người được giao khác và leader, không báo người thao tác', async () => {
+        prisma.task.findUnique.mockResolvedValue(buildTask({ assigneeIds: [20, 21] }));
+        await service.update(assignee, 5, { status: 'review' });
+        const notified = (callArg(notifications.notify) as { userId: number }[]).map((n) => n.userId).sort((a, b) => a - b);
+        expect(notified).toEqual([10, 21]);
+      });
+
+      it('đổi deadline: báo mọi người được giao (trừ người thao tác)', async () => {
+        prisma.task.findUnique.mockResolvedValue(buildTask({ assigneeIds: [20, 21] }));
+        await service.update(owner, 5, { deadline: '2026-12-01T00:00:00.000Z' });
+        const notified = (callArg(notifications.notify) as { userId: number; type: string }[]).filter((n) => n.type === 'deadline_changed').map((n) => n.userId);
+        expect(notified.sort()).toEqual([20, 21]);
+      });
+
+      it('kéo thẻ Kanban đổi cột: báo mọi người được giao khác', async () => {
+        prisma.task.findUnique.mockResolvedValue(buildTask({ assigneeIds: [20, 21] }));
+        prisma.task.findMany.mockResolvedValue([]);
+        await service.move(assignee, 5, { status: 'done', position: 0 });
+        const notified = (callArg(notifications.notify) as { userId: number }[]).map((n) => n.userId);
+        expect(notified).toContain(21);
+        expect(notified).not.toContain(20);
+      });
+    });
+
+    describe('lọc theo người được giao', () => {
+      const query = (over: Partial<ListTasksQueryDto> = {}): ListTasksQueryDto => Object.assign(new ListTasksQueryDto(), over);
+
+      it('danh sách: task có BẤT KỲ người nào trong các người được chọn', async () => {
+        prisma.task.count.mockResolvedValue(0);
+        prisma.task.findMany.mockResolvedValue([]);
+        await service.list(admin, query({ assigneeIds: [20, 21] }));
+        const where = (callArg(prisma.task.findMany) as { where: { AND: unknown[] } }).where;
+        expect(where.AND).toEqual(expect.arrayContaining([{ assignees: { some: { userId: { in: [20, 21] } } } }]));
+      });
+
+      it('không chọn ai thì không lọc theo người', async () => {
+        prisma.task.count.mockResolvedValue(0);
+        prisma.task.findMany.mockResolvedValue([]);
+        await service.list(admin, query({ assigneeIds: [] }));
+        const where = (callArg(prisma.task.findMany) as { where: { AND: Record<string, unknown>[] } }).where;
+        expect(where.AND.some((f) => 'assignees' in f)).toBe(false);
+      });
+
+      it('Kanban lọc nhiều người', async () => {
+        prisma.task.findMany.mockResolvedValue([]);
+        await service.board(admin, { projectId: 1, assigneeIds: [21] });
+        expect(callArg(prisma.task.findMany)).toMatchObject({ where: { projectId: 1, parentId: null, assignees: { some: { userId: { in: [21] } } } } });
+      });
     });
   });
 });

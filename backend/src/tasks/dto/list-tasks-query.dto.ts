@@ -1,8 +1,8 @@
 import { Priority, TaskStatus } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
-import { IsBoolean, IsDateString, IsEnum, IsIn, IsInt, IsOptional, IsString, MaxLength } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsDateString, IsEnum, IsIn, IsInt, IsOptional, IsString, MaxLength } from 'class-validator';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
-import { toBoolean, trimString } from '../../common/utils/transforms';
+import { toBoolean, toNumberList, trimString } from '../../common/utils/transforms';
 
 export const TASK_SORT_FIELDS = ['createdAt', 'updatedAt', 'deadline', 'priority', 'status', 'title'] as const;
 export type TaskSortField = (typeof TASK_SORT_FIELDS)[number];
@@ -13,10 +13,13 @@ export class ListTasksQueryDto extends PaginationQueryDto {
   @IsInt()
   projectId?: number;
 
+  /** Lọc theo người được giao: "1,2" hoặc lặp tham số; task có BẤT KỲ người nào trong danh sách */
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  assigneeId?: number;
+  @Transform(toNumberList)
+  @IsArray()
+  @ArrayMaxSize(50)
+  @IsInt({ each: true, message: 'Mã người được giao không hợp lệ' })
+  assigneeIds?: number[];
 
   @IsOptional()
   @IsEnum(TaskStatus)
