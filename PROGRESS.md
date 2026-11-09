@@ -65,3 +65,4 @@
 - Cron chỉ chạy khi tiến trình backend chạy; nếu chạy nhiều bản backend song song sẽ trùng lần quét (đã chống tạo thông báo trùng ở mức DB-check, chưa có khóa phân tán).
 - Đăng ký công khai (`POST /auth/register`): luôn tạo `member`, DTO không có trường role (gửi `role` bị 400); tắt bằng `ALLOW_REGISTRATION=false`.
 - Có 3 script dữ liệu: `seed:admin` (chỉ đảm bảo admin), `reset` (xóa hết, giữ admin), `seed` (xóa hết, nạp dữ liệu mẫu). `dev.sh` chỉ tạo admin khi DB trống.
+- Member được thêm công việc con vào task lớn **được giao cho mình** (chỉ giao cho chính mình hoặc để trống), được sửa/xóa công việc con do chính mình tạo; không tạo được task lớn, không thêm vào task của người khác. Leader dự án nhận thông báo `subtask_added`. Muốn mở rộng cho mọi thành viên dự án chỉ cần bỏ kiểm tra `parent.assigneeId` trong `TasksService.create`.

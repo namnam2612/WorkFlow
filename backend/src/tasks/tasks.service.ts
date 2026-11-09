@@ -103,8 +103,19 @@ export class TasksService {
   // -------------------------------------------------------------- mutations
 
   async create(user: AuthUser, dto: CreateTaskDto) {
-    const project = await this.access.assertCanManage(user, dto.projectId);
+    const project = await this.access.assertCanView(user, dto.projectId);
+    const canManage = this.access.canManage(user, project);
+    // Thành viên chỉ được thêm công việc con (không tạo công việc lớn mới)
+    if (!canManage && !dto.parentId) {
+      throw new ForbiddenException('Chỉ trưởng nhóm của dự án hoặc quản trị viên mới tạo được công việc mới');
+    }
     const parent = dto.parentId ? await this.assertValidParent(dto.parentId, dto.projectId) : null;
+    if (!canManage && parent) {
+      if (parent.assigneeId !== user.id) {
+        throw new ForbiddenException('Bạn chỉ được thêm công việc con vào công việc được giao cho mình');
+      }
+      this.assertSelfAssignment(user, dto.assigneeId);
+    }
     await this.assertValidAssignee(project, dto.assigneeId);
 
     const status = dto.status ?? 'todo';
@@ -137,9 +148,20 @@ export class TasksService {
       return task;
     });
 
+    const notices: NewNotification[] = [];
     if (created.assigneeId !== null && created.assigneeId !== user.id) {
-      await this.notifications.notify([this.assignedNotification(created.assigneeId, created.title, created.id)]);
+      notices.push(this.assignedNotification(created.assigneeId, created.title, created.id));
     }
+    // Thành viên thêm công việc con: báo cho trưởng nhóm dự án nắm
+    if (!canManage && parent && project.createdById !== user.id) {
+      notices.push({
+        userId: project.createdById,
+        type: 'subtask_added',
+        message: `${user.name} đã thêm công việc con "${created.title}" vào "${parent.title}"`,
+        link: `/tasks/${created.id}`,
+      });
+    }
+    if (notices.length > 0) await this.notifications.notify(notices);
     this.realtime.taskChanged(created.projectId, created.id);
     return this.get(user, created.id);
   }
@@ -148,8 +170,10 @@ export class TasksService {
     const task = await this.findTaskOrThrow(id);
     const project = await this.access.assertCanView(user, task.projectId);
     const canManage = this.access.canManage(user, project);
+    // Người tạo công việc con (thành viên) được sửa đầy đủ công việc con của mình
+    const canEditAll = canManage || this.isSubtaskCreator(user, task);
 
-    if (!canManage) {
+    if (!canEditAll) {
       if (task.assigneeId !== user.id) {
         throw new ForbiddenException('Bạn chỉ được cập nhật công việc được giao cho mình');
       }
@@ -158,6 +182,7 @@ export class TasksService {
         throw new ForbiddenException('Thành viên chỉ được cập nhật trạng thái và giờ làm của công việc được giao');
       }
     }
+    if (!canManage && dto.assigneeId !== undefined) this.assertSelfAssignment(user, dto.assigneeId);
     if (dto.assigneeId !== undefined) await this.assertValidAssignee(project, dto.assigneeId);
 
     const data: Prisma.TaskUncheckedUpdateInput = {};
@@ -291,12 +316,27 @@ export class TasksService {
 
   async remove(user: AuthUser, id: number): Promise<void> {
     const task = await this.findTaskOrThrow(id);
-    await this.access.assertCanManage(user, task.projectId);
+    const project = await this.access.assertCanView(user, task.projectId);
+    if (!this.access.canManage(user, project) && !this.isSubtaskCreator(user, task)) {
+      throw new ForbiddenException('Chỉ trưởng nhóm của dự án, quản trị viên hoặc người tạo công việc con mới được xóa');
+    }
     await this.prisma.task.delete({ where: { id } });
     this.realtime.taskChanged(task.projectId, id);
   }
 
   // ---------------------------------------------------------------- helpers
+
+  /** Công việc con do chính người dùng tạo (dành cho thành viên không phải leader/admin của dự án) */
+  private isSubtaskCreator(user: AuthUser, task: Pick<Task, 'parentId' | 'creatorId'>): boolean {
+    return task.parentId !== null && task.creatorId === user.id;
+  }
+
+  /** Thành viên chỉ được giao việc cho chính mình hoặc để trống */
+  private assertSelfAssignment(user: AuthUser, assigneeId: number | null | undefined): void {
+    if (assigneeId !== null && assigneeId !== undefined && assigneeId !== user.id) {
+      throw new ForbiddenException('Thành viên chỉ được giao công việc con cho chính mình');
+    }
+  }
 
   private async findTaskOrThrow(id: number): Promise<Task> {
     const task = await this.prisma.task.findUnique({ where: { id } });

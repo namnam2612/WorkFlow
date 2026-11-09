@@ -53,6 +53,9 @@ export default function TaskDetailPage() {
   const canManage = canManageProject(user, task.project);
   const canUpdateProgress = canManage || isAssignee(user, task);
   const isSubtask = task.parentId !== null;
+  // Member được thêm công việc con vào task lớn giao cho mình, và sửa/xóa công việc con do mình tạo
+  const canAddSubtask = canManage || isAssignee(user, task);
+  const canEditTask = canManage || (isSubtask && task.creatorId === user?.id);
 
   const changeStatus = async (status: TaskStatus) => {
     try {
@@ -111,7 +114,7 @@ export default function TaskDetailPage() {
           </div>
           <h1 className="break-words text-xl font-semibold text-slate-900 sm:text-2xl">{task.title}</h1>
         </div>
-        {canManage && (
+        {canEditTask && (
           <div className="flex shrink-0 gap-2">
             <Button variant="secondary" icon={<Pencil className="h-4 w-4" />} onClick={() => setEditing(true)}>
               Sửa
@@ -133,7 +136,7 @@ export default function TaskDetailPage() {
             <Card
               title={`Công việc con (${task.subtaskDone}/${task.subtaskTotal})`}
               action={
-                canManage && (
+                canAddSubtask && (
                   <Button variant="secondary" size="sm" icon={<Plus className="h-4 w-4" />} onClick={() => setAddingSubtask(true)}>
                     Thêm
                   </Button>
@@ -141,7 +144,9 @@ export default function TaskDetailPage() {
               }
             >
               {task.subtasks.length === 0 ? (
-                <p className="text-sm text-slate-500">Chưa có công việc con.</p>
+                <p className="text-sm text-slate-500">
+                  Chưa có công việc con.{canAddSubtask && !canManage ? ' Bạn có thể chia nhỏ công việc này nếu cần.' : ''}
+                </p>
               ) : (
                 <>
                   <div className="mb-3 h-1.5 overflow-hidden rounded-full bg-slate-100">

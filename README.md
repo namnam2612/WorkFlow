@@ -25,7 +25,7 @@ Web app để **Leader giao việc và theo dõi tiến độ/deadline** của t
 |---|---|
 | `admin` | Toàn hệ thống: người dùng, vai trò, mọi dự án/task |
 | `leader` | Tạo dự án; thêm/xóa thành viên; tạo/giao/sửa/xóa **mọi task trong dự án do mình tạo** |
-| `member` | Xem task trong dự án mình tham gia; chỉ cập nhật **trạng thái, giờ thực tế, bình luận** trên task **được giao cho mình** |
+| `member` | Xem task trong dự án mình tham gia; cập nhật **trạng thái, giờ thực tế, bình luận** trên task **được giao cho mình**; **thêm công việc con** vào task lớn được giao cho mình (chỉ giao cho chính mình hoặc để trống) và sửa/xóa công việc con do mình tạo |
 
 Phân quyền được kiểm tra **ở backend** (`JwtAuthGuard` toàn cục, `RolesGuard` + `@Roles`, và `ProjectAccessService` cho quyền theo dự án/task cụ thể). Frontend chỉ ẩn nút để trải nghiệm tốt hơn.
 
@@ -160,7 +160,7 @@ Tiền tố `/api`. Mọi route cần `Authorization: Bearer <accessToken>` tr�
 | Auth | `POST /auth/login` · `POST /auth/register` (công khai, luôn tạo `member`) · `POST /auth/refresh` · `POST /auth/logout` · `GET /auth/me` · `POST /auth/change-password` | công khai / đăng nhập |
 | Users | `GET /users` (lọc, phân trang, kèm thống kê) · `GET /users/:id` · `POST /users` · `PATCH /users/:id` | list/get: theo phạm vi dự án; tạo: admin; sửa: admin hoặc chính mình (giới hạn trường) |
 | Projects | `GET /projects` · `POST /projects` · `GET/PATCH/DELETE /projects/:id` · `POST /projects/:id/members` · `DELETE /projects/:id/members/:userId` | tạo: admin/leader; sửa/xóa/thành viên: admin hoặc leader của dự án |
-| Tasks | `GET /tasks` (lọc, tìm kiếm, sắp xếp, phân trang) · `GET /tasks/board?projectId=` · `POST /tasks` (kèm `parentId` = subtask) · `GET/PATCH/DELETE /tasks/:id` · `PATCH /tasks/:id/move` (status + position) | tạo/xóa: leader của dự án/admin; sửa: leader/admin (mọi trường), assignee (status, actualHours); move: leader/admin hoặc assignee |
+| Tasks | `GET /tasks` (lọc, tìm kiếm, sắp xếp, phân trang) · `GET /tasks/board?projectId=` · `POST /tasks` (kèm `parentId` = subtask) · `GET/PATCH/DELETE /tasks/:id` · `PATCH /tasks/:id/move` (status + position) | tạo task lớn/xóa: leader của dự án/admin; tạo công việc con: thêm cả assignee của task cha; sửa: leader/admin (mọi trường), assignee (status, actualHours), người tạo công việc con (mọi trường của việc con đó); move: leader/admin hoặc assignee |
 | Comments | `GET/POST /tasks/:id/comments` · `DELETE /comments/:id` | xem: thành viên dự án; viết: leader/admin hoặc assignee; xóa: tác giả hoặc leader/admin |
 | Activity | `GET /tasks/:id/activity` | thành viên dự án |
 | Notifications | `GET /notifications` · `GET /notifications/unread-count` · `PATCH /notifications/:id/read` · `POST /notifications/read-all` · `POST /notifications/scan-deadlines` | người dùng; `scan-deadlines`: admin |

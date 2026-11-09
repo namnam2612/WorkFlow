@@ -83,9 +83,57 @@ describe('TasksService', () => {
   describe('create', () => {
     const dto = { projectId: 1, title: 'Việc mới', assigneeId: 20 };
 
-    it('member không được tạo task (kiểm tra ở backend, không chỉ ẩn nút)', async () => {
+    it('member không được tạo task lớn (kiểm tra ở backend, không chỉ ẩn nút)', async () => {
       await expect(service.create(assignee, dto)).rejects.toBeInstanceOf(ForbiddenException);
       expect(prisma.task.create).not.toHaveBeenCalled();
+    });
+
+    describe('member thêm công việc con', () => {
+      const subDto = { projectId: 1, parentId: 7, title: 'Việc con của tôi' };
+
+      beforeEach(() => {
+        prisma.task.findUnique.mockResolvedValue(buildTask({ id: 7, assigneeId: 20, title: 'Task lớn' }));
+      });
+
+      it('được thêm vào task lớn được giao cho mình, mặc định không giao ai', async () => {
+        await service.create(assignee, subDto);
+        const arg = callArg(prisma.task.create) as { data: Partial<Task> };
+        expect(arg.data).toMatchObject({ parentId: 7, creatorId: 20, assigneeId: null });
+      });
+
+      it('được tự giao cho chính mình', async () => {
+        await service.create(assignee, { ...subDto, assigneeId: 20 });
+        const arg = callArg(prisma.task.create) as { data: Partial<Task> };
+        expect(arg.data.assigneeId).toBe(20);
+      });
+
+      it('không được giao việc con cho người khác', async () => {
+        await expect(service.create(assignee, { ...subDto, assigneeId: 21 })).rejects.toBeInstanceOf(ForbiddenException);
+        expect(prisma.task.create).not.toHaveBeenCalled();
+      });
+
+      it('không được thêm vào task lớn giao cho người khác', async () => {
+        await expect(service.create(otherMember, subDto)).rejects.toBeInstanceOf(ForbiddenException);
+      });
+
+      it('không được thêm vào task lớn chưa giao ai', async () => {
+        prisma.task.findUnique.mockResolvedValue(buildTask({ id: 7, assigneeId: null }));
+        await expect(service.create(assignee, subDto)).rejects.toBeInstanceOf(ForbiddenException);
+      });
+
+      it('người ngoài dự án không được thêm', async () => {
+        await expect(service.create(outsider, subDto)).rejects.toBeInstanceOf(ForbiddenException);
+      });
+
+      it('vẫn không thêm được công việc con của công việc con (chỉ 1 cấp)', async () => {
+        prisma.task.findUnique.mockResolvedValue(buildTask({ id: 7, parentId: 3, assigneeId: 20 }));
+        await expect(service.create(assignee, subDto)).rejects.toBeInstanceOf(BadRequestException);
+      });
+
+      it('báo cho trưởng nhóm dự án khi member thêm công việc con', async () => {
+        await service.create(assignee, subDto);
+        expect(notifications.notify).toHaveBeenCalledWith([expect.objectContaining({ userId: 10, type: 'subtask_added' })]);
+      });
     });
 
     it('leader của dự án khác không được tạo task', async () => {
@@ -233,6 +281,32 @@ describe('TasksService', () => {
       expect(notified).not.toContain(20);
     });
 
+    describe('người tạo công việc con (member)', () => {
+      const ownSubtask = () => buildTask({ id: 8, parentId: 7, creatorId: 20, assigneeId: 20 });
+
+      it('sửa được tiêu đề/ưu tiên công việc con do mình tạo', async () => {
+        prisma.task.findUnique.mockResolvedValue(ownSubtask());
+        await service.update(assignee, 8, { title: 'Tên mới', priority: 'high' });
+        const arg = callArg(prisma.task.update) as { data: Partial<Task> };
+        expect(arg.data).toMatchObject({ title: 'Tên mới', priority: 'high' });
+      });
+
+      it('không được giao công việc con cho người khác khi sửa', async () => {
+        prisma.task.findUnique.mockResolvedValue(ownSubtask());
+        await expect(service.update(assignee, 8, { assigneeId: 21 })).rejects.toBeInstanceOf(ForbiddenException);
+      });
+
+      it('không sửa được công việc con do người khác tạo (kể cả khi được giao)', async () => {
+        prisma.task.findUnique.mockResolvedValue(buildTask({ id: 8, parentId: 7, creatorId: 10, assigneeId: 20 }));
+        await expect(service.update(assignee, 8, { title: 'x' })).rejects.toBeInstanceOf(ForbiddenException);
+      });
+
+      it('không sửa được task lớn dù là người tạo (chỉ áp dụng cho công việc con)', async () => {
+        prisma.task.findUnique.mockResolvedValue(buildTask({ id: 8, parentId: null, creatorId: 20, assigneeId: 20 }));
+        await expect(service.update(assignee, 8, { title: 'x' })).rejects.toBeInstanceOf(ForbiddenException);
+      });
+    });
+
     it('404 khi task không tồn tại', async () => {
       prisma.task.findUnique.mockResolvedValue(null);
       await expect(service.update(owner, 404, { title: 'x' })).rejects.toBeInstanceOf(NotFoundException);
@@ -306,6 +380,18 @@ describe('TasksService', () => {
     it('leader dự án khác không được xóa', async () => {
       prisma.task.findUnique.mockResolvedValue(buildTask());
       await expect(service.remove(otherLeader, 5)).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('member xóa được công việc con do mình tạo, nhưng không xóa được của người khác hay task lớn', async () => {
+      prisma.task.findUnique.mockResolvedValue(buildTask({ id: 8, parentId: 7, creatorId: 20 }));
+      await service.remove(assignee, 8);
+      expect(prisma.task.delete).toHaveBeenCalledTimes(1);
+
+      prisma.task.findUnique.mockResolvedValue(buildTask({ id: 8, parentId: 7, creatorId: 10 }));
+      await expect(service.remove(assignee, 8)).rejects.toBeInstanceOf(ForbiddenException);
+      prisma.task.findUnique.mockResolvedValue(buildTask({ id: 5, parentId: null, creatorId: 20 }));
+      await expect(service.remove(assignee, 5)).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.task.delete).toHaveBeenCalledTimes(1);
     });
 
     it('leader sở hữu và admin xóa được', async () => {
