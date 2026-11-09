@@ -29,6 +29,8 @@ export interface User {
   role: Role;
   avatarUrl: string | null;
   isActive: boolean;
+  /** Nhận thêm thông báo qua email */
+  emailNotifications: boolean;
   createdAt: string;
   /** Hồ sơ cá nhân (tùy chọn) */
   jobTitle: string | null;
@@ -69,6 +71,8 @@ export interface ProjectSummary {
   createdById: number;
   createdAt: string;
   createdBy: UserBrief;
+  /** Đã cấu hình Slack webhook (URL là bí mật nên không trả về) */
+  slackConfigured: boolean;
   members: UserBrief[];
   taskCount: number;
   doneCount: number;

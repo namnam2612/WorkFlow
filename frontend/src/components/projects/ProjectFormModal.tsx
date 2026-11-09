@@ -24,6 +24,7 @@ const schema = z
     description: z.string().max(5000, 'Tối đa 5000 ký tự'),
     startDate: z.string(),
     endDate: z.string(),
+    slackWebhookUrl: z.string().trim().refine((v) => v === '' || /^https:\/\/hooks\.slack\.com\/(services|workflows|triggers)\//.test(v), 'Phải có dạng https://hooks.slack.com/services/...'),
   })
   .refine((v) => !v.startDate || !v.endDate || v.endDate >= v.startDate, {
     path: ['endDate'],
@@ -60,8 +61,10 @@ export function ProjectFormModal({ open, onClose, project, onSaved }: ProjectFor
       description: project?.description ?? '',
       startDate: isoToVnDateInput(project?.startDate),
       endDate: isoToVnDateInput(project?.endDate),
+      slackWebhookUrl: '',
     },
   });
+  const [removeSlack, setRemoveSlack] = useState(false);
 
   const toggleMember = (id: number) =>
     setMemberIds((current) => (current.includes(id) ? current.filter((x) => x !== id) : [...current, id]));
@@ -81,6 +84,8 @@ export function ProjectFormModal({ open, onClose, project, onSaved }: ProjectFor
         description: values.description.trim() || null,
         startDate: vnDateInputToIso(values.startDate),
         endDate: vnDateInputToIso(values.endDate),
+        // Webhook là bí mật nên không điền sẵn: để trống = giữ nguyên, nhập mới = thay, "Gỡ" = xóa
+        ...(values.slackWebhookUrl ? { slackWebhookUrl: values.slackWebhookUrl } : removeSlack ? { slackWebhookUrl: null } : {}),
         ...(project ? {} : { memberIds }),
       });
     } catch (error) {
@@ -130,6 +135,26 @@ export function ProjectFormModal({ open, onClose, project, onSaved }: ProjectFor
             <input id="project-end" type="date" className={inputClass} {...register('endDate')} />
           </Field>
         </div>
+
+        <Field
+          label="Slack webhook (tùy chọn)"
+          htmlFor="project-slack"
+          error={errors.slackWebhookUrl?.message}
+          hint={
+            project?.slackConfigured && !removeSlack
+              ? 'Đã cấu hình. Nhập URL mới để thay, hoặc bấm "Gỡ webhook". Sự kiện của dự án sẽ được đăng vào kênh Slack.'
+              : 'Dán Incoming Webhook của Slack để đăng sự kiện của dự án (giao việc, đổi trạng thái, đến hạn...) vào kênh.'
+          }
+        >
+          <div className="flex gap-2">
+            <input id="project-slack" type="password" autoComplete="off" placeholder={project?.slackConfigured && !removeSlack ? '••••••••••••••••' : 'https://hooks.slack.com/services/...'} className={inputClass} {...register('slackWebhookUrl')} />
+            {project?.slackConfigured && (
+              <Button variant="secondary" onClick={() => setRemoveSlack((v) => !v)}>
+                {removeSlack ? 'Giữ lại' : 'Gỡ webhook'}
+              </Button>
+            )}
+          </div>
+        </Field>
 
         {!project && (
           <div>

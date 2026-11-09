@@ -210,9 +210,10 @@ export class TasksService {
       return task;
     });
 
+    const assigneeNames = new Map((await this.userRefs(assigneeIds)).map((u) => [u.id, u.name]));
     const notices: NewNotification[] = assigneeIds
       .filter((id) => id !== user.id)
-      .map((id) => this.assignedNotification(id, created.title, created.id));
+      .map((id) => this.assignedNotification(id, created.title, created.id, created.projectId, assigneeNames.get(id)));
     // Thành viên thêm công việc con: báo cho trưởng nhóm dự án nắm
     if (!canManage && parent && project.createdById !== user.id) {
       notices.push({
@@ -220,6 +221,7 @@ export class TasksService {
         type: 'subtask_added',
         message: `${user.name} đã thêm công việc con "${created.title}" vào "${parent.title}"`,
         link: `/tasks/${created.id}`,
+        projectId: created.projectId,
       });
     }
     if (notices.length > 0) await this.notifications.notify(notices);
@@ -352,7 +354,8 @@ export class TasksService {
     });
 
     // Chỉ người MỚI được thêm nhận thông báo "được giao"; người giữ nguyên không bị báo lại
-    const notices: NewNotification[] = addedIds.filter((uid) => uid !== user.id).map((uid) => this.assignedNotification(uid, updated.title, id));
+    const addedNames = new Map((await this.userRefs(addedIds)).map((u) => [u.id, u.name]));
+    const notices: NewNotification[] = addedIds.filter((uid) => uid !== user.id).map((uid) => this.assignedNotification(uid, updated.title, id, task.projectId, addedNames.get(uid)));
     if (statusChanged) notices.push(...this.statusNotifications(user, project, updated, nextStatus.name, nextIds));
     if (dto.deadline !== undefined && updated.deadline?.getTime() !== task.deadline?.getTime()) {
       for (const uid of nextIds.filter((x) => x !== user.id)) {
@@ -361,6 +364,7 @@ export class TasksService {
           type: 'deadline_changed',
           message: `Deadline của "${updated.title}" đã được thay đổi`,
           link: this.taskLink(updated),
+          projectId: updated.projectId,
         });
       }
     }
@@ -510,8 +514,15 @@ export class TasksService {
     return `/tasks/${task.id}`;
   }
 
-  private assignedNotification(userId: number, title: string, linkTaskId: number): NewNotification {
-    return { userId, type: 'task_assigned', message: `Bạn được giao công việc "${title}"`, link: `/tasks/${linkTaskId}` };
+  private assignedNotification(userId: number, title: string, linkTaskId: number, projectId: number, assigneeName?: string): NewNotification {
+    return {
+      userId,
+      type: 'task_assigned',
+      message: `Bạn được giao công việc "${title}"`,
+      channelMessage: `${assigneeName ?? 'Một thành viên'} được giao công việc "${title}"`,
+      link: `/tasks/${linkTaskId}`,
+      projectId,
+    };
   }
 
   /** Báo cho người tạo task và trưởng nhóm dự án (trừ người thao tác) khi đổi trạng thái */
@@ -523,6 +534,7 @@ export class TasksService {
       type: 'status_changed',
       message: `${actor.name} chuyển "${task.title}" sang "${statusName}"`,
       link: this.taskLink(task),
+      projectId: task.projectId,
     }));
   }
 

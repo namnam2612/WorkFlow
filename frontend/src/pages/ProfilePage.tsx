@@ -173,6 +173,32 @@ function PasswordForm() {
   );
 }
 
+function NotificationPrefs({ user, onSaved }: { user: User; onSaved: () => Promise<void> }) {
+  const toast = useToast();
+  const [saving, setSaving] = useState(false);
+  const toggle = async (checked: boolean) => {
+    setSaving(true);
+    try {
+      await api.patch(`/users/${user.id}`, { emailNotifications: checked });
+      await onSaved();
+      toast.show(checked ? 'Đã bật nhận thông báo qua email' : 'Đã tắt thông báo qua email', 'success');
+    } catch (error) {
+      toast.show(getErrorMessage(error), 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <label className="flex cursor-pointer items-start gap-3">
+      <input type="checkbox" checked={user.emailNotifications} disabled={saving} onChange={(e) => void toggle(e.target.checked)} className="mt-1 h-4 w-4 rounded border-slate-300" />
+      <span>
+        <span className="block text-sm font-medium text-slate-900">Gửi thông báo qua email</span>
+        <span className="block text-xs text-slate-500">Ngoài thông báo trong ứng dụng, gửi thêm email tới {user.email} (giao việc, đổi trạng thái, bình luận, đến hạn). Chỉ hoạt động khi quản trị viên đã cấu hình máy chủ email.</span>
+      </span>
+    </label>
+  );
+}
+
 export default function ProfilePage() {
   const { user, refreshUser } = useAuth();
   if (!user) return null;
@@ -185,6 +211,9 @@ export default function ProfilePage() {
         </Card>
         <Card title="Thông tin cá nhân">
           <ProfileForm user={user} onSaved={refreshUser} />
+        </Card>
+        <Card title="Thông báo">
+          <NotificationPrefs user={user} onSaved={refreshUser} />
         </Card>
         <Card title="Bảo mật">
           <PasswordForm />

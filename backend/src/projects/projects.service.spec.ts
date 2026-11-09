@@ -3,6 +3,7 @@ import { ActivityService } from '../activity/activity.service';
 import { AttachmentCleanupService } from '../attachments/attachment-cleanup.service';
 import { AuthUser } from '../common/types/auth-user';
 import { NotificationsService } from '../notifications/notifications.service';
+import { SlackService } from '../notifications/slack.service';
 import { asPrisma, callArg, createPrismaMock, firstArgs, PrismaMock } from '../test-utils';
 import { ProjectAccessService } from './project-access.service';
 import { ProjectsService } from './projects.service';
@@ -32,6 +33,7 @@ describe('ProjectsService.removeMember - gỡ khỏi danh sách người đượ
       { notify: jest.fn() } as unknown as NotificationsService,
       activity as unknown as ActivityService,
       {} as unknown as AttachmentCleanupService,
+      { post: jest.fn().mockResolvedValue(true) } as unknown as SlackService,
     );
     jest.spyOn(service, 'get').mockResolvedValue({} as never);
   });

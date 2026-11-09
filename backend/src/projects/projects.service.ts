@@ -5,6 +5,7 @@ import { ActivityService } from '../activity/activity.service';
 import { AuthUser } from '../common/types/auth-user';
 import { USER_BRIEF_SELECT } from '../common/utils/user-brief';
 import { NotificationsService } from '../notifications/notifications.service';
+import { SlackService } from '../notifications/slack.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
@@ -32,6 +33,7 @@ export class ProjectsService {
     private readonly notifications: NotificationsService,
     private readonly activity: ActivityService,
     private readonly attachmentCleanup: AttachmentCleanupService,
+    private readonly slack: SlackService,
   ) {}
 
   async list(user: AuthUser, search?: string) {
@@ -65,6 +67,7 @@ export class ProjectsService {
           startDate: dto.startDate ? new Date(dto.startDate) : null,
           endDate: dto.endDate ? new Date(dto.endDate) : null,
           createdById: user.id,
+          slackWebhookUrl: dto.slackWebhookUrl ?? null,
           members: { create: [...memberIds].map((userId) => ({ userId })) },
         },
         include: projectInclude,
@@ -100,11 +103,21 @@ export class ProjectsService {
         description: dto.description,
         startDate: dto.startDate === undefined ? undefined : dto.startDate ? new Date(dto.startDate) : null,
         endDate: dto.endDate === undefined ? undefined : dto.endDate ? new Date(dto.endDate) : null,
+        slackWebhookUrl: dto.slackWebhookUrl,
       },
       include: projectInclude,
     });
     const counts = await this.countsFor([id]);
     return this.toView(project, counts.get(id));
+  }
+
+  /** Gửi một tin thử tới Slack webhook của dự án để người quản lý kiểm tra cấu hình */
+  async testSlack(user: AuthUser, id: number): Promise<{ ok: boolean }> {
+    await this.access.assertCanManage(user, id);
+    const project = await this.prisma.project.findUniqueOrThrow({ where: { id }, select: { name: true, slackWebhookUrl: true } });
+    if (!project.slackWebhookUrl) throw new BadRequestException('Dự án chưa cấu hình Slack webhook');
+    const ok = await this.slack.post(project.slackWebhookUrl, `✅ TaskFlow đã kết nối với kênh này cho dự án *${project.name}*`);
+    return { ok };
   }
 
   async remove(user: AuthUser, id: number): Promise<void> {
@@ -204,9 +217,11 @@ export class ProjectsService {
   }
 
   private toView(project: ProjectWithRelations, counts: ProjectCounts = { taskCount: 0, doneCount: 0, overdueCount: 0 }) {
-    const { members, ...rest } = project;
+    // Webhook là bí mật: chỉ cho biết đã cấu hình hay chưa
+    const { members, slackWebhookUrl, ...rest } = project;
     return {
       ...rest,
+      slackConfigured: slackWebhookUrl !== null,
       members: members.map((m) => m.user),
       ...counts,
       progress: counts.taskCount === 0 ? 0 : Math.round((counts.doneCount / counts.taskCount) * 100),

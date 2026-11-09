@@ -41,6 +41,7 @@ export class DeadlineScannerService {
       where: { status: { category: { not: 'done' } }, deadline: { not: null, lte: soonLimit } },
       select: {
         id: true,
+        projectId: true,
         title: true,
         deadline: true,
         assignees: { select: { userId: true } },
@@ -73,6 +74,7 @@ export class DeadlineScannerService {
           userId,
           type,
           link,
+          projectId: task.projectId,
           message: isOverdue ? `Công việc "${task.title}" đã quá hạn` : `Công việc "${task.title}" sắp đến hạn trong vòng 24 giờ`,
         });
       }

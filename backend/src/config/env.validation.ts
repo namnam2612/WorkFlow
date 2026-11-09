@@ -59,6 +59,40 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   JWT_REFRESH_EXPIRES_IN?: string;
+
+  /** Gửi email thông báo: cần SMTP_HOST; để trống = tắt kênh email */
+  @IsOptional()
+  @IsString()
+  SMTP_HOST?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(65535)
+  SMTP_PORT?: number;
+
+  /** 'true' = TLS ngay khi kết nối (thường cổng 465) */
+  @IsOptional()
+  @IsIn(['true', 'false'])
+  SMTP_SECURE?: string;
+
+  @IsOptional()
+  @IsString()
+  SMTP_USER?: string;
+
+  @IsOptional()
+  @IsString()
+  SMTP_PASS?: string;
+
+  /** Người gửi, ví dụ: "TaskFlow <no-reply@congty.vn>" */
+  @IsOptional()
+  @IsString()
+  MAIL_FROM?: string;
+
+  /** Địa chỉ web của ứng dụng, dùng để tạo link trong email/Slack (ví dụ https://alpha.hopphu.vn) */
+  @IsOptional()
+  @IsString()
+  APP_URL?: string;
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {

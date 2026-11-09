@@ -7,6 +7,8 @@ export interface ProjectInput {
   description?: string | null;
   startDate?: string | null;
   endDate?: string | null;
+  /** undefined = giữ nguyên; null = gỡ; chuỗi = đặt mới */
+  slackWebhookUrl?: string | null;
   memberIds?: number[];
 }
 

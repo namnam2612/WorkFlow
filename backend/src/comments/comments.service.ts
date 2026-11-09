@@ -58,6 +58,7 @@ export class CommentsService {
         type: 'comment_added',
         message: `${user.name} đã bình luận trong "${task.title}"`,
         link: `/tasks/${task.id}`,
+        projectId: task.projectId,
       })),
     );
     this.realtime.taskChanged(task.projectId, task.id);

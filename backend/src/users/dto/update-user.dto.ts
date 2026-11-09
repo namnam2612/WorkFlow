@@ -61,6 +61,11 @@ export class UpdateUserDto {
   @MaxLength(255)
   facebookUrl?: string | null;
 
+  /** Nhận thêm thông báo qua email (mỗi người tự bật/tắt cho mình) */
+  @IsOptional()
+  @IsBoolean()
+  emailNotifications?: boolean;
+
   /** Chỉ admin */
   @IsOptional()
   @IsEnum(Role, { message: 'Vai trò không hợp lệ' })

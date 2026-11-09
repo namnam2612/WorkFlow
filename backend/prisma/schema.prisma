@@ -56,14 +56,16 @@ enum Priority {
 }
 
 model User {
-  id           Int      @id @default(autoincrement())
-  name         String   @db.VarChar(120)
-  email        String   @unique @db.VarChar(190)
-  passwordHash String   @db.VarChar(100)
-  role         Role     @default(member)
-  avatarUrl    String?  @db.VarChar(500)
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
+  id                 Int      @id @default(autoincrement())
+  name               String   @db.VarChar(120)
+  email              String   @unique @db.VarChar(190)
+  passwordHash       String   @db.VarChar(100)
+  role               Role     @default(member)
+  avatarUrl          String?  @db.VarChar(500)
+  isActive           Boolean  @default(true)
+  /// Nhận thêm thông báo qua email (cần cấu hình SMTP); mặc định tắt
+  emailNotifications Boolean  @default(false)
+  createdAt          DateTime @default(now())
 
   // Hồ sơ cá nhân (tất cả tùy chọn)
   jobTitle     String? @db.VarChar(120)
@@ -111,13 +113,15 @@ model RefreshToken {
 }
 
 model Project {
-  id          Int       @id @default(autoincrement())
-  name        String    @db.VarChar(160)
-  description String?   @db.Text
-  startDate   DateTime?
-  endDate     DateTime?
-  createdById Int
-  createdAt   DateTime  @default(now())
+  id              Int       @id @default(autoincrement())
+  name            String    @db.VarChar(160)
+  description     String?   @db.Text
+  startDate       DateTime?
+  endDate         DateTime?
+  /// Incoming Webhook của Slack: sự kiện của dự án được đăng vào kênh. Là bí mật, không trả về qua API
+  slackWebhookUrl String?   @db.VarChar(500)
+  createdById     Int
+  createdAt       DateTime  @default(now())
 
   createdBy   User            @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: Restrict)
   members     ProjectMember[]

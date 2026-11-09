@@ -1,4 +1,4 @@
-import { KanbanSquare, ListChecks, Pencil, Plus, Trash2, UserMinus, UserPlus } from 'lucide-react';
+import { KanbanSquare, ListChecks, Pencil, Plus, Send, Trash2, UserMinus, UserPlus } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
@@ -15,7 +15,7 @@ import { useToast } from '../components/ui/useToast';
 import { useDeleteProject, useProject, useProjectMembers } from '../hooks/useProjects';
 import { useTasks } from '../hooks/useTasks';
 import { useUsers } from '../hooks/useUsers';
-import { getErrorMessage } from '../lib/api';
+import { api, getErrorMessage } from '../lib/api';
 import { ROLE_LABEL } from '../lib/constants';
 import { formatDate } from '../lib/format';
 import { canManageProject } from '../lib/permissions';
@@ -41,6 +41,19 @@ export default function ProjectDetailPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<{ id: number; name: string } | null>(null);
   const [selectedUser, setSelectedUser] = useState('');
+  const [testingSlack, setTestingSlack] = useState(false);
+
+  const testSlack = async () => {
+    setTestingSlack(true);
+    try {
+      const result = await api.post<{ ok: boolean }>(`/projects/${projectId}/slack-test`);
+      toast.show(result.ok ? 'Đã gửi tin thử tới Slack' : 'Slack không nhận tin: kiểm tra lại webhook', result.ok ? 'success' : 'error');
+    } catch (error) {
+      toast.show(getErrorMessage(error), 'error');
+    } finally {
+      setTestingSlack(false);
+    }
+  };
 
   if (projectQuery.isLoading) return <PageLoader />;
   if (projectQuery.isError || !project) return <ErrorState error={projectQuery.error} onRetry={() => void projectQuery.refetch()} />;
@@ -97,6 +110,11 @@ export default function ProjectDetailPage() {
                 <Button variant="secondary" icon={<Plus className="h-4 w-4" />} onClick={() => setCreatingTask(true)}>
                   Thêm công việc
                 </Button>
+                {project.slackConfigured && (
+                  <Button variant="ghost" icon={<Send className="h-4 w-4" />} loading={testingSlack} onClick={() => void testSlack()}>
+                    Gửi thử Slack
+                  </Button>
+                )}
                 <Button variant="secondary" icon={<Pencil className="h-4 w-4" />} onClick={() => setEditing(true)}>
                   Sửa
                 </Button>

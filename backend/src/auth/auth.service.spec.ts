@@ -20,6 +20,7 @@ function buildUser(overrides: Partial<User> = {}): User {
     role: Role.leader,
     avatarUrl: null,
     isActive: true,
+    emailNotifications: false,
     createdAt: new Date('2026-01-01T00:00:00Z'),
     jobTitle: null,
     phone: null,

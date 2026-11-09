@@ -1,6 +1,7 @@
-import { ArrayUnique, IsArray, IsDateString, IsInt, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { ArrayUnique, IsArray, IsDateString, IsInt, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-import { trimString } from '../../common/utils/transforms';
+import { emptyToNull, trimString } from '../../common/utils/transforms';
+import { SLACK_WEBHOOK_PATTERN } from '../../notifications/slack.service';
 
 export class CreateProjectDto {
   @Transform(trimString)
@@ -21,6 +22,13 @@ export class CreateProjectDto {
   @IsOptional()
   @IsDateString({}, { message: 'Ngày kết thúc không hợp lệ' })
   endDate?: string | null;
+
+  /** Incoming Webhook của Slack; null/rỗng = gỡ. Không bao giờ được trả lại qua API */
+  @IsOptional()
+  @Transform(emptyToNull)
+  @Matches(SLACK_WEBHOOK_PATTERN, { message: 'Slack webhook phải có dạng https://hooks.slack.com/services/...' })
+  @MaxLength(500)
+  slackWebhookUrl?: string | null;
 
   @IsOptional()
   @IsArray()

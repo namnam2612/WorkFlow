@@ -20,6 +20,7 @@ const target = (id: number, role: Role = 'member'): User => ({
   role,
   avatarUrl: null,
   isActive: true,
+  emailNotifications: false,
   createdAt: new Date(),
   jobTitle: null,
   phone: null,

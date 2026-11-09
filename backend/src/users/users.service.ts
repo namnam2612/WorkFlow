@@ -124,6 +124,7 @@ export class UsersService {
       facebookUrl: dto.facebookUrl,
       role: dto.role,
       isActive: dto.isActive,
+      emailNotifications: dto.emailNotifications,
     };
     if (dto.password !== undefined) data.passwordHash = await bcrypt.hash(dto.password, 10);
 

@@ -41,6 +41,12 @@ export class ProjectsController {
     await this.projects.remove(user, id);
   }
 
+  @Post(':id/slack-test')
+  @Roles('admin', 'leader')
+  testSlack(@CurrentUser() user: AuthUser, @Param('id', ParseIntPipe) id: number) {
+    return this.projects.testSlack(user, id);
+  }
+
   @Post(':id/members')
   @Roles('admin', 'leader')
   addMember(@CurrentUser() user: AuthUser, @Param('id', ParseIntPipe) id: number, @Body() dto: AddMemberDto) {
