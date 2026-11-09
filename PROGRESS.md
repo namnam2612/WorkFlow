@@ -67,3 +67,9 @@
 - Có 3 script dữ liệu: `seed:admin` (chỉ đảm bảo admin), `reset` (xóa hết, giữ admin), `seed` (xóa hết, nạp dữ liệu mẫu). `dev.sh` chỉ tạo admin khi DB trống.
 - Member được thêm công việc con vào task lớn **được giao cho mình** (chỉ giao cho chính mình hoặc để trống), được sửa/xóa công việc con do chính mình tạo; không tạo được task lớn, không thêm vào task của người khác. Leader dự án nhận thông báo `subtask_added`. Muốn mở rộng cho mọi thành viên dự án chỉ cần bỏ kiểm tra `parent.assigneeId` trong `TasksService.create`.
 - Bình luận trên công việc con: ngoài leader/admin và assignee, người tạo việc con và assignee của task cha cũng bình luận được. Người tạo việc con (member) cũng đổi được trạng thái/giờ làm của việc con đó dù chưa được giao.
+
+## Deploy (alpha.hopphu.vn)
+- Server Ubuntu 24.04 (103.175.146.251) dùng chung với site khác (`beta.hopphu.vn`, các cổng 3100/4010/8080/27017 đã bị chiếm). TaskFlow chạy ở `/opt/taskflow-alpha` bằng `deploy/docker-compose.prod.yml` (project `taskflow-alpha`), frontend chỉ nghe `127.0.0.1:18080`, MySQL/backend không mở cổng ngoài.
+- nginx của server: chỉ thêm `/etc/nginx/conf.d/alpha.hopphu.vn.conf`; HTTPS Let's Encrypt tự gia hạn (certbot). `TRUST_PROXY=2` (nginx server → nginx container).
+- Deploy không dùng GitHub: `deploy/deploy.sh` gửi `git archive HEAD` qua SSH; `.env` trên server (secret ngẫu nhiên) được giữ nguyên khi deploy lại.
+- Cập nhật phiên bản: commit rồi `LE_EMAIL=... ./deploy/deploy.sh root@103.175.146.251`.
