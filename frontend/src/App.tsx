@@ -7,6 +7,7 @@ import LoginPage from './pages/LoginPage';
 import MemberDetailPage from './pages/MemberDetailPage';
 import MembersPage from './pages/MembersPage';
 import NotFoundPage from './pages/NotFoundPage';
+import NotificationsPage from './pages/NotificationsPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 import ProjectsPage from './pages/ProjectsPage';
 import TaskDetailPage from './pages/TaskDetailPage';
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="projects/:id/board" element={<KanbanPage />} />
           <Route path="tasks" element={<TasksPage />} />
           <Route path="tasks/:id" element={<TaskDetailPage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
           <Route path="members" element={<MembersPage />} />
           <Route path="members/:id" element={<MemberDetailPage />} />
           <Route path="*" element={<NotFoundPage />} />

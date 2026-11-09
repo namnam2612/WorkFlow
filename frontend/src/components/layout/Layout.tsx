@@ -3,7 +3,9 @@ import { Bell, CheckSquare, FolderKanban, LayoutDashboard, ListChecks, LogOut, M
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
+import { useRealtime } from '../../hooks/useRealtime';
 import { ROLE_LABEL } from '../../lib/constants';
+import { NotificationBell } from '../notifications/NotificationBell';
 import { Avatar } from '../ui/Avatar';
 
 const NAV_ITEMS = [
@@ -53,6 +55,7 @@ export function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  useRealtime(user?.id);
 
   const handleLogout = async () => {
     await logout();
@@ -112,7 +115,8 @@ export function Layout() {
             <Menu className="h-5 w-5" />
           </button>
           <div className="hidden lg:block" />
-          <div id="header-actions" className="flex items-center gap-3">
+          <div className="flex items-center gap-3">
+            <NotificationBell />
             {user && (
               <div className="flex items-center gap-2">
                 <Avatar name={user.name} avatarUrl={user.avatarUrl} size="sm" />

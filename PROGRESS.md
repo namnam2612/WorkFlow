@@ -20,9 +20,9 @@
 - [x] Frontend dnd-kit (kéo thả đổi cột + thứ tự), optimistic update có rollback, lọc người/ưu tiên (đã E2E bằng Playwright)
 
 ## Giai đoạn 5 — Tương tác
-- [ ] Bình luận, activity log tự ghi
-- [ ] Thông báo realtime Socket.IO + chuông
-- [ ] Cron mỗi giờ quét sắp hạn/quá hạn
+- [x] Bình luận (GET/POST /tasks/:id/comments), activity log tự ghi + tab lịch sử
+- [x] Thông báo realtime Socket.IO (xác thực JWT ở handshake) + chuông + trang thông báo
+- [x] Cron mỗi giờ quét sắp hạn (<=24h)/quá hạn, chống trùng; admin chạy tay: POST /notifications/scan-deadlines
 
 ## Giai đoạn 6 — Dashboard & Thành viên
 - [ ] API thống kê
@@ -51,3 +51,6 @@
 - Đăng nhập giới hạn 10 lần/phút/IP (Throttler); refresh token tái sử dụng sẽ thu hồi toàn bộ phiên của user.
 - Kanban tải toàn bộ task cấp cao của dự án, lọc người/ưu tiên ở client để vị trí kéo thả luôn tính trên cột đầy đủ.
 - Member chỉ kéo được thẻ giao cho mình (leader/admin của dự án kéo được tất cả); backend kiểm tra lại ở `PATCH /tasks/:id/move`.
+- Bình luận: leader/admin của dự án bình luận mọi task; member chỉ trên task được giao cho mình; xóa: tác giả hoặc leader/admin của dự án.
+- Thông báo phát sinh khi: được giao việc, đổi trạng thái (báo người tạo/leader/assignee, trừ người thao tác), bình luận, đổi deadline, thêm vào dự án, task sắp hạn (<=24h) và quá hạn (cron).
+- Socket.IO: sự kiện `notification` (riêng từng user) và `task:changed` (thành viên dự án + admin) để Kanban/danh sách tự làm mới.

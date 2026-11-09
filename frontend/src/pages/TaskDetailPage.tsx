@@ -157,7 +157,7 @@ export default function TaskDetailPage() {
             </Card>
           )}
 
-          <TaskDiscussion taskId={task.id} />
+          <TaskDiscussion taskId={task.id} canComment={canUpdateProgress} canModerate={canManage} />
         </div>
 
         <div className="space-y-6">
