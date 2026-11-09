@@ -1,37 +1,33 @@
-import type { Priority, Role, TaskStatus } from '../types/api';
+import type { BugSeverity, Environment, Priority, Role, StatusCategory, TaskType } from '../types/api';
 
-export const STATUSES: TaskStatus[] = ['todo', 'in_progress', 'review', 'done', 'blocked'];
 export const PRIORITIES: Priority[] = ['low', 'medium', 'high', 'urgent'];
 
-export const STATUS_META: Record<TaskStatus, { label: string; badge: string; dot: string; column: string }> = {
-  todo: { label: 'Cần làm', badge: 'bg-slate-100 text-slate-700 ring-slate-200', dot: 'bg-slate-400', column: 'border-slate-300' },
-  in_progress: { label: 'Đang làm', badge: 'bg-blue-50 text-blue-700 ring-blue-200', dot: 'bg-blue-500', column: 'border-blue-400' },
-  review: { label: 'Chờ duyệt', badge: 'bg-amber-50 text-amber-700 ring-amber-200', dot: 'bg-amber-500', column: 'border-amber-400' },
-  done: { label: 'Hoàn thành', badge: 'bg-emerald-50 text-emerald-700 ring-emerald-200', dot: 'bg-emerald-500', column: 'border-emerald-400' },
-  blocked: { label: 'Bị chặn', badge: 'bg-rose-50 text-rose-700 ring-rose-200', dot: 'bg-rose-500', column: 'border-rose-400' },
-};
+export const CATEGORIES: StatusCategory[] = ['todo', 'in_progress', 'done'];
+export const CATEGORY_LABEL: Record<StatusCategory, string> = { todo: 'Cần làm', in_progress: 'Đang làm', done: 'Hoàn thành' };
 
-// Màu trạng thái trên nền tối (màu chỉ mang ý nghĩa trạng thái). Kèm mã hóa phụ (legend, nhãn số, khe 2px, tooltip, bảng).
-const STATUS_CHART_COLORS_DARK: Record<TaskStatus, string> = {
-  todo: '#8cc0ff',
-  in_progress: '#ffd561',
-  review: '#c5a6ff',
-  done: '#7ee2a8',
-  blocked: '#ff8a8a',
-};
-
+// Màu theo NHÓM trạng thái trên biểu đồ tổng hợp (mỗi dự án có bộ trạng thái riêng nên không thể một màu một trạng thái).
+// Kèm mã hóa phụ (legend, nhãn số, khe 2px, tooltip, bảng).
+const CATEGORY_CHART_COLORS_DARK: Record<StatusCategory, string> = { todo: '#8cc0ff', in_progress: '#ffd561', done: '#7ee2a8' };
 // Bản cho nền sáng: đậm hơn để đủ tương phản trên nền trắng
-const STATUS_CHART_COLORS_LIGHT: Record<TaskStatus, string> = {
-  todo: '#2272e6',
-  in_progress: '#e0a100',
-  review: '#7048e8',
-  done: '#2f9e44',
-  blocked: '#e03131',
+const CATEGORY_CHART_COLORS_LIGHT: Record<StatusCategory, string> = { todo: '#2272e6', in_progress: '#e0a100', done: '#2f9e44' };
+
+export function categoryChartColors(theme: 'dark' | 'light'): Record<StatusCategory, string> {
+  return theme === 'light' ? CATEGORY_CHART_COLORS_LIGHT : CATEGORY_CHART_COLORS_DARK;
+}
+
+export const TYPES: TaskType[] = ['task', 'story', 'bug', 'epic'];
+export const TYPE_LABEL: Record<TaskType, string> = { task: 'Công việc', story: 'User Story', bug: 'Bug', epic: 'Epic' };
+
+export const SEVERITIES: BugSeverity[] = ['minor', 'major', 'critical', 'blocker'];
+export const SEVERITY_META: Record<BugSeverity, { label: string; badge: string }> = {
+  minor: { label: 'Nhẹ', badge: 'bg-slate-100 text-slate-600 ring-slate-200' },
+  major: { label: 'Vừa', badge: 'bg-sky-50 text-sky-700 ring-sky-200' },
+  critical: { label: 'Nghiêm trọng', badge: 'bg-orange-50 text-orange-700 ring-orange-200' },
+  blocker: { label: 'Chặn phát hành', badge: 'bg-red-50 text-red-700 ring-red-200' },
 };
 
-export function statusChartColors(theme: 'dark' | 'light'): Record<TaskStatus, string> {
-  return theme === 'light' ? STATUS_CHART_COLORS_LIGHT : STATUS_CHART_COLORS_DARK;
-}
+export const ENVIRONMENTS: Environment[] = ['dev', 'staging', 'prod'];
+export const ENVIRONMENT_LABEL: Record<Environment, string> = { dev: 'Dev', staging: 'Staging', prod: 'Production' };
 
 export const PRIORITY_META: Record<Priority, { label: string; badge: string }> = {
   low: { label: 'Thấp', badge: 'bg-slate-100 text-slate-600 ring-slate-200' },
@@ -58,5 +54,8 @@ export const ACTION_LABEL: Record<string, string> = {
   comment_added: 'đã bình luận',
   subtask_added: 'đã thêm công việc con',
   attachment_added: 'đã đính kèm file',
+  type_changed: 'đã đổi loại công việc',
+  story_points_changed: 'đã đổi Story Point',
+  bug_info_changed: 'đã cập nhật thông tin Bug',
   attachment_removed: 'đã xóa file đính kèm',
 };

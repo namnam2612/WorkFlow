@@ -13,12 +13,39 @@ enum Role {
   member
 }
 
-enum TaskStatus {
+/// Nhóm của một trạng thái: hệ thống chỉ cần biết "chưa làm / đang làm / đã xong" (tính tiến độ, quá hạn, completedAt)
+enum StatusCategory {
   todo
   in_progress
-  review
   done
-  blocked
+}
+
+/// Bộ trạng thái dùng cho công việc thường hay cho Bug (Bug có vòng đời riêng)
+enum StatusScope {
+  task
+  bug
+}
+
+/// Loại công việc: task thường, user story, bug, epic (nhóm story)
+enum TaskType {
+  task
+  story
+  bug
+  epic
+}
+
+enum BugSeverity {
+  minor
+  major
+  critical
+  blocker
+}
+
+/// Môi trường phát hiện / cần sửa của Bug
+enum Environment {
+  dev
+  staging
+  prod
 }
 
 enum Priority {
@@ -94,10 +121,29 @@ model Project {
 
   createdBy   User            @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: Restrict)
   members     ProjectMember[]
+  statuses    ProjectStatus[]
   tasks       Task[]
   attachments Attachment[]
 
   @@index([createdById])
+}
+
+/// Trạng thái tùy biến của từng dự án (cột Kanban). Có 2 bộ: công việc thường và Bug.
+model ProjectStatus {
+  id        Int            @id @default(autoincrement())
+  projectId Int
+  scope     StatusScope    @default(task)
+  name      String         @db.VarChar(40)
+  color     String         @db.VarChar(9)
+  category  StatusCategory
+  position  Int            @default(0)
+  createdAt DateTime       @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks   Task[]
+
+  @@unique([projectId, scope, name])
+  @@index([projectId, scope, position])
 }
 
 model ProjectMember {
@@ -112,26 +158,32 @@ model ProjectMember {
 }
 
 model Task {
-  id             Int        @id @default(autoincrement())
+  id             Int          @id @default(autoincrement())
   projectId      Int
   parentId       Int?
-  title          String     @db.VarChar(255)
-  description    String?    @db.Text
+  title          String       @db.VarChar(255)
+  description    String?      @db.Text
   creatorId      Int
-  status         TaskStatus @default(todo)
-  priority       Priority   @default(medium)
+  type           TaskType     @default(task)
+  statusId       Int
+  storyPoints    Int?
+  /// Chỉ dùng cho type = bug
+  severity       BugSeverity?
+  environment    Environment?
+  priority       Priority     @default(medium)
   deadline       DateTime?
   estimatedHours Float?
   actualHours    Float?
-  position       Int        @default(0)
+  position       Int          @default(0)
   completedAt    DateTime?
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
-  project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  parent   Task?   @relation("Subtasks", fields: [parentId], references: [id], onDelete: Cascade)
-  subtasks Task[]  @relation("Subtasks")
-  creator  User    @relation("TaskCreator", fields: [creatorId], references: [id], onDelete: Restrict)
+  project  Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  status   ProjectStatus @relation(fields: [statusId], references: [id], onDelete: Restrict)
+  parent   Task?         @relation("Subtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  subtasks Task[]        @relation("Subtasks")
+  creator  User          @relation("TaskCreator", fields: [creatorId], references: [id], onDelete: Restrict)
 
   assignees    TaskAssignee[]
   comments     Comment[]
@@ -140,7 +192,9 @@ model Task {
 
   @@index([deadline])
   @@index([projectId])
-  @@index([projectId, status, position])
+  @@index([projectId, statusId, position])
+  @@index([statusId])
+  @@index([projectId, type])
   @@index([parentId])
 }
 

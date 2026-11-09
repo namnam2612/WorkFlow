@@ -1,3 +1,1 @@
-import type { TaskStatus } from '../types/api';
-
-export const columnDroppableId = (status: TaskStatus): string => `column:${status}`;
+export const columnDroppableId = (statusId: number): string => `column:${statusId}`;

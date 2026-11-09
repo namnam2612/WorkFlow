@@ -38,7 +38,7 @@ export class DeadlineScannerService {
   async scan(now: Date = new Date()): Promise<ScanResult> {
     const soonLimit = new Date(now.getTime() + DUE_SOON_WINDOW_MS);
     const candidates = await this.prisma.task.findMany({
-      where: { status: { not: 'done' }, deadline: { not: null, lte: soonLimit } },
+      where: { status: { category: { not: 'done' } }, deadline: { not: null, lte: soonLimit } },
       select: {
         id: true,
         title: true,

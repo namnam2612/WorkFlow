@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { Bar, BarChart, CartesianGrid, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { STATUS_META, statusChartColors } from '../../lib/constants';
+import { CATEGORY_LABEL, categoryChartColors } from '../../lib/constants';
 import { useTheme } from '../ui/useTheme';
-import type { DashboardData, TaskStatus } from '../../types/api';
+import type { DashboardData, StatusCategory } from '../../types/api';
 import { Button } from '../ui/Button';
 
 type WorkloadRow = DashboardData['workload'][number];
 
 // Thứ tự xếp chồng cố định: khớp thứ tự màu đã validate
-const STACK_ORDER: TaskStatus[] = ['todo', 'in_progress', 'review', 'done', 'blocked'];
+const STACK_ORDER: StatusCategory[] = ['todo', 'in_progress', 'done'];
 const INK_ON_COLOR = '#050505';
 const CHROME = {
   dark: { surface: '#111111', grid: 'rgba(255,255,255,0.08)', ink: '#888888', cursor: 'rgba(255,255,255,0.05)' },
@@ -20,7 +20,7 @@ interface TooltipEntry {
   value?: number | string;
 }
 
-function WorkloadTooltip({ active, payload, label, colors }: { active?: boolean; payload?: TooltipEntry[]; label?: string | number; colors: Record<TaskStatus, string> }) {
+function WorkloadTooltip({ active, payload, label, colors }: { active?: boolean; payload?: TooltipEntry[]; label?: string | number; colors: Record<StatusCategory, string> }) {
   if (!active || !payload || payload.length === 0) return null;
   const values = new Map(payload.map((p) => [String(p.dataKey), Number(p.value ?? 0)]));
   return (
@@ -29,7 +29,7 @@ function WorkloadTooltip({ active, payload, label, colors }: { active?: boolean;
       {STACK_ORDER.map((status) => (
         <p key={status} className="flex items-center gap-2 text-slate-600">
           <span className="h-2 w-2 rounded-sm" style={{ backgroundColor: colors[status] }} aria-hidden />
-          <span className="flex-1">{STATUS_META[status].label}</span>
+          <span className="flex-1">{CATEGORY_LABEL[status]}</span>
           <span className="font-medium tabular-nums text-slate-900">{values.get(status) ?? 0}</span>
         </p>
       ))}
@@ -39,7 +39,7 @@ function WorkloadTooltip({ active, payload, label, colors }: { active?: boolean;
 
 export function WorkloadChart({ data }: { data: WorkloadRow[] }) {
   const { theme } = useTheme();
-  const STATUS_CHART_COLORS = statusChartColors(theme);
+  const STATUS_CHART_COLORS = categoryChartColors(theme);
   const chrome = CHROME[theme];
   const [asTable, setAsTable] = useState(false);
   const height = Math.max(180, data.length * 44 + 40);
@@ -51,7 +51,7 @@ export function WorkloadChart({ data }: { data: WorkloadRow[] }) {
           {STACK_ORDER.map((status) => (
             <li key={status} className="flex items-center gap-1.5">
               <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: STATUS_CHART_COLORS[status] }} aria-hidden />
-              {STATUS_META[status].label}
+              {CATEGORY_LABEL[status]}
             </li>
           ))}
         </ul>
@@ -68,7 +68,7 @@ export function WorkloadChart({ data }: { data: WorkloadRow[] }) {
                 <th className="py-2 pr-4 font-semibold">Thành viên</th>
                 {STACK_ORDER.map((s) => (
                   <th key={s} className="px-3 py-2 text-right font-semibold">
-                    {STATUS_META[s].label}
+                    {CATEGORY_LABEL[s]}
                   </th>
                 ))}
                 <th className="px-3 py-2 text-right font-semibold text-red-600">Quá hạn</th>

@@ -7,7 +7,7 @@ import type { Task } from '../../types/api';
 export function DeadlineText({ task, className }: { task: Pick<Task, 'deadline' | 'status'>; className?: string }) {
   if (!task.deadline) return <span className={clsx('text-xs text-slate-400', className)}>Không có deadline</span>;
   const overdue = isOverdue(task);
-  const soon = !overdue && task.status !== 'done' && daysUntil(task.deadline) <= 3;
+  const soon = !overdue && task.status.category !== 'done' && daysUntil(task.deadline) <= 3;
   return (
     <span
       className={clsx(

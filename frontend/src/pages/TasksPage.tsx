@@ -12,10 +12,10 @@ import { EmptyState, ErrorState, PageLoader } from '../components/ui/States';
 import { useProjects } from '../hooks/useProjects';
 import { useTasks } from '../hooks/useTasks';
 import { useUsers } from '../hooks/useUsers';
-import { PRIORITIES, PRIORITY_META, STATUSES, STATUS_META } from '../lib/constants';
+import { CATEGORIES, CATEGORY_LABEL, PRIORITIES, PRIORITY_META, TYPE_LABEL, TYPES } from '../lib/constants';
 import { vnDateInputToEndOfDayIso, vnDateInputToIso } from '../lib/format';
 import { inputClass } from '../lib/styles';
-import type { Priority, TaskFilters, TaskStatus } from '../types/api';
+import type { Priority, StatusCategory, TaskFilters, TaskType } from '../types/api';
 
 const PAGE_SIZE = 15;
 const SORT_FIELDS: NonNullable<TaskFilters['sortBy']>[] = ['createdAt', 'updatedAt', 'deadline', 'priority', 'status', 'title'];
@@ -44,7 +44,8 @@ export default function TasksPage() {
   const projectId = params.get('projectId') ?? '';
   // ?assigneeIds=1,2 (chọn nhiều người); chấp nhận cả ?assigneeId=1 của đường dẫn cũ
   const assigneeIds = (params.get('assigneeIds') ?? params.get('assigneeId') ?? '').split(',').map(Number).filter((n) => Number.isInteger(n) && n > 0);
-  const status = asEnum<TaskStatus>(params.get('status'), STATUSES);
+  const statusCategory = asEnum<StatusCategory>(params.get('statusCategory'), CATEGORIES);
+  const type = asEnum<TaskType>(params.get('type'), TYPES);
   const priority = asEnum<Priority>(params.get('priority'), PRIORITIES);
   const from = params.get('from') ?? '';
   const to = params.get('to') ?? '';
@@ -81,7 +82,8 @@ export default function TasksPage() {
   const filters = {
     projectId: projectId ? Number(projectId) : undefined,
     assigneeIds: assigneeIds.length > 0 ? assigneeIds : undefined,
-    status,
+    statusCategory,
+    types: type ? [type] : undefined,
     priority,
     deadlineFrom: from ? (vnDateInputToIso(from) ?? undefined) : undefined,
     deadlineTo: vnDateInputToEndOfDayIso(to),
@@ -95,7 +97,7 @@ export default function TasksPage() {
   const tasksQuery = useTasks(filters);
 
   const canCreate = user?.role === 'admin' || user?.role === 'leader';
-  const hasFilters = Boolean(q || projectId || assigneeIds.length > 0 || status || priority || from || to || includeSubtasks);
+  const hasFilters = Boolean(q || projectId || assigneeIds.length > 0 || statusCategory || type || priority || from || to || includeSubtasks);
 
   const clearFilters = () => {
     window.clearTimeout(searchTimer.current);
@@ -127,7 +129,7 @@ export default function TasksPage() {
           <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
           <input value={searchInput} onChange={(e) => onSearchChange(e.target.value)} placeholder="Tìm theo tiêu đề hoặc mô tả..." className={`${inputClass} pl-9`} aria-label="Tìm công việc" />
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <select aria-label="Dự án" value={projectId} onChange={(e) => update({ projectId: e.target.value })} className={inputClass}>
             <option value="">Tất cả dự án</option>
             {projectsQuery.data?.map((p) => (
@@ -141,11 +143,19 @@ export default function TasksPage() {
             value={assigneeIds}
             onChange={(ids) => update({ assigneeIds: ids.join(','), assigneeId: null })}
           />
-          <select aria-label="Trạng thái" value={status ?? ''} onChange={(e) => update({ status: e.target.value })} className={inputClass}>
+          <select aria-label="Trạng thái" value={statusCategory ?? ''} onChange={(e) => update({ statusCategory: e.target.value })} className={inputClass}>
             <option value="">Mọi trạng thái</option>
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {STATUS_META[s].label}
+            {CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {CATEGORY_LABEL[c]}
+              </option>
+            ))}
+          </select>
+          <select aria-label="Loại công việc" value={type ?? ''} onChange={(e) => update({ type: e.target.value })} className={inputClass}>
+            <option value="">Mọi loại</option>
+            {TYPES.map((t) => (
+              <option key={t} value={t}>
+                {TYPE_LABEL[t]}
               </option>
             ))}
           </select>

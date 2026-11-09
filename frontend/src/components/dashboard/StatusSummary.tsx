@@ -1,10 +1,11 @@
 import { AlertTriangle, ListTodo } from 'lucide-react';
-import { STATUSES, STATUS_META, statusChartColors } from '../../lib/constants';
+import { CATEGORIES, CATEGORY_LABEL, categoryChartColors } from '../../lib/constants';
 import { useTheme } from '../ui/useTheme';
-import type { StatusCounts } from '../../types/api';
+import type { DashboardData } from '../../types/api';
 
 interface StatusSummaryProps {
-  counts: StatusCounts;
+  counts: DashboardData['categoryCounts'];
+  breakdown: DashboardData['statusBreakdown'];
   total: number;
   overdueCount: number;
 }
@@ -21,16 +22,20 @@ function Tile({ label, value, accent, icon }: { label: string; value: number; ac
   );
 }
 
-/** Thẻ số liệu theo trạng thái + thanh phân bố (một tổng chia thành các phần, khe 2px giữa các đoạn) */
-export function StatusSummary({ counts, total, overdueCount }: StatusSummaryProps) {
+/**
+ * Thẻ số liệu theo NHÓM trạng thái (mỗi dự án có bộ trạng thái riêng) + thanh phân bố theo từng trạng thái
+ * (màu do dự án đặt; một tổng chia thành các phần, khe 2px giữa các đoạn)
+ */
+export function StatusSummary({ counts, breakdown, total, overdueCount }: StatusSummaryProps) {
   const { theme } = useTheme();
-  const STATUS_CHART_COLORS = statusChartColors(theme);
+  const colors = categoryChartColors(theme);
+  const pct = (n: number) => Math.round((n / total) * 100);
   return (
     <section aria-label="Số công việc theo trạng thái">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         <Tile label="Tổng" value={total} icon={<ListTodo className="h-4 w-4 text-slate-400" />} />
-        {STATUSES.map((status) => (
-          <Tile key={status} label={STATUS_META[status].label} value={counts[status]} accent={STATUS_CHART_COLORS[status]} />
+        {CATEGORIES.map((category) => (
+          <Tile key={category} label={CATEGORY_LABEL[category]} value={counts[category]} accent={colors[category]} />
         ))}
         <div className={`rounded-2xl border p-4 ${overdueCount > 0 ? 'border-red-200 bg-red-50' : 'border-slate-200 bg-card'}`}>
           <div className={`flex items-center gap-2 text-xs uppercase tracking-[1px] ${overdueCount > 0 ? 'text-red-700' : 'text-slate-500'}`}>
@@ -42,18 +47,20 @@ export function StatusSummary({ counts, total, overdueCount }: StatusSummaryProp
 
       {total > 0 && (
         <div className="mt-4 rounded-2xl border border-white/[0.08] bg-card p-4">
-          <div className="flex h-3 gap-0.5 overflow-hidden rounded-full" role="img" aria-label={STATUSES.map((s) => `${STATUS_META[s].label}: ${counts[s]}`).join(', ')}>
-            {STATUSES.filter((s) => counts[s] > 0).map((status) => (
-              <div key={status} title={`${STATUS_META[status].label}: ${counts[status]} (${Math.round((counts[status] / total) * 100)}%)`} style={{ width: `${(counts[status] / total) * 100}%`, backgroundColor: STATUS_CHART_COLORS[status] }} />
-            ))}
+          <div className="flex h-3 gap-0.5 overflow-hidden rounded-full" role="img" aria-label={breakdown.map((s) => `${s.name}: ${s.count}`).join(', ')}>
+            {breakdown
+              .filter((s) => s.count > 0)
+              .map((s) => (
+                <div key={s.name} title={`${s.name}: ${s.count} (${pct(s.count)}%)`} style={{ width: `${(s.count / total) * 100}%`, backgroundColor: s.color }} />
+              ))}
           </div>
           <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-slate-600">
-            {STATUSES.map((status) => (
-              <li key={status} className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: STATUS_CHART_COLORS[status] }} aria-hidden />
-                {STATUS_META[status].label}
+            {breakdown.map((s) => (
+              <li key={s.name} className="flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: s.color }} aria-hidden />
+                {s.name}
                 <span className="font-medium tabular-nums text-slate-900">
-                  {counts[status]} ({Math.round((counts[status] / total) * 100)}%)
+                  {s.count} ({pct(s.count)}%)
                 </span>
               </li>
             ))}

@@ -16,7 +16,7 @@ export class ApiError extends Error {
   }
 }
 
-type Query = Record<string, string | number | boolean | number[] | undefined | null>;
+type Query = Record<string, string | number | boolean | (string | number)[] | undefined | null>;
 
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';

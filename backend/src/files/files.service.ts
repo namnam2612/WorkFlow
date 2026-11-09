@@ -5,6 +5,7 @@ import { Paginated, toPaginated } from '../common/dto/pagination-query.dto';
 import { AuthUser } from '../common/types/auth-user';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProjectAccessService } from '../projects/project-access.service';
+import { STATUS_SELECT } from '../statuses/status-view';
 import { FileListQueryDto, FileSearchQueryDto, FolderQueryDto } from './dto/files-query.dto';
 
 /** Số file, tổng dung lượng và thời điểm file mới nhất của một thư mục */
@@ -91,7 +92,7 @@ export class FilesService {
     const titleFilter: Prisma.TaskWhereInput = query.search ? { title: { contains: query.search } } : {};
     const tasks = await this.prisma.task.findMany({
       where: { projectId, ...(query.includeEmpty ? {} : { id: { in: [...stats.keys()] } }), ...titleFilter },
-      select: { id: true, title: true, status: true, parentId: true, parent: { select: { id: true, title: true } } },
+      select: { id: true, title: true, status: { select: STATUS_SELECT }, parentId: true, parent: { select: { id: true, title: true } } },
     });
     const items = tasks
       .map((t) => ({ id: t.id, name: t.title, status: t.status, parent: t.parent, ...(stats.get(t.id) ?? NO_FILES) }))
@@ -118,7 +119,7 @@ export class FilesService {
   async getTask(user: AuthUser, taskId: number, query: FileListQueryDto) {
     const task = await this.prisma.task.findUnique({
       where: { id: taskId },
-      select: { id: true, title: true, status: true, projectId: true, project: { select: { name: true } }, parent: { select: { id: true, title: true } } },
+      select: { id: true, title: true, status: { select: STATUS_SELECT }, projectId: true, project: { select: { name: true } }, parent: { select: { id: true, title: true } } },
     });
     if (!task) throw new NotFoundException('Không tìm thấy công việc');
     await this.access.assertCanView(user, task.projectId);

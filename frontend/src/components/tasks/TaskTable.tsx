@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { isOverdue } from '../../lib/format';
 import type { Task, TaskFilters } from '../../types/api';
 import { AssigneeStack } from '../assignees/AssigneeStack';
-import { PriorityBadge, StatusBadge } from '../ui/Badges';
+import { PriorityBadge, StatusBadge, TypeBadge } from '../ui/Badges';
 import { DeadlineText } from './DeadlineText';
 
 type SortKey = NonNullable<TaskFilters['sortBy']>;
@@ -56,6 +56,8 @@ export function TaskTable({ tasks, showProject = true, sortBy, order, onSort }: 
                   {task.title}
                 </Link>
                 <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                  <TypeBadge type={task.type} hideTask />
+                  {task.storyPoints !== null && <span title="Story Point">{task.storyPoints} SP</span>}
                   {showProject && task.project && <span>{task.project.name}</span>}
                   {task.subtaskTotal > 0 && (
                     <span className="inline-flex items-center gap-1">

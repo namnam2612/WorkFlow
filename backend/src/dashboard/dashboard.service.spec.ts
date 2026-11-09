@@ -16,6 +16,7 @@ describe('DashboardService - nhiều người được giao', () => {
     prisma = createPrismaMock();
     prisma.project.findMany.mockResolvedValue([{ id: 1, name: 'Dự án A' }]);
     prisma.task.groupBy.mockResolvedValue([]);
+    prisma.projectStatus.findMany.mockResolvedValue([]);
     prisma.task.findMany.mockResolvedValue([]);
     prisma.task.count.mockResolvedValue(0);
     prisma.user.findMany.mockResolvedValue([
@@ -24,9 +25,9 @@ describe('DashboardService - nhiều người được giao', () => {
     ]);
     // Một task quá hạn giao cho CẢ Cường và Dung + một task riêng của Cường
     prisma.taskAssignee.findMany.mockResolvedValue([
-      { userId: 20, task: { status: 'in_progress', deadline: new Date('2020-01-01') } },
-      { userId: 21, task: { status: 'in_progress', deadline: new Date('2020-01-01') } },
-      { userId: 20, task: { status: 'todo', deadline: null } },
+      { userId: 20, task: { status: { category: 'in_progress' }, deadline: new Date('2020-01-01') } },
+      { userId: 21, task: { status: { category: 'in_progress' }, deadline: new Date('2020-01-01') } },
+      { userId: 20, task: { status: { category: 'todo' }, deadline: null } },
     ]);
     const prismaService = asPrisma(prisma);
     service = new DashboardService(prismaService, new ProjectAccessService(prismaService));

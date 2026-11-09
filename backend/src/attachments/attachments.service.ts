@@ -24,6 +24,7 @@ import {
   sanitizeFileName,
   matchesPreviewSignature,
 } from './file-types';
+import { STATUS_SELECT } from '../statuses/status-view';
 import { storagePath } from './file-layout';
 import { StorageService } from './storage.service';
 
@@ -40,7 +41,7 @@ const projectRefSelect = { id: true, name: true, createdById: true } satisfies P
 
 export const attachmentInclude = {
   uploader: { select: USER_BRIEF_SELECT },
-  task: { select: { id: true, title: true, status: true, project: { select: projectRefSelect } } },
+  task: { select: { id: true, title: true, status: { select: STATUS_SELECT }, project: { select: projectRefSelect } } },
   project: { select: projectRefSelect },
 } satisfies Prisma.AttachmentInclude;
 

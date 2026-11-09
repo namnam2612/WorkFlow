@@ -3,9 +3,8 @@ import { useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import clsx from 'clsx';
 import { Plus } from 'lucide-react';
-import { STATUS_META } from '../../lib/constants';
 import { columnDroppableId } from '../../lib/kanban';
-import type { Task, TaskStatus } from '../../types/api';
+import type { ProjectStatus, Task } from '../../types/api';
 import { KanbanCard } from './KanbanCard';
 
 function SortableCard({ task, canDrag }: { task: Task; canDrag: boolean }) {
@@ -24,7 +23,7 @@ function SortableCard({ task, canDrag }: { task: Task; canDrag: boolean }) {
 }
 
 interface KanbanColumnProps {
-  status: TaskStatus;
+  status: ProjectStatus;
   /** Toàn bộ task của cột (không lọc) — dùng để tính tổng */
   totalCount: number;
   /** Task đang hiển thị (đã lọc) */
@@ -34,20 +33,19 @@ interface KanbanColumnProps {
 }
 
 export function KanbanColumn({ status, totalCount, tasks, canDrag, onAdd }: KanbanColumnProps) {
-  const meta = STATUS_META[status];
-  const { setNodeRef, isOver } = useDroppable({ id: columnDroppableId(status) });
+  const { setNodeRef, isOver } = useDroppable({ id: columnDroppableId(status.id) });
 
   return (
-    <section className="flex w-[288px] shrink-0 flex-col rounded-2xl border border-white/[0.08] bg-elevated lg:w-auto lg:min-w-0 lg:flex-1" aria-label={meta.label}>
-      <header className={clsx('flex items-center justify-between rounded-t-2xl border-t-2 px-3 py-2.5', meta.column)}>
+    <section className="flex w-[288px] shrink-0 flex-col rounded-2xl border border-white/[0.08] bg-elevated lg:w-auto lg:min-w-0 lg:flex-1" aria-label={status.name}>
+      <header className="flex items-center justify-between rounded-t-2xl border-t-2 px-3 py-2.5" style={{ borderTopColor: status.color }}>
         <div className="flex items-center gap-2">
-          <h2 className="text-xs font-semibold uppercase tracking-[1.5px] text-slate-800">{meta.label}</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-[1.5px] text-slate-800">{status.name}</h2>
           <span className="tabular rounded-full border border-white/[0.08] px-2 py-0.5 text-xs font-medium text-slate-600">
             {tasks.length === totalCount ? totalCount : `${tasks.length}/${totalCount}`}
           </span>
         </div>
         {onAdd && (
-          <button type="button" onClick={onAdd} aria-label={`Thêm công việc vào cột ${meta.label}`} className="rounded-md p-1 text-slate-500 hover:bg-white/10 hover:text-white">
+          <button type="button" onClick={onAdd} aria-label={`Thêm công việc vào cột ${status.name}`} className="rounded-md p-1 text-slate-500 hover:bg-white/10 hover:text-white">
             <Plus className="h-4 w-4" />
           </button>
         )}

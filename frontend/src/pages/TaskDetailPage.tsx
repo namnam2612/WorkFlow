@@ -8,19 +8,19 @@ import { SubtaskRow } from '../components/tasks/SubtaskRow';
 import { AttachmentSection } from '../components/attachments/AttachmentSection';
 import { TaskDiscussion } from '../components/tasks/TaskDiscussion';
 import { TaskFormModal } from '../components/tasks/TaskFormModal';
-import { PriorityBadge, StatusBadge } from '../components/ui/Badges';
+import { PriorityBadge, SeverityBadge, StatusBadge, TypeBadge } from '../components/ui/Badges';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { ErrorState, PageLoader } from '../components/ui/States';
 import { useToast } from '../components/ui/useToast';
+import { statusesOf, useProjectStatuses } from '../hooks/useStatuses';
 import { useDeleteTask, useTask, useUpdateTask } from '../hooks/useTasks';
 import { getErrorMessage } from '../lib/api';
-import { STATUSES, STATUS_META } from '../lib/constants';
+import { ENVIRONMENT_LABEL } from '../lib/constants';
 import { formatDateTime, isOverdue } from '../lib/format';
 import { canManageProject, isAssignee } from '../lib/permissions';
 import { inputClass } from '../lib/styles';
-import type { TaskStatus } from '../types/api';
 
 function MetaRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -42,6 +42,7 @@ export default function TaskDetailPage() {
   const task = taskQuery.data;
   const update = useUpdateTask(taskId);
   const deleteTask = useDeleteTask();
+  const statusesQuery = useProjectStatuses(task?.projectId);
 
   const [editing, setEditing] = useState(false);
   const [addingSubtask, setAddingSubtask] = useState(false);
@@ -62,9 +63,9 @@ export default function TaskDetailPage() {
   // Bình luận: như trên, thêm người được giao task cha khi xem công việc con
   const canComment = canUpdateProgress || (isSubtask && !!user && (task.parent?.assigneeIds.includes(user.id) ?? false));
 
-  const changeStatus = async (status: TaskStatus) => {
+  const changeStatus = async (statusId: number) => {
     try {
-      await update.mutateAsync({ status });
+      await update.mutateAsync({ statusId });
       toast.show('Đã cập nhật trạng thái', 'success');
     } catch (error) {
       toast.show(getErrorMessage(error), 'error');
@@ -113,8 +114,10 @@ export default function TaskDetailPage() {
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="mb-2 flex flex-wrap items-center gap-2">
+            <TypeBadge type={task.type} hideTask />
             <StatusBadge status={task.status} />
             <PriorityBadge priority={task.priority} />
+            {task.type === 'bug' && task.severity && <SeverityBadge severity={task.severity} />}
             {isOverdue(task) && <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">Quá hạn</span>}
           </div>
           <h1 className="break-words text-xl font-semibold text-slate-900 sm:text-2xl">{task.title}</h1>
@@ -184,12 +187,13 @@ export default function TaskDetailPage() {
               <MetaRow label="Người tạo">{task.creator.name}</MetaRow>
               <MetaRow label="Trạng thái">
                 {canUpdateProgress ? (
-                  <select aria-label="Trạng thái" value={task.status} disabled={update.isPending} onChange={(e) => void changeStatus(e.target.value as TaskStatus)} className={`${inputClass} w-auto! py-1`}>
-                    {STATUSES.map((s) => (
-                      <option key={s} value={s}>
-                        {STATUS_META[s].label}
+                  <select aria-label="Trạng thái" value={task.statusId} disabled={update.isPending} onChange={(e) => void changeStatus(Number(e.target.value))} className={`${inputClass} w-auto! py-1`}>
+                    {statusesOf(statusesQuery.data, task.status.scope).map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
                       </option>
                     ))}
+                    {!statusesOf(statusesQuery.data, task.status.scope).some((s) => s.id === task.statusId) && <option value={task.statusId}>{task.status.name}</option>}
                   </select>
                 ) : (
                   <StatusBadge status={task.status} />
@@ -198,6 +202,16 @@ export default function TaskDetailPage() {
               <MetaRow label="Ưu tiên">
                 <PriorityBadge priority={task.priority} />
               </MetaRow>
+              <MetaRow label="Loại">
+                <TypeBadge type={task.type} className="justify-end" />
+              </MetaRow>
+              {task.storyPoints !== null && <MetaRow label="Story Point">{task.storyPoints}</MetaRow>}
+              {task.type === 'bug' && (
+                <>
+                  <MetaRow label="Mức nghiêm trọng">{task.severity ? <SeverityBadge severity={task.severity} /> : '—'}</MetaRow>
+                  <MetaRow label="Môi trường">{task.environment ? ENVIRONMENT_LABEL[task.environment] : '—'}</MetaRow>
+                </>
+              )}
               <MetaRow label="Deadline">
                 <div className="flex flex-col items-end gap-0.5">
                   <span>{formatDateTime(task.deadline)}</span>

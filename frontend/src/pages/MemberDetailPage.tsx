@@ -22,9 +22,9 @@ const TABS: { key: TabKey; label: string }[] = [
 ];
 
 const TAB_FILTERS: Record<TabKey, Partial<TaskFilters> & { overdue?: boolean }> = {
-  in_progress: { status: 'in_progress' },
-  todo: { status: 'todo' },
-  done: { status: 'done' },
+  in_progress: { statusCategory: 'in_progress' },
+  todo: { statusCategory: 'todo' },
+  done: { statusCategory: 'done' },
   overdue: { overdue: true },
 };
 

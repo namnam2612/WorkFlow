@@ -1,5 +1,25 @@
 export type Role = 'admin' | 'leader' | 'member';
-export type TaskStatus = 'todo' | 'in_progress' | 'review' | 'done' | 'blocked';
+/** Nhóm trạng thái: hệ thống chỉ cần biết chưa làm / đang làm / đã xong; tên và màu do từng dự án đặt */
+export type StatusCategory = 'todo' | 'in_progress' | 'done';
+/** Bộ trạng thái: công việc thường hay Bug (vòng đời riêng) */
+export type StatusScope = 'task' | 'bug';
+export type TaskType = 'task' | 'story' | 'bug' | 'epic';
+export type BugSeverity = 'minor' | 'major' | 'critical' | 'blocker';
+export type Environment = 'dev' | 'staging' | 'prod';
+
+/** Trạng thái nhúng trong task */
+export interface StatusRef {
+  id: number;
+  name: string;
+  color: string;
+  category: StatusCategory;
+  scope: StatusScope;
+}
+
+export interface ProjectStatus extends StatusRef {
+  projectId: number;
+  position: number;
+}
 export type Priority = 'low' | 'medium' | 'high' | 'urgent';
 
 export interface User {
@@ -67,7 +87,12 @@ export interface Task {
   title: string;
   description: string | null;
   creatorId: number;
-  status: TaskStatus;
+  type: TaskType;
+  statusId: number;
+  status: StatusRef;
+  storyPoints: number | null;
+  severity: BugSeverity | null;
+  environment: Environment | null;
   priority: Priority;
   deadline: string | null;
   estimatedHours: number | null;
@@ -125,7 +150,9 @@ export interface TaskFilters {
   projectId?: number;
   /** Task có BẤT KỲ người nào trong danh sách */
   assigneeIds?: number[];
-  status?: TaskStatus;
+  statusId?: number;
+  statusCategory?: StatusCategory;
+  types?: TaskType[];
   priority?: Priority;
   deadlineFrom?: string;
   deadlineTo?: string;
@@ -136,18 +163,20 @@ export interface TaskFilters {
   pageSize?: number;
 }
 
-export type StatusCounts = Record<TaskStatus, number>;
+export type StatusCounts = Record<StatusCategory, number>;
 
 export interface DashboardData {
   scope: 'mine' | 'team';
-  statusCounts: StatusCounts;
+  categoryCounts: StatusCounts;
+  /** Gộp theo tên trạng thái (mỗi dự án có bộ riêng) */
+  statusBreakdown: { name: string; color: string; category: StatusCategory; count: number }[];
   totalTasks: number;
   upcoming: Task[];
   upcomingCount: number;
   overdue: Task[];
   overdueCount: number;
   projectProgress: { projectId: number; name: string; total: number; done: number; progress: number }[];
-  workload: { userId: number; name: string; todo: number; in_progress: number; review: number; blocked: number; done: number; overdue: number }[];
+  workload: { userId: number; name: string; todo: number; in_progress: number; done: number; overdue: number }[];
 }
 
 export interface UserStats {
@@ -177,7 +206,7 @@ export interface Attachment {
   createdAt: string;
   uploader: UserBrief;
   /** null với file của dự án */
-  task: { id: number; title: string; status: TaskStatus } | null;
+  task: { id: number; title: string; status: StatusRef } | null;
   project: { id: number; name: string };
   /** Ảnh/PDF xem trực tiếp được */
   previewable: boolean;
@@ -224,7 +253,7 @@ export interface TaskFolder extends FolderStats {
   id: number;
   /** Tiêu đề task */
   name: string;
-  status: TaskStatus;
+  status: StatusRef;
   /** Task cha nếu đây là công việc con */
   parent: { id: number; title: string } | null;
 }
@@ -240,7 +269,7 @@ export type ProjectContents = Paginated<TaskFolder> & {
 export type ProjectFilesPage = Paginated<Attachment> & { project: { id: number; name: string }; canUpload: boolean };
 
 export type TaskFilesPage = Paginated<Attachment> & {
-  task: { id: number; title: string; status: TaskStatus; projectId: number; projectName: string; parent: { id: number; title: string } | null };
+  task: { id: number; title: string; status: StatusRef; projectId: number; projectName: string; parent: { id: number; title: string } | null };
   canUpload: boolean;
 };
 

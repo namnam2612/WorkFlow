@@ -1,10 +1,10 @@
-import { Priority, TaskStatus } from '@prisma/client';
+import { Priority, StatusCategory, TaskType } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
 import { ArrayMaxSize, IsArray, IsBoolean, IsDateString, IsEnum, IsIn, IsInt, IsOptional, IsString, MaxLength } from 'class-validator';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { toBoolean, toNumberList, trimString } from '../../common/utils/transforms';
 
-export const TASK_SORT_FIELDS = ['createdAt', 'updatedAt', 'deadline', 'priority', 'status', 'title'] as const;
+export const TASK_SORT_FIELDS = ['createdAt', 'updatedAt', 'deadline', 'priority', 'status', 'title', 'type'] as const;
 export type TaskSortField = (typeof TASK_SORT_FIELDS)[number];
 
 export class ListTasksQueryDto extends PaginationQueryDto {
@@ -22,8 +22,20 @@ export class ListTasksQueryDto extends PaginationQueryDto {
   assigneeIds?: number[];
 
   @IsOptional()
-  @IsEnum(TaskStatus)
-  status?: TaskStatus;
+  @Type(() => Number)
+  @IsInt()
+  statusId?: number;
+
+  /** Lọc theo nhóm trạng thái (cần làm / đang làm / đã xong) xuyên qua mọi dự án */
+  @IsOptional()
+  @IsEnum(StatusCategory)
+  statusCategory?: StatusCategory;
+
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.split(',').filter(Boolean) : value))
+  @IsArray()
+  @IsEnum(TaskType, { each: true })
+  types?: TaskType[];
 
   @IsOptional()
   @IsEnum(Priority)

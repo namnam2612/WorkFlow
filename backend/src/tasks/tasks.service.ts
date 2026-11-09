@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, Task, TaskStatus } from '@prisma/client';
+import { BugSeverity, Environment, Prisma, ProjectStatus, Task, TaskType } from '@prisma/client';
 import { ActivityService } from '../activity/activity.service';
 import { Paginated, toPaginated } from '../common/dto/pagination-query.dto';
 import { AuthUser } from '../common/types/auth-user';
@@ -13,12 +13,15 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { ListTasksQueryDto } from './dto/list-tasks-query.dto';
 import { MoveTaskDto } from './dto/move-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
-import { STATUS_LABEL_VI } from './task-labels';
+import { scopeOfType } from '../statuses/default-statuses';
+import { STATUS_SELECT } from '../statuses/status-view';
+import { StatusesService } from '../statuses/statuses.service';
 import { AttachmentCleanupService } from '../attachments/attachment-cleanup.service';
 import { assigneesInclude, taskInclude, toTaskView } from './task-view';
 
 const detailInclude = {
   assignees: assigneesInclude,
+  status: { select: STATUS_SELECT },
   creator: { select: USER_BRIEF_SELECT },
   project: { select: { id: true, name: true, createdById: true } },
   parent: { select: { id: true, title: true, assignees: { select: { userId: true } } } },
@@ -26,12 +29,12 @@ const detailInclude = {
   _count: { select: { comments: true, attachments: true } },
 } satisfies Prisma.TaskInclude;
 
-/** Task kèm id những người được giao (đủ để kiểm tra quyền và so sánh thay đổi) */
-type TaskRow = Task & { assignees: { userId: number }[] };
-const withAssigneeIds = { assignees: { select: { userId: true } } } satisfies Prisma.TaskInclude;
+/** Task kèm id những người được giao và trạng thái hiện tại (đủ để kiểm tra quyền và so sánh thay đổi) */
+type TaskRow = Task & { assignees: { userId: number }[]; status: ProjectStatus };
+const withAssigneeIds = { assignees: { select: { userId: true } }, status: true } satisfies Prisma.TaskInclude;
 
 /** Các trường mà người được giao (không phải leader/admin) được phép sửa */
-const ASSIGNEE_EDITABLE_FIELDS: ReadonlySet<string> = new Set(['status', 'actualHours']);
+const ASSIGNEE_EDITABLE_FIELDS: ReadonlySet<string> = new Set(['statusId', 'actualHours']);
 
 @Injectable()
 export class TasksService {
@@ -42,6 +45,7 @@ export class TasksService {
     private readonly notifications: NotificationsService,
     private readonly realtime: RealtimeService,
     private readonly attachmentCleanup: AttachmentCleanupService,
+    private readonly statuses: StatusesService,
   ) {}
 
   // ---------------------------------------------------------------- queries
@@ -53,7 +57,9 @@ export class TasksService {
     if (user.role !== 'admin') filters.push({ project: this.access.visibleProjectWhere(user) });
     if (query.projectId !== undefined) filters.push({ projectId: query.projectId });
     if (query.assigneeIds?.length) filters.push({ assignees: { some: { userId: { in: query.assigneeIds } } } });
-    if (query.status) filters.push({ status: query.status });
+    if (query.statusId !== undefined) filters.push({ statusId: query.statusId });
+    if (query.statusCategory) filters.push({ status: { category: query.statusCategory } });
+    if (query.types?.length) filters.push({ type: { in: query.types } });
     if (query.priority) filters.push({ priority: query.priority });
     if (!query.includeSubtasks) filters.push({ parentId: null });
     if (query.deadlineFrom || query.deadlineTo) {
@@ -64,7 +70,7 @@ export class TasksService {
         },
       });
     }
-    if (query.overdue) filters.push({ status: { not: 'done' }, deadline: { lt: new Date() } });
+    if (query.overdue) filters.push({ status: { category: { not: 'done' } }, deadline: { lt: new Date() } });
     if (query.search) {
       filters.push({ OR: [{ title: { contains: query.search } }, { description: { contains: query.search } }] });
     }
@@ -82,6 +88,7 @@ export class TasksService {
       where: {
         projectId: query.projectId,
         parentId: null,
+        type: { not: 'epic' },
         ...(query.assigneeIds?.length ? { assignees: { some: { userId: { in: query.assigneeIds } } } } : {}),
         ...(query.priority ? { priority: query.priority } : {}),
       },
@@ -104,7 +111,7 @@ export class TasksService {
       parent: parent ? { id: parent.id, title: parent.title, assigneeIds: parent.assignees.map((a) => a.userId) } : null,
       subtasks: subtasks.map(toTaskView),
       subtaskTotal: subtasks.length,
-      subtaskDone: subtasks.filter((s) => s.status === 'done').length,
+      subtaskDone: subtasks.filter((s) => s.status.category === 'done').length,
       commentCount: _count.comments,
       attachmentCount: _count.attachments,
     };
@@ -120,6 +127,9 @@ export class TasksService {
       throw new ForbiddenException('Chỉ trưởng nhóm của dự án hoặc quản trị viên mới tạo được công việc mới');
     }
     const parent = dto.parentId ? await this.assertValidParent(dto.parentId, dto.projectId) : null;
+    const type = dto.type ?? 'task';
+    if (parent && (type === 'epic' || type === 'story')) throw new BadRequestException('Công việc con chỉ có thể là Task hoặc Bug');
+    this.assertBugFields(type, dto.severity, dto.environment);
     const assigneeIds = [...new Set(dto.assigneeIds ?? [])];
     if (!canManage && parent) {
       if (!this.isAssigned(parent, user.id)) {
@@ -129,9 +139,9 @@ export class TasksService {
     }
     await this.assertValidAssignees(project, assigneeIds);
 
-    const status = dto.status ?? 'todo';
+    const status = await this.statuses.resolve(dto.projectId, scopeOfType(type), dto.statusId);
     const created = await this.prisma.$transaction(async (tx) => {
-      const position = await this.nextPosition(tx, dto.projectId, status, parent?.id ?? null);
+      const position = await this.nextPosition(tx, dto.projectId, status.id, parent?.id ?? null);
       const task = await tx.task.create({
         data: {
           projectId: dto.projectId,
@@ -140,16 +150,20 @@ export class TasksService {
           description: dto.description ?? null,
           assignees: { create: assigneeIds.map((userId) => ({ userId })) },
           creatorId: user.id,
-          status,
+          type,
+          statusId: status.id,
+          storyPoints: dto.storyPoints ?? null,
+          severity: type === 'bug' ? (dto.severity ?? 'major') : null,
+          environment: type === 'bug' ? (dto.environment ?? null) : null,
           priority: dto.priority ?? 'medium',
           deadline: dto.deadline ? new Date(dto.deadline) : null,
           estimatedHours: dto.estimatedHours ?? null,
           actualHours: dto.actualHours ?? null,
           position,
-          completedAt: status === 'done' ? new Date() : null,
+          completedAt: status.category === 'done' ? new Date() : null,
         },
       });
-      await this.activity.log({ taskId: task.id, userId: user.id, action: 'task_created', detail: { title: task.title } }, tx);
+      await this.activity.log({ taskId: task.id, userId: user.id, action: 'task_created', detail: { title: task.title, type } }, tx);
       if (assigneeIds.length > 0) {
         await this.activity.log(
           { taskId: task.id, userId: user.id, action: 'assignee_changed', detail: { added: await this.userRefs(assigneeIds, tx), removed: [] } },
@@ -212,6 +226,26 @@ export class TasksService {
       await this.assertValidAssignees(project, addedIds);
     }
 
+    // Loại, trạng thái, Story Point, thông tin Bug
+    const nextType: TaskType = dto.type ?? task.type;
+    const typeChanged = nextType !== task.type;
+    if (typeChanged && task.parentId !== null && (nextType === 'epic' || nextType === 'story')) {
+      throw new BadRequestException('Công việc con chỉ có thể là Task hoặc Bug');
+    }
+    const nextSeverity = nextType !== 'bug' ? null : dto.severity !== undefined ? dto.severity : task.severity;
+    const nextEnvironment = nextType !== 'bug' ? null : dto.environment !== undefined ? dto.environment : task.environment;
+    this.assertBugFields(nextType, dto.severity, dto.environment);
+    const nextScope = scopeOfType(nextType);
+    let nextStatus: ProjectStatus = task.status;
+    if (nextScope !== scopeOfType(task.type)) {
+      nextStatus =
+        dto.statusId !== undefined
+          ? await this.statuses.resolve(task.projectId, nextScope, dto.statusId)
+          : await this.statuses.mapToScope(task.projectId, nextScope, task.status.category);
+    } else if (dto.statusId !== undefined && dto.statusId !== task.statusId) {
+      nextStatus = await this.statuses.resolve(task.projectId, nextScope, dto.statusId);
+    }
+
     const data: Prisma.TaskUncheckedUpdateInput = {};
     const logs: { action: Parameters<ActivityService['log']>[0]['action']; detail: Prisma.InputJsonValue }[] = [];
 
@@ -242,6 +276,22 @@ export class TasksService {
       data.actualHours = dto.actualHours ?? null;
       logs.push({ action: 'hours_changed', detail: { field: 'actualHours', from: task.actualHours, to: dto.actualHours ?? null } });
     }
+    if (typeChanged) {
+      data.type = nextType;
+      logs.push({ action: 'type_changed', detail: { from: task.type, to: nextType } });
+    }
+    if (dto.storyPoints !== undefined && (dto.storyPoints ?? null) !== task.storyPoints) {
+      data.storyPoints = dto.storyPoints ?? null;
+      logs.push({ action: 'story_points_changed', detail: { from: task.storyPoints, to: dto.storyPoints ?? null } });
+    }
+    if (nextSeverity !== task.severity) {
+      data.severity = nextSeverity;
+      logs.push({ action: 'bug_info_changed', detail: { field: 'severity', from: task.severity, to: nextSeverity } });
+    }
+    if (nextEnvironment !== task.environment) {
+      data.environment = nextEnvironment;
+      logs.push({ action: 'bug_info_changed', detail: { field: 'environment', from: task.environment, to: nextEnvironment } });
+    }
     if (assigneesChanged) {
       data.updatedAt = new Date(); // chỉ đổi người được giao vẫn làm "mới cập nhật"
       const names = await this.userRefs([...addedIds, ...removedIds]);
@@ -251,14 +301,14 @@ export class TasksService {
       });
     }
 
-    const statusChanged = dto.status !== undefined && dto.status !== task.status;
+    const statusChanged = nextStatus.id !== task.statusId;
     const updated = await this.prisma.$transaction(async (tx) => {
-      if (statusChanged && dto.status) {
-        data.status = dto.status;
-        data.completedAt = dto.status === 'done' ? new Date() : null;
+      if (statusChanged) {
+        data.statusId = nextStatus.id;
+        data.completedAt = this.completedAtFor(task, nextStatus);
         // Sang cột mới thì xếp cuối cột
-        data.position = await this.nextPosition(tx, task.projectId, dto.status, task.parentId);
-        logs.push({ action: 'status_changed', detail: { from: task.status, to: dto.status } });
+        data.position = await this.nextPosition(tx, task.projectId, nextStatus.id, task.parentId);
+        logs.push({ action: 'status_changed', detail: { from: { id: task.status.id, name: task.status.name }, to: { id: nextStatus.id, name: nextStatus.name } } });
       }
       if (Object.keys(data).length === 0) return task;
       if (removedIds.length > 0) await tx.taskAssignee.deleteMany({ where: { taskId: id, userId: { in: removedIds } } });
@@ -272,7 +322,7 @@ export class TasksService {
 
     // Chỉ người MỚI được thêm nhận thông báo "được giao"; người giữ nguyên không bị báo lại
     const notices: NewNotification[] = addedIds.filter((uid) => uid !== user.id).map((uid) => this.assignedNotification(uid, updated.title, id));
-    if (statusChanged && dto.status) notices.push(...this.statusNotifications(user, project, updated, dto.status, nextIds));
+    if (statusChanged) notices.push(...this.statusNotifications(user, project, updated, nextStatus.name, nextIds));
     if (dto.deadline !== undefined && updated.deadline?.getTime() !== task.deadline?.getTime()) {
       for (const uid of nextIds.filter((x) => x !== user.id)) {
         notices.push({
@@ -295,10 +345,11 @@ export class TasksService {
       throw new ForbiddenException('Bạn chỉ được di chuyển công việc được giao cho mình');
     }
 
-    const statusChanged = dto.status !== task.status;
+    const target = await this.statuses.resolve(task.projectId, scopeOfType(task.type), dto.statusId);
+    const statusChanged = target.id !== task.statusId;
     const updated = await this.prisma.$transaction(async (tx) => {
       const column = await tx.task.findMany({
-        where: { projectId: task.projectId, parentId: task.parentId, status: dto.status, id: { not: id } },
+        where: { projectId: task.projectId, parentId: task.parentId, statusId: target.id, id: { not: id } },
         orderBy: [{ position: 'asc' }, { id: 'asc' }],
         select: { id: true, position: true },
       });
@@ -312,9 +363,9 @@ export class TasksService {
           moved = await tx.task.update({
             where: { id },
             data: {
-              status: dto.status,
+              statusId: target.id,
               position: i,
-              ...(statusChanged ? { completedAt: dto.status === 'done' ? new Date() : null } : {}),
+              ...(statusChanged ? { completedAt: this.completedAtFor(task, target) } : {}),
             },
           });
         } else if (entry.position !== i) {
@@ -323,7 +374,7 @@ export class TasksService {
       }
       if (statusChanged) {
         await this.activity.log(
-          { taskId: id, userId: user.id, action: 'status_changed', detail: { from: task.status, to: dto.status } },
+          { taskId: id, userId: user.id, action: 'status_changed', detail: { from: { id: task.status.id, name: task.status.name }, to: { id: target.id, name: target.name } } },
           tx,
         );
       }
@@ -331,7 +382,7 @@ export class TasksService {
     });
 
     if (statusChanged) {
-      await this.notifications.notify(this.statusNotifications(user, project, updated, dto.status, task.assignees.map((a) => a.userId)));
+      await this.notifications.notify(this.statusNotifications(user, project, updated, target.name, task.assignees.map((a) => a.userId)));
     }
     this.realtime.taskChanged(task.projectId, id);
     return this.get(user, id);
@@ -394,13 +445,26 @@ export class TasksService {
     }
   }
 
+  /** Vào nhóm "done" thì ghi completedAt; rời khỏi thì xóa; đổi giữa hai trạng thái cùng nhóm "done" thì giữ nguyên */
+  private completedAtFor(task: Pick<Task, 'completedAt'> & { status: { category: string } }, next: { category: string }): Date | null {
+    if (next.category !== 'done') return null;
+    return task.status.category === 'done' && task.completedAt ? task.completedAt : new Date();
+  }
+
+  /** Mức độ nghiêm trọng và môi trường chỉ có nghĩa với Bug */
+  private assertBugFields(type: TaskType, severity: BugSeverity | null | undefined, environment: Environment | null | undefined): void {
+    if (type !== 'bug' && ((severity ?? null) !== null || (environment ?? null) !== null)) {
+      throw new BadRequestException('Mức độ nghiêm trọng và môi trường chỉ dùng cho Bug');
+    }
+  }
+
   private async nextPosition(
     tx: Prisma.TransactionClient,
     projectId: number,
-    status: TaskStatus,
+    statusId: number,
     parentId: number | null,
   ): Promise<number> {
-    const max = await tx.task.aggregate({ where: { projectId, status, parentId }, _max: { position: true } });
+    const max = await tx.task.aggregate({ where: { projectId, statusId, parentId }, _max: { position: true } });
     return (max._max.position ?? -1) + 1;
   }
 
@@ -420,13 +484,13 @@ export class TasksService {
   }
 
   /** Báo cho người tạo task và trưởng nhóm dự án (trừ người thao tác) khi đổi trạng thái */
-  private statusNotifications(actor: AuthUser, project: ProjectRef, task: Task, status: TaskStatus, assigneeIds: number[]): NewNotification[] {
+  private statusNotifications(actor: AuthUser, project: ProjectRef, task: Task, statusName: string, assigneeIds: number[]): NewNotification[] {
     const recipients = new Set<number>([task.creatorId, project.createdById, ...assigneeIds]);
     recipients.delete(actor.id);
     return [...recipients].map((userId) => ({
       userId,
       type: 'status_changed',
-      message: `${actor.name} chuyển "${task.title}" sang "${STATUS_LABEL_VI[status]}"`,
+      message: `${actor.name} chuyển "${task.title}" sang "${statusName}"`,
       link: this.taskLink(task),
     }));
   }
@@ -434,7 +498,9 @@ export class TasksService {
   /** Phân trang có sắp xếp; deadline tăng dần luôn đặt task không có deadline xuống cuối */
   private async findPage(where: Prisma.TaskWhereInput, query: ListTasksQueryDto, skip: number, total: number) {
     const { sortBy, order, pageSize } = query;
-    const orderBy: Prisma.TaskOrderByWithRelationInput[] = [{ [sortBy]: order }, { id: 'desc' }];
+    const primary: Prisma.TaskOrderByWithRelationInput[] =
+      sortBy === 'status' ? [{ status: { category: order } }, { status: { position: order } }] : [{ [sortBy]: order }];
+    const orderBy: Prisma.TaskOrderByWithRelationInput[] = [...primary, { id: 'desc' }];
 
     if (!(sortBy === 'deadline' && order === 'asc')) {
       return this.prisma.task.findMany({ where, include: taskInclude, orderBy, skip, take: pageSize });

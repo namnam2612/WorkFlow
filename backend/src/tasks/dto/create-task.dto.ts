@@ -1,4 +1,4 @@
-import { Priority, TaskStatus } from '@prisma/client';
+import { BugSeverity, Environment, Priority, TaskType } from '@prisma/client';
 import { Transform } from 'class-transformer';
 import { ArrayMaxSize, ArrayUnique, IsArray, IsDateString, IsEnum, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
 import { trimString } from '../../common/utils/transforms';
@@ -31,9 +31,31 @@ export class CreateTaskDto {
   @IsInt({ each: true, message: 'Mã người được giao không hợp lệ' })
   assigneeIds?: number[];
 
+  /** Loại công việc; mặc định task. Bug dùng bộ trạng thái riêng của Bug. */
   @IsOptional()
-  @IsEnum(TaskStatus, { message: 'Trạng thái không hợp lệ' })
-  status?: TaskStatus;
+  @IsEnum(TaskType, { message: 'Loại công việc không hợp lệ' })
+  type?: TaskType;
+
+  /** Trạng thái (thuộc dự án, đúng bộ theo loại); bỏ trống = trạng thái đầu tiên của bộ */
+  @IsOptional()
+  @IsInt({ message: 'Trạng thái không hợp lệ' })
+  statusId?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(1000)
+  storyPoints?: number | null;
+
+  /** Chỉ dùng cho Bug */
+  @IsOptional()
+  @IsEnum(BugSeverity, { message: 'Mức độ nghiêm trọng không hợp lệ' })
+  severity?: BugSeverity | null;
+
+  /** Chỉ dùng cho Bug */
+  @IsOptional()
+  @IsEnum(Environment, { message: 'Môi trường không hợp lệ' })
+  environment?: Environment | null;
 
   @IsOptional()
   @IsEnum(Priority, { message: 'Mức ưu tiên không hợp lệ' })

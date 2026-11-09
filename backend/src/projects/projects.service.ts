@@ -8,6 +8,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
+import { createDefaultStatuses } from '../statuses/default-statuses';
 import { ProjectAccessService } from './project-access.service';
 
 const projectInclude = {
@@ -56,16 +57,20 @@ export class ProjectsService {
     if (user.role === 'leader') memberIds.add(user.id);
     await this.assertUsersExistAndActive([...memberIds]);
 
-    const project = await this.prisma.project.create({
-      data: {
-        name: dto.name,
-        description: dto.description ?? null,
-        startDate: dto.startDate ? new Date(dto.startDate) : null,
-        endDate: dto.endDate ? new Date(dto.endDate) : null,
-        createdById: user.id,
-        members: { create: [...memberIds].map((userId) => ({ userId })) },
-      },
-      include: projectInclude,
+    const project = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.project.create({
+        data: {
+          name: dto.name,
+          description: dto.description ?? null,
+          startDate: dto.startDate ? new Date(dto.startDate) : null,
+          endDate: dto.endDate ? new Date(dto.endDate) : null,
+          createdById: user.id,
+          members: { create: [...memberIds].map((userId) => ({ userId })) },
+        },
+        include: projectInclude,
+      });
+      await createDefaultStatuses(tx, created.id);
+      return created;
     });
 
     await this.notifications.notify(
@@ -173,23 +178,23 @@ export class ProjectsService {
     if (projectIds.length === 0) return result;
     for (const id of projectIds) result.set(id, { taskCount: 0, doneCount: 0, overdueCount: 0 });
 
+    // Epic chỉ là nhóm story nên không tính vào tiến độ
+    const countable: Prisma.TaskWhereInput = { projectId: { in: projectIds }, parentId: null, type: { not: 'epic' } };
     const [byStatus, overdue] = await Promise.all([
-      this.prisma.task.groupBy({
-        by: ['projectId', 'status'],
-        where: { projectId: { in: projectIds }, parentId: null },
-        _count: { _all: true },
-      }),
+      this.prisma.task.groupBy({ by: ['projectId', 'statusId'], where: countable, _count: { _all: true } }),
       this.prisma.task.groupBy({
         by: ['projectId'],
-        where: { projectId: { in: projectIds }, parentId: null, status: { not: 'done' }, deadline: { lt: new Date() } },
+        where: { ...countable, status: { category: { not: 'done' } }, deadline: { lt: new Date() } },
         _count: { _all: true },
       }),
     ]);
+    const statusRows = await this.prisma.projectStatus.findMany({ where: { id: { in: [...new Set(byStatus.map((r) => r.statusId))] } }, select: { id: true, category: true } });
+    const categoryOf = new Map(statusRows.map((s) => [s.id, s.category]));
     for (const row of byStatus) {
       const entry = result.get(row.projectId);
       if (!entry) continue;
       entry.taskCount += row._count._all;
-      if (row.status === 'done') entry.doneCount += row._count._all;
+      if (categoryOf.get(row.statusId) === 'done') entry.doneCount += row._count._all;
     }
     for (const row of overdue) {
       const entry = result.get(row.projectId);

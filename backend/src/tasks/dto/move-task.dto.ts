@@ -1,9 +1,9 @@
-import { TaskStatus } from '@prisma/client';
-import { IsEnum, IsInt, Min } from 'class-validator';
+import { IsInt, Min } from 'class-validator';
 
 export class MoveTaskDto {
-  @IsEnum(TaskStatus, { message: 'Trạng thái không hợp lệ' })
-  status: TaskStatus;
+  /** Trạng thái đích (cột), phải thuộc cùng dự án và đúng bộ trạng thái của công việc */
+  @IsInt({ message: 'Trạng thái không hợp lệ' })
+  statusId: number;
 
   /** Vị trí (bắt đầu từ 0) trong cột đích */
   @IsInt()

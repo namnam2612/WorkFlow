@@ -6,6 +6,9 @@ import { PrismaService } from '../prisma/prisma.service';
 export type ActivityAction =
   | 'task_created'
   | 'status_changed'
+  | 'type_changed'
+  | 'story_points_changed'
+  | 'bug_info_changed'
   | 'assignee_changed'
   | 'priority_changed'
   | 'deadline_changed'

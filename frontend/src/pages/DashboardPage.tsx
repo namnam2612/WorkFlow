@@ -64,7 +64,7 @@ export default function DashboardPage() {
         <EmptyState title="Chưa có dữ liệu để thống kê" description="Bạn chưa tham gia dự án nào. Hãy tạo dự án hoặc liên hệ trưởng nhóm." />
       ) : (
         <div className="space-y-6">
-          <StatusSummary counts={data.statusCounts} total={data.totalTasks} overdueCount={data.overdueCount} />
+          <StatusSummary counts={data.categoryCounts} breakdown={data.statusBreakdown} total={data.totalTasks} overdueCount={data.overdueCount} />
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <Card

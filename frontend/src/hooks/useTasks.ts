@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
-import type { Paginated, Priority, Task, TaskDetail, TaskFilters, TaskStatus } from '../types/api';
+import type { BugSeverity, Environment, Paginated, Priority, Task, TaskDetail, TaskFilters, TaskType } from '../types/api';
 
 export interface TaskInput {
   projectId?: number;
@@ -9,7 +9,11 @@ export interface TaskInput {
   description?: string | null;
   /** Thay TOÀN BỘ danh sách người được giao (người đã có giữ nguyên, người mới thêm được báo) */
   assigneeIds?: number[];
-  status?: TaskStatus;
+  type?: TaskType;
+  statusId?: number;
+  storyPoints?: number | null;
+  severity?: BugSeverity | null;
+  environment?: Environment | null;
   priority?: Priority;
   deadline?: string | null;
   estimatedHours?: number | null;
@@ -76,7 +80,7 @@ export const boardKey = (projectId: number) => ['board', projectId] as const;
 
 interface MoveVariables {
   id: number;
-  status: TaskStatus;
+  statusId: number;
   position: number;
   /** Trạng thái bảng sau khi kéo thả, dùng để cập nhật cache ngay (optimistic) */
   optimistic: Task[];
@@ -86,7 +90,7 @@ interface MoveVariables {
 export function useMoveTask(projectId: number, onError?: (error: unknown) => void) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, status, position }: MoveVariables) => api.patch<TaskDetail>(`/tasks/${id}/move`, { status, position }),
+    mutationFn: ({ id, statusId, position }: MoveVariables) => api.patch<TaskDetail>(`/tasks/${id}/move`, { statusId, position }),
     onMutate: async (variables) => {
       await queryClient.cancelQueries({ queryKey: boardKey(projectId) });
       const previous = queryClient.getQueryData<Task[]>(boardKey(projectId));

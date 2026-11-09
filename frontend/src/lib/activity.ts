@@ -1,10 +1,20 @@
 import type { ActivityLogEntry } from '../types/api';
-import { PRIORITY_META, STATUS_META } from './constants';
+import { PRIORITY_META, TYPE_LABEL, SEVERITY_META, ENVIRONMENT_LABEL } from './constants';
 import { formatDateTime } from './format';
-import type { Priority, TaskStatus } from '../types/api';
+import type { BugSeverity, Environment, Priority, TaskType } from '../types/api';
 
+/** Log mới lưu {id, name}; log cũ lưu khóa của 5 trạng thái cố định trước đây */
+const LEGACY_STATUS_LABEL: Record<string, string> = { todo: 'Cần làm', in_progress: 'Đang làm', review: 'Chờ duyệt', done: 'Hoàn thành', blocked: 'Bị chặn' };
 function statusLabel(value: unknown): string {
-  return typeof value === 'string' && value in STATUS_META ? STATUS_META[value as TaskStatus].label : String(value ?? '—');
+  if (value && typeof value === 'object' && 'name' in value && typeof (value as { name: unknown }).name === 'string') return (value as { name: string }).name;
+  return typeof value === 'string' ? (LEGACY_STATUS_LABEL[value] ?? value) : '—';
+}
+
+const typeLabel = (v: unknown): string => (typeof v === 'string' && v in TYPE_LABEL ? TYPE_LABEL[v as TaskType] : '—');
+function bugValue(field: unknown, v: unknown): string {
+  if (typeof v !== 'string') return 'không có';
+  if (field === 'severity') return v in SEVERITY_META ? SEVERITY_META[v as BugSeverity].label : v;
+  return v in ENVIRONMENT_LABEL ? ENVIRONMENT_LABEL[v as Environment] : v;
 }
 
 function priorityLabel(value: unknown): string {
@@ -49,6 +59,12 @@ export function describeActivity(entry: ActivityLogEntry): string {
       return `đã đổi trạng thái từ "${statusLabel(detail.from)}" sang "${statusLabel(detail.to)}"`;
     case 'assignee_changed':
       return describeAssigneeChange(detail);
+    case 'type_changed':
+      return `đã đổi loại từ "${typeLabel(detail.from)}" sang "${typeLabel(detail.to)}"`;
+    case 'story_points_changed':
+      return `đã đổi Story Point: ${String(detail.from ?? '—')} → ${String(detail.to ?? '—')}`;
+    case 'bug_info_changed':
+      return `đã đổi ${detail.field === 'severity' ? 'mức độ nghiêm trọng' : 'môi trường'} của Bug: ${bugValue(detail.field, detail.from)} → ${bugValue(detail.field, detail.to)}`;
     case 'priority_changed':
       return `đã đổi mức ưu tiên từ "${priorityLabel(detail.from)}" sang "${priorityLabel(detail.to)}"`;
     case 'deadline_changed': {

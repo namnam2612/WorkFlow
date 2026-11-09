@@ -13,37 +13,40 @@ import {
   type UniqueIdentifier,
 } from '@dnd-kit/core';
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
-import { ArrowLeft, Plus, X } from 'lucide-react';
+import { ArrowLeft, Plus, Settings2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
 import { AssigneeFilter } from '../components/assignees/AssigneeFilter';
 import { KanbanCard } from '../components/kanban/KanbanCard';
 import { KanbanColumn } from '../components/kanban/KanbanColumn';
+import { StatusManagerModal } from '../components/projects/StatusManagerModal';
 import { TaskFormModal } from '../components/tasks/TaskFormModal';
 import { Button } from '../components/ui/Button';
 import { ErrorState, PageLoader } from '../components/ui/States';
 import { useToast } from '../components/ui/useToast';
 import { useProject } from '../hooks/useProjects';
+import { statusesOf, useProjectStatuses } from '../hooks/useStatuses';
 import { useBoard, useMoveTask } from '../hooks/useTasks';
 import { getErrorMessage } from '../lib/api';
-import { PRIORITIES, PRIORITY_META, STATUSES } from '../lib/constants';
+import { PRIORITIES, PRIORITY_META } from '../lib/constants';
 import { columnDroppableId } from '../lib/kanban';
 import { canManageProject, isAssignee } from '../lib/permissions';
-import { inputClass } from '../lib/styles';
-import type { Priority, Task, TaskStatus } from '../types/api';
+import { chipClass, inputClass } from '../lib/styles';
+import type { Priority, ProjectStatus, StatusScope, Task } from '../types/api';
 
-type Columns = Record<TaskStatus, Task[]>;
+/** Cột Kanban theo id trạng thái của dự án (mỗi dự án có bộ cột riêng) */
+type Columns = Record<number, Task[]>;
 
-const emptyColumns = (): Columns => ({ todo: [], in_progress: [], review: [], done: [], blocked: [] });
-
-function groupByStatus(tasks: Task[]): Columns {
-  const columns = emptyColumns();
-  for (const task of [...tasks].sort((a, b) => a.position - b.position || a.id - b.id)) columns[task.status].push(task);
+function groupByStatus(tasks: Task[], statuses: ProjectStatus[]): Columns {
+  const columns: Columns = Object.fromEntries(statuses.map((s) => [s.id, [] as Task[]]));
+  for (const task of [...tasks].sort((a, b) => a.position - b.position || a.id - b.id)) columns[task.statusId]?.push(task);
   return columns;
 }
 
-const flatten = (columns: Columns): Task[] => STATUSES.flatMap((status) => columns[status].map((task, index) => ({ ...task, status, position: index })));
+/** Task sau kéo thả: gán lại trạng thái và vị trí theo cột */
+const flatten = (columns: Columns, statuses: ProjectStatus[]): Task[] =>
+  statuses.flatMap((s) => (columns[s.id] ?? []).map((task, index) => ({ ...task, statusId: s.id, status: { id: s.id, name: s.name, color: s.color, category: s.category, scope: s.scope }, position: index })));
 
 function isColumnId(id: UniqueIdentifier): id is string {
   return typeof id === 'string' && id.startsWith('column:');
@@ -59,18 +62,27 @@ export default function KanbanPage() {
   const boardQuery = useBoard(projectId);
   const move = useMoveTask(projectId, (error) => toast.show(`Không thể di chuyển: ${getErrorMessage(error)}`, 'error'));
 
-  const [columns, setColumns] = useState<Columns>(emptyColumns);
+  const statusesQuery = useProjectStatuses(projectId);
+  const [scope, setScope] = useState<StatusScope>('task');
+  const [managingStatuses, setManagingStatuses] = useState(false);
+  const statuses = useMemo(() => statusesOf(statusesQuery.data, scope), [statusesQuery.data, scope]);
+  // Task của bộ đang xem (công việc hoặc Bug); task thuộc bộ kia giữ nguyên khi cập nhật cache
+  const scopeTasks = useMemo(() => (boardQuery.data ?? []).filter((t) => t.status.scope === scope), [boardQuery.data, scope]);
+  const otherTasks = useMemo(() => (boardQuery.data ?? []).filter((t) => t.status.scope !== scope), [boardQuery.data, scope]);
+  const bugCount = useMemo(() => (boardQuery.data ?? []).filter((t) => t.status.scope === 'bug').length, [boardQuery.data]);
+
+  const [columns, setColumns] = useState<Columns>({});
   const [activeId, setActiveId] = useState<number | null>(null);
-  const dragStart = useRef<{ status: TaskStatus; index: number } | null>(null);
+  const dragStart = useRef<{ statusId: number; index: number } | null>(null);
   const [assigneeFilter, setAssigneeFilter] = useState<number[]>([]);
   const [unassignedFilter, setUnassignedFilter] = useState(false);
   const [priorityFilter, setPriorityFilter] = useState<Priority | ''>('');
-  const [creatingIn, setCreatingIn] = useState<TaskStatus | null>(null);
+  const [creatingIn, setCreatingIn] = useState<number | null>(null);
 
   // Đồng bộ state cục bộ với dữ liệu server (trừ lúc đang kéo)
   useEffect(() => {
-    if (boardQuery.data && activeId === null) setColumns(groupByStatus(boardQuery.data));
-  }, [boardQuery.data, activeId]);
+    if (boardQuery.data && statusesQuery.data && activeId === null) setColumns(groupByStatus(scopeTasks, statuses));
+  }, [boardQuery.data, statusesQuery.data, scopeTasks, statuses, activeId]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -89,23 +101,24 @@ export default function KanbanPage() {
       task.assignees.some((a) => assigneeFilter.includes(a.id)) ||
       (unassignedFilter && task.assignees.length === 0);
     const matches = (task: Task) => byAssignee(task) && (priorityFilter === '' || task.priority === priorityFilter);
-    const result = emptyColumns();
-    for (const status of STATUSES) result[status] = columns[status].filter(matches);
+    const result: Columns = {};
+    for (const s of statuses) result[s.id] = (columns[s.id] ?? []).filter(matches);
     return result;
-  }, [columns, assigneeFilter, unassignedFilter, priorityFilter]);
+  }, [columns, statuses, assigneeFilter, unassignedFilter, priorityFilter]);
 
-  const findContainer = (itemId: UniqueIdentifier): TaskStatus | undefined => {
-    if (isColumnId(itemId)) return STATUSES.find((s) => columnDroppableId(s) === itemId);
-    return STATUSES.find((s) => columns[s].some((t) => t.id === itemId));
+  const findContainer = (itemId: UniqueIdentifier): number | undefined => {
+    const ids = statuses.map((s) => s.id);
+    if (isColumnId(itemId)) return ids.find((sid) => columnDroppableId(sid) === itemId);
+    return ids.find((sid) => (columns[sid] ?? []).some((t) => t.id === itemId));
   };
 
-  const activeTask = activeId === null ? null : (STATUSES.flatMap((s) => columns[s]).find((t) => t.id === activeId) ?? null);
+  const activeTask = activeId === null ? null : (statuses.flatMap((s) => columns[s.id] ?? []).find((t) => t.id === activeId) ?? null);
 
   const onDragStart = (event: DragStartEvent) => {
     const taskId = Number(event.active.id);
-    const status = findContainer(taskId);
-    if (!status) return;
-    dragStart.current = { status, index: columns[status].findIndex((t) => t.id === taskId) };
+    const statusId = findContainer(taskId);
+    if (statusId === undefined) return;
+    dragStart.current = { statusId, index: (columns[statusId] ?? []).findIndex((t) => t.id === taskId) };
     setActiveId(taskId);
   };
 
@@ -114,12 +127,12 @@ export default function KanbanPage() {
     if (!over) return;
     const from = findContainer(active.id);
     const to = findContainer(over.id);
-    if (!from || !to || from === to) return;
+    if (from === undefined || to === undefined || from === to) return;
 
     setColumns((prev) => {
-      const moved = prev[from].find((t) => t.id === active.id);
+      const moved = (prev[from] ?? []).find((t) => t.id === active.id);
       if (!moved) return prev;
-      const target = prev[to];
+      const target = prev[to] ?? [];
       let index = target.length;
       if (!isColumnId(over.id)) {
         const overIndex = target.findIndex((t) => t.id === over.id);
@@ -129,8 +142,8 @@ export default function KanbanPage() {
       }
       return {
         ...prev,
-        [from]: prev[from].filter((t) => t.id !== active.id),
-        [to]: [...target.slice(0, index), { ...moved, status: to }, ...target.slice(index)],
+        [from]: (prev[from] ?? []).filter((t) => t.id !== active.id),
+        [to]: [...target.slice(0, index), { ...moved, statusId: to }, ...target.slice(index)],
       };
     });
   };
@@ -142,35 +155,37 @@ export default function KanbanPage() {
     setActiveId(null);
 
     if (!over || !start) {
-      if (boardQuery.data) setColumns(groupByStatus(boardQuery.data));
+      setColumns(groupByStatus(scopeTasks, statuses));
       return;
     }
     const container = findContainer(active.id);
     const overContainer = findContainer(over.id);
-    if (!container || !overContainer) return;
+    if (container === undefined || overContainer === undefined) return;
 
     let next = columns;
+    const column = columns[container] ?? [];
     if (container === overContainer && !isColumnId(over.id) && active.id !== over.id) {
-      const oldIndex = columns[container].findIndex((t) => t.id === active.id);
-      const newIndex = columns[container].findIndex((t) => t.id === over.id);
-      next = { ...columns, [container]: arrayMove(columns[container], oldIndex, newIndex) };
+      const oldIndex = column.findIndex((t) => t.id === active.id);
+      const newIndex = column.findIndex((t) => t.id === over.id);
+      next = { ...columns, [container]: arrayMove(column, oldIndex, newIndex) };
       setColumns(next);
     }
 
-    const finalIndex = next[container].findIndex((t) => t.id === active.id);
-    if (container === start.status && finalIndex === start.index) return;
-    move.mutate({ id: Number(active.id), status: container, position: finalIndex, optimistic: flatten(next) });
+    const finalIndex = (next[container] ?? []).findIndex((t) => t.id === active.id);
+    if (container === start.statusId && finalIndex === start.index) return;
+    move.mutate({ id: Number(active.id), statusId: container, position: finalIndex, optimistic: [...otherTasks, ...flatten(next, statuses)] });
   };
 
   const onDragCancel = () => {
     dragStart.current = null;
     setActiveId(null);
-    if (boardQuery.data) setColumns(groupByStatus(boardQuery.data));
+    setColumns(groupByStatus(scopeTasks, statuses));
   };
 
-  if (projectQuery.isLoading || boardQuery.isLoading) return <PageLoader />;
+  if (projectQuery.isLoading || boardQuery.isLoading || statusesQuery.isLoading) return <PageLoader />;
   if (projectQuery.isError || !project) return <ErrorState error={projectQuery.error} onRetry={() => void projectQuery.refetch()} />;
   if (boardQuery.isError) return <ErrorState error={boardQuery.error} onRetry={() => void boardQuery.refetch()} />;
+  if (statusesQuery.isError) return <ErrorState error={statusesQuery.error} onRetry={() => void statusesQuery.refetch()} />;
 
   const hasFilter = assigneeFilter.length > 0 || unassignedFilter || priorityFilter !== '';
 
@@ -216,30 +231,45 @@ export default function KanbanPage() {
             </Button>
           )}
           {canManage && (
-            <Button icon={<Plus className="h-4 w-4" />} onClick={() => setCreatingIn('todo')}>
-              Thêm công việc
+            <Button variant="secondary" icon={<Settings2 className="h-4 w-4" />} onClick={() => setManagingStatuses(true)}>
+              Tùy chỉnh cột
+            </Button>
+          )}
+          {canManage && (
+            <Button icon={<Plus className="h-4 w-4" />} onClick={() => setCreatingIn(statuses[0]?.id ?? null)}>
+              {scope === 'bug' ? 'Thêm Bug' : 'Thêm công việc'}
             </Button>
           )}
         </div>
       </div>
 
+      <div className="mb-4 inline-flex gap-2" role="group" aria-label="Bộ cột">
+        <button type="button" aria-pressed={scope === 'task'} onClick={() => setScope('task')} className={chipClass(scope === 'task')}>
+          Công việc
+        </button>
+        <button type="button" aria-pressed={scope === 'bug'} onClick={() => setScope('bug')} className={chipClass(scope === 'bug')}>
+          Bug{bugCount > 0 ? ` (${bugCount})` : ''}
+        </button>
+      </div>
+
       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd} onDragCancel={onDragCancel}>
         <div className="flex gap-3 overflow-x-auto pb-4 lg:overflow-visible" style={{ minHeight: '60vh' }}>
-          {STATUSES.map((status) => (
+          {statuses.map((status) => (
             <KanbanColumn
-              key={status}
+              key={status.id}
               status={status}
-              tasks={visible[status]}
-              totalCount={columns[status].length}
+              tasks={visible[status.id] ?? []}
+              totalCount={(columns[status.id] ?? []).length}
               canDrag={canDrag}
-              onAdd={canManage ? () => setCreatingIn(status) : undefined}
+              onAdd={canManage ? () => setCreatingIn(status.id) : undefined}
             />
           ))}
         </div>
         <DragOverlay>{activeTask ? <KanbanCard task={activeTask} overlay /> : null}</DragOverlay>
       </DndContext>
 
-      {creatingIn && <TaskFormModal open defaultProjectId={project.id} defaultStatus={creatingIn} onClose={() => setCreatingIn(null)} />}
+      {creatingIn !== null && <TaskFormModal open defaultProjectId={project.id} defaultStatusId={creatingIn} defaultType={scope === 'bug' ? 'bug' : 'task'} onClose={() => setCreatingIn(null)} />}
+      {managingStatuses && <StatusManagerModal projectId={project.id} onClose={() => setManagingStatuses(false)} />}
     </>
   );
 }

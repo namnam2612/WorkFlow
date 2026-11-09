@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { PRIORITY_META } from '../../lib/constants';
 import { isOverdue } from '../../lib/format';
 import type { Task } from '../../types/api';
+import { SeverityBadge, TypeBadge } from '../ui/Badges';
 import { DeadlineText } from '../tasks/DeadlineText';
 import { AssigneeStack } from '../assignees/AssigneeStack';
 
@@ -36,6 +37,17 @@ export function KanbanCard({ task, overlay = false, dimmed = false, locked = fal
       )}
     >
       <span className={clsx('absolute inset-y-0 left-0 w-1', PRIORITY_BAR[task.priority])} aria-hidden />
+      {(task.type !== 'task' || task.storyPoints !== null) && (
+        <div className="mb-1.5 flex flex-wrap items-center gap-2">
+          <TypeBadge type={task.type} hideTask />
+          {task.type === 'bug' && task.severity && <SeverityBadge severity={task.severity} />}
+          {task.storyPoints !== null && (
+            <span className="ml-auto rounded-full border border-white/[0.14] px-1.5 text-[11px] font-semibold tabular-nums text-slate-600" title="Story Point">
+              {task.storyPoints}
+            </span>
+          )}
+        </div>
+      )}
       <Link
         to={`/tasks/${task.id}`}
         draggable={false}

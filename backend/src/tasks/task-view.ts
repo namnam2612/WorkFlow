@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { USER_BRIEF_SELECT } from '../common/utils/user-brief';
+import { STATUS_SELECT } from '../statuses/status-view';
 
 /** Người được giao, xếp theo thứ tự được giao (ổn định giữa các lần tải) */
 export const assigneesInclude = {
@@ -9,8 +10,9 @@ export const assigneesInclude = {
 
 export const taskInclude = {
   assignees: assigneesInclude,
+  status: { select: STATUS_SELECT },
   project: { select: { id: true, name: true } },
-  subtasks: { select: { status: true } },
+  subtasks: { select: { status: { select: { category: true } } } },
   _count: { select: { comments: true, attachments: true } },
 } satisfies Prisma.TaskInclude;
 
@@ -23,7 +25,7 @@ export function toTaskView(task: TaskWithRelations) {
     ...rest,
     assignees: assignees.map((a) => a.user),
     subtaskTotal: subtasks.length,
-    subtaskDone: subtasks.filter((s) => s.status === 'done').length,
+    subtaskDone: subtasks.filter((s) => s.status.category === 'done').length,
     commentCount: _count.comments,
     attachmentCount: _count.attachments,
   };

@@ -1,5 +1,6 @@
-import { PrismaClient, Priority, Role, TaskStatus } from '@prisma/client';
+import { PrismaClient, Priority, Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { createDefaultStatuses, DEFAULT_TASK_STATUSES } from '../src/statuses/default-statuses';
 import { clearAttachments, makeDocx, makePdf, makePng, makePptx, makeXlsx, writeSample } from './seed-files';
 
 const prisma = new PrismaClient();
@@ -7,9 +8,12 @@ const prisma = new PrismaClient();
 const DAY = 24 * 60 * 60 * 1000;
 const daysFromNow = (days: number): Date => new Date(Date.now() + days * DAY);
 
+/** Khóa trạng thái mặc định của bộ công việc (xem DEFAULT_TASK_STATUSES) */
+type StatusKey = 'todo' | 'in_progress' | 'review' | 'done' | 'blocked';
+
 type TaskSeed = {
   title: string;
-  status: TaskStatus;
+  status: StatusKey;
   priority: Priority;
   /** Số ngày so với hiện tại (âm = đã qua), null = không có deadline */
   deadline: number | null;
@@ -197,10 +201,19 @@ async function main(): Promise<void> {
       fileCount++;
     }
 
-    const positionByStatus = new Map<TaskStatus, number>();
-    const nextPosition = (status: TaskStatus): number => {
-      const position = positionByStatus.get(status) ?? 0;
-      positionByStatus.set(status, position + 1);
+    // Bộ trạng thái mặc định của dự án (tạo giống lúc tạo dự án qua API)
+    await createDefaultStatuses(prisma, project.id);
+    const statusRows = await prisma.projectStatus.findMany({ where: { projectId: project.id, scope: 'task' } });
+    const statusIdOf = (key: StatusKey): number => {
+      const name = DEFAULT_TASK_STATUSES.find((d) => d.key === key)?.name;
+      const row = statusRows.find((r) => r.name === name);
+      if (!row) throw new Error(`Thiếu trạng thái seed: ${key}`);
+      return row.id;
+    };
+    const positionByStatus = new Map<number, number>();
+    const nextPosition = (statusId: number): number => {
+      const position = positionByStatus.get(statusId) ?? 0;
+      positionByStatus.set(statusId, position + 1);
       return position;
     };
 
@@ -219,12 +232,12 @@ async function main(): Promise<void> {
           description: `Mô tả chi tiết cho công việc "${t.title}".`,
           assignees: { create: assigneeIds.map((userId) => ({ userId, assignedAt: daysFromNow(def.startOffset + index) })) },
           creatorId: leader.id,
-          status: t.status,
+          statusId: statusIdOf(t.status),
           priority: t.priority,
           deadline,
           estimatedHours: t.estimated ?? null,
           actualHours: t.actual ?? null,
-          position: nextPosition(t.status),
+          position: nextPosition(statusIdOf(t.status)),
           completedAt,
           createdAt: daysFromNow(def.startOffset + index),
         },
@@ -319,7 +332,7 @@ async function main(): Promise<void> {
             title: subtaskTitle,
             assignees: { create: assigneeIds.map((userId) => ({ userId })) },
             creatorId: leader.id,
-            status: subDone ? 'done' : 'todo',
+            statusId: statusIdOf(subDone ? 'done' : 'todo'),
             priority: t.priority,
             deadline,
             completedAt: subDone ? daysFromNow(-1) : null,
@@ -337,7 +350,10 @@ async function main(): Promise<void> {
             taskId: task.id,
             userId: assigneeId,
             action: 'status_changed',
-            detail: { from: 'todo', to: t.status },
+            detail: {
+              from: { id: statusIdOf('todo'), name: DEFAULT_TASK_STATUSES[0]?.name },
+              to: { id: statusIdOf(t.status), name: DEFAULT_TASK_STATUSES.find((d) => d.key === t.status)?.name },
+            },
           },
         });
       }

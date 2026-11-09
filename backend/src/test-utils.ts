@@ -10,8 +10,9 @@ export interface PrismaMock {
   comment: Record<'findMany' | 'create' | 'findUnique' | 'delete', MockFn>;
   project: Record<'findUnique' | 'findMany', MockFn>;
   notification: Record<'findFirst', MockFn>;
+  projectStatus: Record<'findMany' | 'findFirst' | 'findUnique' | 'create' | 'update' | 'delete' | 'aggregate', MockFn>;
   projectMember: Record<'findUnique' | 'delete', MockFn>;
-  task: Record<'findUnique' | 'findMany' | 'create' | 'update' | 'delete' | 'count' | 'aggregate' | 'groupBy', MockFn>;
+  task: Record<'findUnique' | 'findMany' | 'create' | 'update' | 'updateMany' | 'delete' | 'count' | 'aggregate' | 'groupBy', MockFn>;
   taskAssignee: Record<'findMany' | 'createMany' | 'deleteMany', MockFn>;
   $transaction: MockFn;
   $queryRaw: MockFn;
@@ -27,12 +28,14 @@ export function createPrismaMock(): PrismaMock {
     comment: { findMany: jest.fn(), create: jest.fn(), findUnique: jest.fn(), delete: jest.fn() },
     project: { findUnique: jest.fn(), findMany: jest.fn() },
     notification: { findFirst: jest.fn() },
+    projectStatus: { findMany: jest.fn(), findFirst: jest.fn(), findUnique: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn(), aggregate: jest.fn() },
     projectMember: { findUnique: jest.fn(), delete: jest.fn() },
     task: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
       delete: jest.fn(),
       count: jest.fn(),
       aggregate: jest.fn(),

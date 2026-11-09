@@ -71,7 +71,7 @@ export function vnDateInputToEndOfDayIso(value: string): string | undefined {
 }
 
 export function isOverdue(task: Pick<Task, 'deadline' | 'status'>): boolean {
-  return task.status !== 'done' && task.deadline !== null && new Date(task.deadline).getTime() < Date.now();
+  return task.status.category !== 'done' && task.deadline !== null && new Date(task.deadline).getTime() < Date.now();
 }
 
 /** Số ngày còn lại tới deadline (âm = đã quá hạn), làm tròn lên */
@@ -81,7 +81,7 @@ export function daysUntil(iso: string): number {
 
 export function deadlineLabel(task: Pick<Task, 'deadline' | 'status'>): string {
   if (!task.deadline) return 'Không có deadline';
-  if (task.status === 'done') return formatDate(task.deadline);
+  if (task.status.category === 'done') return formatDate(task.deadline);
   const days = daysUntil(task.deadline);
   if (days < 0) return `Quá hạn ${Math.abs(days)} ngày`;
   if (days === 0) return 'Hôm nay';

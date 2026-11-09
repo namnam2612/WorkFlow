@@ -5,13 +5,14 @@ import { z } from 'zod';
 import { useAuth } from '../../auth/useAuth';
 import { useFormAttachments } from '../../hooks/useFormAttachments';
 import { useProject, useProjects } from '../../hooks/useProjects';
+import { statusesOf, useProjectStatuses } from '../../hooks/useStatuses';
 import { useCreateTask, useUpdateTask } from '../../hooks/useTasks';
 import { getErrorMessage } from '../../lib/api';
-import { PRIORITIES, PRIORITY_META, STATUSES, STATUS_META } from '../../lib/constants';
+import { ENVIRONMENT_LABEL, ENVIRONMENTS, PRIORITIES, PRIORITY_META, SEVERITIES, SEVERITY_META, TYPE_LABEL, TYPES } from '../../lib/constants';
 import { isoToVnDateTimeInput, vnDateTimeInputToIso } from '../../lib/format';
 import { canManageProject } from '../../lib/permissions';
 import { inputClass, labelClass } from '../../lib/styles';
-import type { Priority, Task, TaskStatus, UserBrief } from '../../types/api';
+import type { Priority, Task, TaskType, UserBrief } from '../../types/api';
 import { AssigneePicker } from '../assignees/AssigneePicker';
 import { AttachmentPicker } from '../attachments/AttachmentPicker';
 import { FormUploadPhase } from '../attachments/FormUploadPhase';
@@ -25,11 +26,18 @@ const hoursField = z
   .string()
   .refine((v) => v === '' || (!Number.isNaN(Number(v)) && Number(v) >= 0 && Number(v) <= 10000), 'Giờ phải là số từ 0 đến 10000');
 
+const pointsField = z.string().refine((v) => v === '' || (/^\d+$/.test(v) && Number(v) <= 1000), 'Story Point phải là số nguyên từ 0 đến 1000');
+
 const schema = z.object({
   title: z.string().trim().min(1, 'Vui lòng nhập tiêu đề').max(255, 'Tối đa 255 ký tự'),
   description: z.string().max(10000, 'Tối đa 10000 ký tự'),
   projectId: z.string().min(1, 'Vui lòng chọn dự án'),
-  status: z.enum(['todo', 'in_progress', 'review', 'done', 'blocked']),
+  type: z.enum(['task', 'story', 'bug', 'epic']),
+  /** Rỗng = trạng thái đầu tiên của bộ (chỉ khi tạo mới) */
+  statusId: z.string(),
+  storyPoints: pointsField,
+  severity: z.enum(['', 'minor', 'major', 'critical', 'blocker']),
+  environment: z.enum(['', 'dev', 'staging', 'prod']),
   priority: z.enum(['low', 'medium', 'high', 'urgent']),
   deadline: z.string(),
   estimatedHours: hoursField,
@@ -43,7 +51,8 @@ interface TaskFormModalProps {
   /** Có giá trị = chế độ sửa */
   task?: Task;
   defaultProjectId?: number;
-  defaultStatus?: TaskStatus;
+  defaultStatusId?: number;
+  defaultType?: TaskType;
   /** Tạo công việc con */
   parentId?: number;
   onSaved?: (taskId: number) => void;
@@ -51,7 +60,7 @@ interface TaskFormModalProps {
 
 const toNumberOrNull = (value: string): number | null => (value === '' ? null : Number(value));
 
-export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultStatus, parentId, onSaved }: TaskFormModalProps) {
+export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultStatusId, defaultType, parentId, onSaved }: TaskFormModalProps) {
   const { user } = useAuth();
   const toast = useToast();
   const create = useCreateTask();
@@ -75,7 +84,11 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
       title: task?.title ?? '',
       description: task?.description ?? '',
       projectId: String(task?.projectId ?? defaultProjectId ?? ''),
-      status: task?.status ?? defaultStatus ?? 'todo',
+      type: task?.type ?? defaultType ?? 'task',
+      statusId: task ? String(task.statusId) : defaultStatusId ? String(defaultStatusId) : '',
+      storyPoints: task?.storyPoints != null ? String(task.storyPoints) : '',
+      severity: task?.severity ?? '',
+      environment: task?.environment ?? '',
       priority: task?.priority ?? 'medium',
       deadline: isoToVnDateTimeInput(task?.deadline),
       estimatedHours: task?.estimatedHours != null ? String(task.estimatedHours) : '',
@@ -85,6 +98,9 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
 
   const projectId = Number(watch('projectId')) || undefined;
   const projectQuery = useProject(projectId);
+  const statusesQuery = useProjectStatuses(projectId);
+  const type = watch('type');
+  const statusOptions = statusesOf(statusesQuery.data, type === 'bug' ? 'bug' : 'task');
   const manageableProjects = (projectsQuery.data ?? []).filter((p) => canManageProject(user, p));
   // Thành viên (không phải leader/admin của dự án) chỉ được giao việc con cho chính mình
   const canAssignOthers = canManageProject(user, projectQuery.data);
@@ -93,6 +109,10 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
   const lockedIds = canAssignOthers ? [] : assignees.filter((a) => a.id !== user?.id).map((a) => a.id);
   const isEdit = task !== undefined;
   const isSubtask = parentId !== undefined || task?.parentId != null;
+  // Công việc con chỉ là Task hoặc Bug; Story/Epic là công việc lớn
+  const typeOptions = isSubtask ? TYPES.filter((t) => t === 'task' || t === 'bug') : TYPES;
+  const statusValue = watch('statusId');
+  const statusFits = statusOptions.some((s) => String(s.id) === statusValue);
 
   const finish = (taskId: number) => {
     toast.show(isEdit ? 'Đã cập nhật công việc' : isSubtask ? 'Đã thêm công việc con' : 'Đã tạo công việc', 'success');
@@ -106,7 +126,11 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
       title: values.title,
       description: values.description.trim() || null,
       assigneeIds: assignees.map((a) => a.id),
-      status: values.status,
+      type: values.type,
+      // Trạng thái không thuộc bộ của loại đã chọn (vd đổi sang Bug) thì để server chọn trạng thái tương ứng
+      statusId: values.statusId && statusOptions.some((s) => String(s.id) === values.statusId) ? Number(values.statusId) : undefined,
+      storyPoints: values.storyPoints === '' ? null : Number(values.storyPoints),
+      ...(values.type === 'bug' ? { severity: values.severity || null, environment: values.environment || null } : {}),
       priority: values.priority,
       deadline: vnDateTimeInputToIso(values.deadline),
       estimatedHours: toNumberOrNull(values.estimatedHours),
@@ -176,15 +200,52 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
               ))}
             </select>
           </Field>
-          <Field label="Trạng thái" htmlFor="task-status">
-            <select id="task-status" className={inputClass} {...register('status')}>
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {STATUS_META[s].label}
+          <Field label="Loại" htmlFor="task-type">
+            <select id="task-type" className={inputClass} {...register('type')}>
+              {typeOptions.map((t) => (
+                <option key={t} value={t}>
+                  {TYPE_LABEL[t]}
                 </option>
               ))}
             </select>
           </Field>
+          <Field label="Trạng thái" htmlFor="task-status">
+            <select id="task-status" className={inputClass} value={statusFits ? statusValue : ''} {...register('statusId')}>
+              {(!statusFits || !isEdit) && <option value="">{statusOptions[0] ? `Mặc định (${statusOptions[0].name})` : '—'}</option>}
+              {statusOptions.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Story Point" htmlFor="task-points" error={errors.storyPoints?.message}>
+            <input id="task-points" inputMode="numeric" className={inputClass} placeholder="VD: 3" {...register('storyPoints')} />
+          </Field>
+          {type === 'bug' && (
+            <>
+              <Field label="Mức độ nghiêm trọng" htmlFor="task-severity">
+                <select id="task-severity" className={inputClass} {...register('severity')}>
+                  <option value="">Mặc định (Vừa)</option>
+                  {SEVERITIES.map((v) => (
+                    <option key={v} value={v}>
+                      {SEVERITY_META[v].label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Môi trường" htmlFor="task-env">
+                <select id="task-env" className={inputClass} {...register('environment')}>
+                  <option value="">Chưa xác định</option>
+                  {ENVIRONMENTS.map((v) => (
+                    <option key={v} value={v}>
+                      {ENVIRONMENT_LABEL[v]}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </>
+          )}
           <div className="sm:col-span-2">
             <p className={labelClass}>Người thực hiện{assignees.length > 1 ? ` (${assignees.length})` : ''}</p>
             <AssigneePicker options={members} selected={assignees} onChange={setAssignees} lockedIds={lockedIds} disabled={!projectId || busy} emptyLabel={projectId ? 'Chưa giao cho ai' : 'Chọn dự án trước'} />

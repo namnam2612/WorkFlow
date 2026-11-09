@@ -1,11 +1,12 @@
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
-import { Priority, Task } from '@prisma/client';
+import { Priority, ProjectStatus, Task } from '@prisma/client';
 import { ActivityService } from '../activity/activity.service';
 import { AttachmentCleanupService } from '../attachments/attachment-cleanup.service';
 import { AuthUser } from '../common/types/auth-user';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ProjectAccessService } from '../projects/project-access.service';
 import { RealtimeService } from '../realtime/realtime.service';
+import { StatusesService } from '../statuses/statuses.service';
 import { asPrisma, callArg, createPrismaMock, firstArgs, PrismaMock } from '../test-utils';
 import { ListTasksQueryDto } from './dto/list-tasks-query.dto';
 import { TasksService } from './tasks.service';
@@ -22,10 +23,43 @@ const outsider: AuthUser = { id: 30, email: 'm3@x.vn', name: 'Người ngoài', 
 /** Id người dùng là thành viên của PROJECT */
 const MEMBER_IDS = new Set([10, 20, 21]);
 
-/** Task giả kèm danh sách người được giao (`assigneeIds`, mặc định chỉ có user 20) */
-type BuiltTask = Task & { assignees: { userId: number }[] };
+/** Bộ trạng thái của PROJECT: công việc (1–5) và Bug (11–16), giống mặc định khi tạo dự án */
+const mk = (id: number, scope: 'task' | 'bug', name: string, category: 'todo' | 'in_progress' | 'done', position: number): ProjectStatus => ({
+  id,
+  projectId: 1,
+  scope,
+  name,
+  color: '#000000',
+  category,
+  position,
+  createdAt: new Date('2026-01-01T00:00:00Z'),
+});
+const STATUS_ROWS: ProjectStatus[] = [
+  mk(1, 'task', 'Cần làm', 'todo', 0),
+  mk(2, 'task', 'Đang làm', 'in_progress', 1),
+  mk(3, 'task', 'Chờ duyệt', 'in_progress', 2),
+  mk(4, 'task', 'Hoàn thành', 'done', 3),
+  mk(5, 'task', 'Bị chặn', 'in_progress', 4),
+  mk(11, 'bug', 'Mới', 'todo', 0),
+  mk(12, 'bug', 'Đã xác nhận', 'todo', 1),
+  mk(13, 'bug', 'Đang sửa', 'in_progress', 2),
+  mk(14, 'bug', 'Chờ kiểm thử', 'in_progress', 3),
+  mk(15, 'bug', 'Mở lại', 'in_progress', 4),
+  mk(16, 'bug', 'Đã đóng', 'done', 5),
+];
+/** Id trạng thái theo tên cũ để test dễ đọc */
+const S = { todo: 1, in_progress: 2, review: 3, done: 4, blocked: 5 } as const;
+const statusById = (id: number): ProjectStatus => {
+  const row = STATUS_ROWS.find((r) => r.id === id);
+  if (!row) throw new Error(`Thiếu trạng thái test ${id}`);
+  return row;
+};
+
+/** Task giả kèm danh sách người được giao (`assigneeIds`, mặc định chỉ có user 20) và trạng thái hiện tại */
+type BuiltTask = Task & { assignees: { userId: number }[]; status: ProjectStatus };
 function buildTask(overrides: Partial<Task> & { assigneeIds?: number[] } = {}): BuiltTask {
   const { assigneeIds = [20], ...rest } = overrides;
+  const statusId = rest.statusId ?? S.todo;
   return {
     id: 5,
     projectId: 1,
@@ -33,7 +67,11 @@ function buildTask(overrides: Partial<Task> & { assigneeIds?: number[] } = {}): 
     title: 'Làm trang đăng nhập',
     description: null,
     creatorId: 10,
-    status: 'todo',
+    type: 'task',
+    statusId,
+    storyPoints: null,
+    severity: null,
+    environment: null,
     priority: 'medium',
     deadline: null,
     estimatedHours: null,
@@ -44,6 +82,7 @@ function buildTask(overrides: Partial<Task> & { assigneeIds?: number[] } = {}): 
     updatedAt: new Date('2026-01-01T00:00:00Z'),
     assignees: assigneeIds.map((userId) => ({ userId })),
     ...rest,
+    status: statusById(rest.statusId ?? statusId),
   };
 }
 
@@ -66,6 +105,10 @@ describe('TasksService', () => {
       Promise.resolve(MEMBER_IDS.has(where.projectId_userId.userId) ? { projectId: 1, userId: where.projectId_userId.userId } : null),
     );
     prisma.user.findUnique.mockResolvedValue({ isActive: true });
+    prisma.projectStatus.findUnique.mockImplementation(({ where }: { where: { id: number } }) => Promise.resolve(STATUS_ROWS.find((r) => r.id === where.id) ?? null));
+    prisma.projectStatus.findFirst.mockImplementation(({ where }: { where: { scope: string; category?: string } }) =>
+      Promise.resolve(STATUS_ROWS.find((r) => r.scope === where.scope && (where.category === undefined || r.category === where.category)) ?? null),
+    );
     prisma.user.findMany.mockResolvedValue([]);
     prisma.task.aggregate.mockResolvedValue({ _max: { position: 2 } });
     prisma.task.create.mockImplementation(({ data }: { data: Partial<Task> }) => Promise.resolve(buildTask({ id: 99, ...data, assigneeIds: [] })));
@@ -85,6 +128,7 @@ describe('TasksService', () => {
       notifications as unknown as NotificationsService,
       realtime as unknown as RealtimeService,
       cleanup as unknown as AttachmentCleanupService,
+      new StatusesService(prismaService, new ProjectAccessService(prismaService)),
     );
     // get() dựng lại chi tiết bằng nhiều truy vấn include — không thuộc phạm vi các test này
     jest.spyOn(service, 'get').mockResolvedValue({} as never);
@@ -154,7 +198,7 @@ describe('TasksService', () => {
       await service.create(owner, dto);
 
       const arg = callArg(prisma.task.create, 0) as { data: Partial<Task> };
-      expect(arg.data).toMatchObject({ projectId: 1, title: 'Việc mới', assignees: { create: [{ userId: 20 }] }, creatorId: 10, status: 'todo', position: 3, completedAt: null });
+      expect(arg.data).toMatchObject({ projectId: 1, title: 'Việc mới', assignees: { create: [{ userId: 20 }] }, creatorId: 10, statusId: S.todo, position: 3, completedAt: null });
       expect(activity.log).toHaveBeenCalledWith(expect.objectContaining({ taskId: 99, userId: 10, action: 'task_created' }), prisma);
       expect(notifications.notify).toHaveBeenCalledWith([expect.objectContaining({ userId: 20, type: 'task_assigned', link: '/tasks/99' })]);
       expect(realtime.taskChanged).toHaveBeenCalledWith(1, 99);
@@ -165,7 +209,7 @@ describe('TasksService', () => {
     });
 
     it('tạo thẳng ở trạng thái done thì set completedAt', async () => {
-      await service.create(owner, { ...dto, status: 'done' });
+      await service.create(owner, { ...dto, statusId: S.done });
       const arg = callArg(prisma.task.create, 0) as { data: Partial<Task> };
       expect(arg.data.completedAt).toBeInstanceOf(Date);
     });
@@ -203,23 +247,23 @@ describe('TasksService', () => {
 
   describe('update', () => {
     it('người được giao đổi sang done: set completedAt, chuyển xuống cuối cột, ghi activity', async () => {
-      prisma.task.findUnique.mockResolvedValue(buildTask({ status: 'in_progress' }));
+      prisma.task.findUnique.mockResolvedValue(buildTask({ statusId: S.in_progress }));
 
-      await service.update(assignee, 5, { status: 'done' });
+      await service.update(assignee, 5, { statusId: S.done });
 
       const arg = callArg(prisma.task.update, 0) as { data: Partial<Task> };
-      expect(arg.data.status).toBe('done');
+      expect(arg.data.statusId).toBe(S.done);
       expect(arg.data.completedAt).toBeInstanceOf(Date);
       expect(arg.data.position).toBe(3);
       expect(activity.log).toHaveBeenCalledWith(
-        expect.objectContaining({ action: 'status_changed', detail: { from: 'in_progress', to: 'done' } }),
+        expect.objectContaining({ action: 'status_changed', detail: { from: { id: 2, name: 'Đang làm' }, to: { id: 4, name: 'Hoàn thành' } } }),
         prisma,
       );
     });
 
     it('rời khỏi done thì xóa completedAt', async () => {
-      prisma.task.findUnique.mockResolvedValue(buildTask({ status: 'done', completedAt: new Date() }));
-      await service.update(assignee, 5, { status: 'review' });
+      prisma.task.findUnique.mockResolvedValue(buildTask({ statusId: S.done, completedAt: new Date() }));
+      await service.update(assignee, 5, { statusId: S.review });
       const arg = callArg(prisma.task.update, 0) as { data: Partial<Task> };
       expect(arg.data.completedAt).toBeNull();
     });
@@ -246,12 +290,12 @@ describe('TasksService', () => {
 
     it('member không được giao task thì không sửa được gì, kể cả status', async () => {
       prisma.task.findUnique.mockResolvedValue(buildTask());
-      await expect(service.update(otherMember, 5, { status: 'done' })).rejects.toBeInstanceOf(ForbiddenException);
+      await expect(service.update(otherMember, 5, { statusId: S.done })).rejects.toBeInstanceOf(ForbiddenException);
     });
 
     it('người ngoài dự án không truy cập được', async () => {
       prisma.task.findUnique.mockResolvedValue(buildTask());
-      await expect(service.update(outsider, 5, { status: 'done' })).rejects.toBeInstanceOf(ForbiddenException);
+      await expect(service.update(outsider, 5, { statusId: S.done })).rejects.toBeInstanceOf(ForbiddenException);
     });
 
     it('leader dự án khác không sửa được task', async () => {
@@ -285,7 +329,7 @@ describe('TasksService', () => {
 
     it('báo cho leader (không báo cho chính người đổi) khi member đổi trạng thái', async () => {
       prisma.task.findUnique.mockResolvedValue(buildTask());
-      await service.update(assignee, 5, { status: 'review' });
+      await service.update(assignee, 5, { statusId: S.review });
       const notified = (callArg(notifications.notify, 0) as { userId: number }[]).map((n) => n.userId);
       expect(notified).toContain(10);
       expect(notified).not.toContain(20);
@@ -332,18 +376,18 @@ describe('TasksService', () => {
 
     it('member không được giao không kéo được thẻ', async () => {
       prisma.task.findUnique.mockResolvedValue(buildTask());
-      await expect(service.move(otherMember, 5, { status: 'done', position: 0 })).rejects.toBeInstanceOf(ForbiddenException);
+      await expect(service.move(otherMember, 5, { statusId: S.done, position: 0 })).rejects.toBeInstanceOf(ForbiddenException);
     });
 
     it('chèn vào giữa cột đích và đánh số lại vị trí liên tục', async () => {
-      prisma.task.findUnique.mockResolvedValue(buildTask({ status: 'todo' }));
+      prisma.task.findUnique.mockResolvedValue(buildTask({ statusId: S.todo }));
       prisma.task.findMany.mockResolvedValue(column);
 
-      await service.move(assignee, 5, { status: 'in_progress', position: 1 });
+      await service.move(assignee, 5, { statusId: S.in_progress, position: 1 });
 
       const updates = firstArgs(prisma.task.update).map((call) => call as { where: { id: number }; data: Partial<Task> });
       // Thẻ 5 vào vị trí 1; thẻ 2 -> 2, thẻ 3 -> 3; thẻ 1 giữ nguyên nên không cập nhật
-      expect(updates.find((u) => u.where.id === 5)?.data).toMatchObject({ status: 'in_progress', position: 1 });
+      expect(updates.find((u) => u.where.id === 5)?.data).toMatchObject({ statusId: S.in_progress, position: 1 });
       expect(updates.find((u) => u.where.id === 2)?.data).toEqual({ position: 2 });
       expect(updates.find((u) => u.where.id === 3)?.data).toEqual({ position: 3 });
       expect(updates.find((u) => u.where.id === 1)).toBeUndefined();
@@ -353,29 +397,29 @@ describe('TasksService', () => {
     it('vị trí vượt quá độ dài cột thì xếp cuối', async () => {
       prisma.task.findUnique.mockResolvedValue(buildTask());
       prisma.task.findMany.mockResolvedValue(column);
-      await service.move(owner, 5, { status: 'review', position: 99 });
+      await service.move(owner, 5, { statusId: S.review, position: 99 });
       const moved = firstArgs(prisma.task.update).map((c) => c as { where: { id: number }; data: Partial<Task> }).find((u) => u.where.id === 5);
       expect(moved?.data.position).toBe(3);
     });
 
     it('kéo vào done set completedAt; kéo ra khỏi done xóa completedAt', async () => {
-      prisma.task.findUnique.mockResolvedValue(buildTask({ status: 'review' }));
+      prisma.task.findUnique.mockResolvedValue(buildTask({ statusId: S.review }));
       prisma.task.findMany.mockResolvedValue([]);
-      await service.move(assignee, 5, { status: 'done', position: 0 });
+      await service.move(assignee, 5, { statusId: S.done, position: 0 });
       let moved = firstArgs(prisma.task.update).map((c) => c as { where: { id: number }; data: Partial<Task> }).find((u) => u.where.id === 5);
       expect(moved?.data.completedAt).toBeInstanceOf(Date);
 
       prisma.task.update.mockClear();
-      prisma.task.findUnique.mockResolvedValue(buildTask({ status: 'done', completedAt: new Date() }));
-      await service.move(assignee, 5, { status: 'todo', position: 0 });
+      prisma.task.findUnique.mockResolvedValue(buildTask({ statusId: S.done, completedAt: new Date() }));
+      await service.move(assignee, 5, { statusId: S.todo, position: 0 });
       moved = firstArgs(prisma.task.update).map((c) => c as { where: { id: number }; data: Partial<Task> }).find((u) => u.where.id === 5);
       expect(moved?.data.completedAt).toBeNull();
     });
 
     it('chỉ đổi thứ tự trong cùng cột thì không ghi activity đổi trạng thái', async () => {
-      prisma.task.findUnique.mockResolvedValue(buildTask({ status: 'todo' }));
+      prisma.task.findUnique.mockResolvedValue(buildTask({ statusId: S.todo }));
       prisma.task.findMany.mockResolvedValue(column);
-      await service.move(assignee, 5, { status: 'todo', position: 0 });
+      await service.move(assignee, 5, { statusId: S.todo, position: 0 });
       expect(activity.log).not.toHaveBeenCalled();
     });
   });
@@ -521,22 +565,22 @@ describe('TasksService', () => {
         ['người thứ hai', otherMember],
       ])('%s đổi được trạng thái và giờ làm', async (_n, user) => {
         prisma.task.findUnique.mockResolvedValue(two());
-        await service.update(user, 5, { status: 'review', actualHours: 2 });
-        expect(callArg(prisma.task.update)).toMatchObject({ data: { status: 'review', actualHours: 2 } });
+        await service.update(user, 5, { statusId: S.review, actualHours: 2 });
+        expect(callArg(prisma.task.update)).toMatchObject({ data: { statusId: S.review, actualHours: 2 } });
       });
 
       it('thành viên dự án KHÔNG nằm trong danh sách được giao thì bị chặn (cập nhật, kéo thẻ)', async () => {
         prisma.task.findUnique.mockResolvedValue(two());
         prisma.projectMember.findUnique.mockResolvedValue({ projectId: 1, userId: 11 });
         const bystander: AuthUser = { id: 22, email: 'm4@x.vn', name: 'Người khác', role: 'member' };
-        await expect(service.update(bystander, 5, { status: 'done' })).rejects.toBeInstanceOf(ForbiddenException);
-        await expect(service.move(bystander, 5, { status: 'done', position: 0 })).rejects.toBeInstanceOf(ForbiddenException);
+        await expect(service.update(bystander, 5, { statusId: S.done })).rejects.toBeInstanceOf(ForbiddenException);
+        await expect(service.move(bystander, 5, { statusId: S.done, position: 0 })).rejects.toBeInstanceOf(ForbiddenException);
       });
 
       it('người được giao thứ hai kéo được thẻ trên Kanban', async () => {
         prisma.task.findUnique.mockResolvedValue(two());
         prisma.task.findMany.mockResolvedValue([]);
-        await expect(service.move(otherMember, 5, { status: 'review', position: 0 })).resolves.toBeDefined();
+        await expect(service.move(otherMember, 5, { statusId: S.review, position: 0 })).resolves.toBeDefined();
       });
 
       it('người được giao (member) vẫn không được tự đổi danh sách người được giao', async () => {
@@ -647,7 +691,7 @@ describe('TasksService', () => {
     describe('thông báo gửi cho tất cả người được giao', () => {
       it('đổi trạng thái: báo mọi người được giao khác và leader, không báo người thao tác', async () => {
         prisma.task.findUnique.mockResolvedValue(buildTask({ assigneeIds: [20, 21] }));
-        await service.update(assignee, 5, { status: 'review' });
+        await service.update(assignee, 5, { statusId: S.review });
         const notified = (callArg(notifications.notify) as { userId: number }[]).map((n) => n.userId).sort((a, b) => a - b);
         expect(notified).toEqual([10, 21]);
       });
@@ -662,7 +706,7 @@ describe('TasksService', () => {
       it('kéo thẻ Kanban đổi cột: báo mọi người được giao khác', async () => {
         prisma.task.findUnique.mockResolvedValue(buildTask({ assigneeIds: [20, 21] }));
         prisma.task.findMany.mockResolvedValue([]);
-        await service.move(assignee, 5, { status: 'done', position: 0 });
+        await service.move(assignee, 5, { statusId: S.done, position: 0 });
         const notified = (callArg(notifications.notify) as { userId: number }[]).map((n) => n.userId);
         expect(notified).toContain(21);
         expect(notified).not.toContain(20);
@@ -693,6 +737,76 @@ describe('TasksService', () => {
         await service.board(admin, { projectId: 1, assigneeIds: [21] });
         expect(callArg(prisma.task.findMany)).toMatchObject({ where: { projectId: 1, parentId: null, assignees: { some: { userId: { in: [21] } } } } });
       });
+    });
+  });
+  describe('loại công việc, Bug và trạng thái theo bộ', () => {
+    it('Bug mới dùng trạng thái đầu tiên của bộ Bug, mức nghiêm trọng mặc định là major', async () => {
+      await service.create(owner, { projectId: 1, title: 'Lỗi đăng nhập', type: 'bug', environment: 'prod' });
+      expect(callArg(prisma.task.create)).toMatchObject({ data: { type: 'bug', statusId: 11, severity: 'major', environment: 'prod', completedAt: null } });
+    });
+
+    it('Bug không dùng được trạng thái của công việc (và ngược lại)', async () => {
+      await expect(service.create(owner, { projectId: 1, title: 'Lỗi', type: 'bug', statusId: S.todo })).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.create(owner, { projectId: 1, title: 'Việc', statusId: 11 })).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.task.create).not.toHaveBeenCalled();
+    });
+
+    it('mức nghiêm trọng / môi trường chỉ dành cho Bug', async () => {
+      await expect(service.create(owner, { projectId: 1, title: 'Việc', type: 'story', severity: 'major' })).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.create(owner, { projectId: 1, title: 'Việc', environment: 'dev' })).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('story/epic không thể là công việc con', async () => {
+      prisma.task.findUnique.mockResolvedValue(buildTask({ id: 7 }));
+      await expect(service.create(owner, { projectId: 1, parentId: 7, title: 'Con', type: 'epic' })).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.create(owner, { projectId: 1, parentId: 7, title: 'Con', type: 'story' })).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.create(owner, { projectId: 1, parentId: 7, title: 'Con', type: 'bug' })).resolves.toBeDefined();
+    });
+
+    it('Story Point được lưu và ghi lịch sử khi đổi', async () => {
+      prisma.task.findUnique.mockResolvedValue(buildTask({ storyPoints: 3 }));
+      await service.update(owner, 5, { storyPoints: 8 });
+      expect(callArg(prisma.task.update)).toMatchObject({ data: { storyPoints: 8 } });
+      expect(activity.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'story_points_changed', detail: { from: 3, to: 8 } }), prisma);
+    });
+
+    it('đổi task thành Bug: sang bộ trạng thái Bug (giữ nhóm), ghi type_changed và status_changed', async () => {
+      prisma.task.findUnique.mockResolvedValue(buildTask({ statusId: S.in_progress }));
+      await service.update(owner, 5, { type: 'bug' });
+      expect(callArg(prisma.task.update)).toMatchObject({ data: { type: 'bug', statusId: 13 } }); // "Đang sửa" là trạng thái đầu nhóm in_progress của Bug
+      expect(activity.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'type_changed', detail: { from: 'task', to: 'bug' } }), prisma);
+      expect(activity.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'status_changed' }), prisma);
+    });
+
+    it('đổi Bug về task: xóa mức nghiêm trọng/môi trường và quay về bộ trạng thái công việc', async () => {
+      prisma.task.findUnique.mockResolvedValue(buildTask({ type: 'bug', statusId: 16, severity: 'critical', environment: 'prod', completedAt: new Date() }));
+      await service.update(owner, 5, { type: 'task' });
+      expect(callArg(prisma.task.update)).toMatchObject({ data: { type: 'task', statusId: S.done, severity: null, environment: null } });
+    });
+
+    it('người được giao (member) chỉ đổi được trạng thái và giờ làm, không đổi loại hay Story Point', async () => {
+      prisma.task.findUnique.mockResolvedValue(buildTask());
+      await expect(service.update(assignee, 5, { type: 'bug' })).rejects.toBeInstanceOf(ForbiddenException);
+      await expect(service.update(assignee, 5, { storyPoints: 5 })).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('kéo Bug sang cột của công việc thường bị từ chối', async () => {
+      prisma.task.findUnique.mockResolvedValue(buildTask({ type: 'bug', statusId: 11 }));
+      await expect(service.move(owner, 5, { statusId: S.in_progress, position: 0 })).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('chuyển giữa hai trạng thái cùng nhóm "done" không đổi completedAt', async () => {
+      const done1 = new Date('2026-02-02T00:00:00Z');
+      STATUS_ROWS.push(mk(40, 'task', 'Đã phát hành', 'done', 9));
+      try {
+        prisma.task.findUnique.mockResolvedValue(buildTask({ statusId: S.done, completedAt: done1 }));
+        prisma.task.findMany.mockResolvedValue([]);
+        await service.move(owner, 5, { statusId: 40, position: 0 });
+        const updates = (prisma.task.update.mock.calls as { 0: { where: { id: number }; data: { completedAt?: Date | null } } }[]).map((c) => c[0]);
+        expect(updates.find((u) => u.where.id === 5)?.data.completedAt).toEqual(done1);
+      } finally {
+        STATUS_ROWS.pop();
+      }
     });
   });
 });

@@ -1,17 +1,17 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, TaskStatus } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { AuthService, PublicUser } from '../auth/auth.service';
 import { Paginated, toPaginated } from '../common/dto/pagination-query.dto';
 import { AuthUser } from '../common/types/auth-user';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProjectAccessService } from '../projects/project-access.service';
-import { assigneeStats } from '../tasks/assignee-stats';
+import { assigneeStats, CategoryCounts, emptyCategoryCounts } from '../tasks/assignee-stats';
 import { CreateUserDto } from './dto/create-user.dto';
 import { ListUsersQueryDto } from './dto/list-users-query.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
-export type StatusCounts = Record<TaskStatus, number>;
+export type StatusCounts = CategoryCounts;
 
 export interface UserStats {
   counts: StatusCounts;
@@ -29,7 +29,7 @@ export function detectImageMime(buf: Buffer): 'image/jpeg' | 'image/png' | 'imag
   return null;
 }
 
-const emptyCounts = (): StatusCounts => ({ todo: 0, in_progress: 0, review: 0, done: 0, blocked: 0 });
+const emptyCounts = emptyCategoryCounts;
 
 @Injectable()
 export class UsersService {

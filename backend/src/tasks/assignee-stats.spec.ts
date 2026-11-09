@@ -10,12 +10,12 @@ describe('assigneeStats (thống kê theo từng người được giao)', () =>
   it('task giao cho nhiều người được tính cho TỪNG người', async () => {
     const prisma = createPrismaMock();
     prisma.taskAssignee.findMany.mockResolvedValue([
-      { userId: 20, task: { status: 'in_progress', deadline: future } },
-      { userId: 21, task: { status: 'in_progress', deadline: future } }, // cùng một task giao cho 20 và 21
-      { userId: 20, task: { status: 'done', deadline: past } },
+      { userId: 20, task: { status: { category: 'in_progress' }, deadline: future } },
+      { userId: 21, task: { status: { category: 'in_progress' }, deadline: future } }, // cùng một task giao cho 20 và 21
+      { userId: 20, task: { status: { category: 'done' }, deadline: past } },
     ]);
     const stats = await assigneeStats(asPrisma(prisma), { task: { parentId: null } }, NOW);
-    expect(stats.get(20)?.counts).toEqual({ todo: 0, in_progress: 1, review: 0, done: 1, blocked: 0 });
+    expect(stats.get(20)?.counts).toEqual({ todo: 0, in_progress: 1, done: 1 });
     expect(stats.get(21)?.counts.in_progress).toBe(1);
     expect(stats.has(22)).toBe(false);
   });
@@ -23,11 +23,11 @@ describe('assigneeStats (thống kê theo từng người được giao)', () =>
   it('quá hạn = chưa xong và deadline đã qua; task đã xong hoặc không có deadline thì không tính', async () => {
     const prisma = createPrismaMock();
     prisma.taskAssignee.findMany.mockResolvedValue([
-      { userId: 20, task: { status: 'todo', deadline: past } },
-      { userId: 20, task: { status: 'blocked', deadline: past } },
-      { userId: 20, task: { status: 'done', deadline: past } },
-      { userId: 20, task: { status: 'todo', deadline: null } },
-      { userId: 20, task: { status: 'todo', deadline: future } },
+      { userId: 20, task: { status: { category: 'todo' }, deadline: past } },
+      { userId: 20, task: { status: { category: 'in_progress' }, deadline: past } },
+      { userId: 20, task: { status: { category: 'done' }, deadline: past } },
+      { userId: 20, task: { status: { category: 'todo' }, deadline: null } },
+      { userId: 20, task: { status: { category: 'todo' }, deadline: future } },
     ]);
     expect((await assigneeStats(asPrisma(prisma), {}, NOW)).get(20)?.overdue).toBe(2);
   });
