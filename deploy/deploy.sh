@@ -18,7 +18,9 @@ SUDO=""; [[ "${TARGET%%@*}" == "root" ]] || SUDO="sudo"
 git diff --quiet HEAD -- || echo "⚠ Có thay đổi chưa commit — chỉ phần ĐÃ COMMIT được deploy."
 git archive --format=tar HEAD | ssh "$TARGET" "mkdir -p '$APP_DIR' && tar -x -C '$APP_DIR'"
 
-# Copy script lên server rồi chạy với tty (-t) để sudo hỏi được mật khẩu nếu cần
+# Copy script lên server rồi chạy với tty (-t) để sudo hỏi được mật khẩu nếu cần.
+# Trên CI (GitHub Actions) không có terminal nên bỏ -t.
 scp -q deploy/remote-setup.sh "$TARGET:/tmp/taskflow-remote-setup.sh"
+TTY_FLAG=""; [ -t 0 ] && TTY_FLAG="-t"
 # shellcheck disable=SC2029
-ssh -t "$TARGET" "$SUDO env DOMAIN='$DOMAIN' APP_DIR='$APP_DIR' LE_EMAIL='$LE_EMAIL' ADMIN_EMAIL='$ADMIN_EMAIL' ADMIN_PASSWORD='${ADMIN_PASSWORD:-}' bash /tmp/taskflow-remote-setup.sh; rc=\$?; rm -f /tmp/taskflow-remote-setup.sh; exit \$rc"
+ssh $TTY_FLAG "$TARGET" "$SUDO env DOMAIN='$DOMAIN' APP_DIR='$APP_DIR' LE_EMAIL='$LE_EMAIL' ADMIN_EMAIL='$ADMIN_EMAIL' ADMIN_PASSWORD='${ADMIN_PASSWORD:-}' bash /tmp/taskflow-remote-setup.sh; rc=\$?; rm -f /tmp/taskflow-remote-setup.sh; exit \$rc"
