@@ -47,6 +47,16 @@ export class CreateTaskDto {
   @Max(1000)
   storyPoints?: number | null;
 
+  /** Sprint của dự án (chưa kết thúc); null = về backlog. Chỉ công việc cấp cao, không phải Epic. */
+  @IsOptional()
+  @IsInt()
+  sprintId?: number | null;
+
+  /** Epic của dự án mà story/công việc này thuộc về; null = không thuộc epic */
+  @IsOptional()
+  @IsInt()
+  epicId?: number | null;
+
   /** Chỉ dùng cho Bug */
   @IsOptional()
   @IsEnum(BugSeverity, { message: 'Mức độ nghiêm trọng không hợp lệ' })

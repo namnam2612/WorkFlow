@@ -7,6 +7,7 @@ import { DeadlineText } from '../components/tasks/DeadlineText';
 import { SubtaskRow } from '../components/tasks/SubtaskRow';
 import { AttachmentSection } from '../components/attachments/AttachmentSection';
 import { TaskDiscussion } from '../components/tasks/TaskDiscussion';
+import { WorkLogSection } from '../components/tasks/WorkLogSection';
 import { TaskFormModal } from '../components/tasks/TaskFormModal';
 import { PriorityBadge, SeverityBadge, StatusBadge, TypeBadge } from '../components/ui/Badges';
 import { Button } from '../components/ui/Button';
@@ -15,7 +16,7 @@ import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { ErrorState, PageLoader } from '../components/ui/States';
 import { useToast } from '../components/ui/useToast';
 import { statusesOf, useProjectStatuses } from '../hooks/useStatuses';
-import { useDeleteTask, useTask, useUpdateTask } from '../hooks/useTasks';
+import { useDeleteTask, useTask, useTasks, useUpdateTask } from '../hooks/useTasks';
 import { getErrorMessage } from '../lib/api';
 import { ENVIRONMENT_LABEL } from '../lib/constants';
 import { formatDateTime, isOverdue } from '../lib/format';
@@ -43,6 +44,7 @@ export default function TaskDetailPage() {
   const update = useUpdateTask(taskId);
   const deleteTask = useDeleteTask();
   const statusesQuery = useProjectStatuses(task?.projectId);
+  const epicChildren = useTasks({ epicId: taskId, pageSize: 50, sortBy: 'updatedAt', order: 'desc' }, task?.type === 'epic');
 
   const [editing, setEditing] = useState(false);
   const [addingSubtask, setAddingSubtask] = useState(false);
@@ -170,6 +172,29 @@ export default function TaskDetailPage() {
             </Card>
           )}
 
+          {task.type === 'epic' && (
+            <Card title={`Story thuộc epic (${epicChildren.data?.total ?? 0})`}>
+              {(epicChildren.data?.items ?? []).length === 0 ? (
+                <p className="text-sm text-slate-500">Chưa có story nào. Chọn epic này khi tạo/sửa công việc để gom vào đây.</p>
+              ) : (
+                <ul className="divide-y divide-slate-100">
+                  {(epicChildren.data?.items ?? []).map((child) => (
+                    <li key={child.id} className="flex items-center gap-3 py-2.5">
+                      <TypeBadge type={child.type} hideTask />
+                      <Link to={`/tasks/${child.id}`} className="min-w-0 flex-1 truncate text-sm font-medium text-slate-900 hover:text-brand-700">
+                        {child.title}
+                      </Link>
+                      {child.storyPoints !== null && <span className="text-xs tabular-nums text-slate-500">{child.storyPoints} SP</span>}
+                      <StatusBadge status={child.status} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          )}
+
+          {task.type !== 'epic' && <WorkLogSection taskId={task.id} canLog={canManage || isAssignee(user, task)} canModerate={canManage} />}
+
           <AttachmentSection scope={{ kind: 'task', id: task.id }} />
 
           <TaskDiscussion taskId={task.id} canComment={canComment} canModerate={canManage} />
@@ -206,6 +231,20 @@ export default function TaskDetailPage() {
                 <TypeBadge type={task.type} className="justify-end" />
               </MetaRow>
               {task.storyPoints !== null && <MetaRow label="Story Point">{task.storyPoints}</MetaRow>}
+              {task.sprint && (
+                <MetaRow label="Sprint">
+                  <Link to={`/projects/${task.projectId}/backlog`} className="font-medium text-brand-600 hover:text-brand-700">
+                    {task.sprint.name}
+                  </Link>
+                </MetaRow>
+              )}
+              {task.epic && (
+                <MetaRow label="Epic">
+                  <Link to={`/tasks/${task.epic.id}`} className="font-medium text-brand-600 hover:text-brand-700">
+                    {task.epic.title}
+                  </Link>
+                </MetaRow>
+              )}
               {task.type === 'bug' && (
                 <>
                   <MetaRow label="Mức nghiêm trọng">{task.severity ? <SeverityBadge severity={task.severity} /> : '—'}</MetaRow>

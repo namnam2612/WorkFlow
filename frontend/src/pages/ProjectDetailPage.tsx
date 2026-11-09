@@ -1,4 +1,4 @@
-import { KanbanSquare, ListChecks, Pencil, Plus, Send, Trash2, UserMinus, UserPlus } from 'lucide-react';
+import { BarChart3, KanbanSquare, ListChecks, ListTodo, Pencil, Plus, Send, Trash2, UserMinus, UserPlus } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
@@ -104,6 +104,12 @@ export default function ProjectDetailPage() {
           <>
             <Button icon={<KanbanSquare className="h-4 w-4" />} onClick={() => navigate(`/projects/${project.id}/board`)}>
               Bảng Kanban
+            </Button>
+            <Button variant="secondary" icon={<ListTodo className="h-4 w-4" />} onClick={() => navigate(`/projects/${project.id}/backlog`)}>
+              Backlog
+            </Button>
+            <Button variant="secondary" icon={<BarChart3 className="h-4 w-4" />} onClick={() => navigate(`/projects/${project.id}/reports`)}>
+              Báo cáo
             </Button>
             {canManage && (
               <>

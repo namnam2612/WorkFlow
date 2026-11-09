@@ -4,6 +4,7 @@ export type StatusCategory = 'todo' | 'in_progress' | 'done';
 /** Bộ trạng thái: công việc thường hay Bug (vòng đời riêng) */
 export type StatusScope = 'task' | 'bug';
 export type TaskType = 'task' | 'story' | 'bug' | 'epic';
+export type SprintStatus = 'planned' | 'active' | 'completed';
 export type BugSeverity = 'minor' | 'major' | 'critical' | 'blocker';
 export type Environment = 'dev' | 'staging' | 'prod';
 
@@ -95,6 +96,10 @@ export interface Task {
   statusId: number;
   status: StatusRef;
   storyPoints: number | null;
+  sprintId: number | null;
+  sprint: { id: number; name: string; status: SprintStatus } | null;
+  epicId: number | null;
+  epic: { id: number; title: string } | null;
   severity: BugSeverity | null;
   environment: Environment | null;
   priority: Priority;
@@ -155,6 +160,8 @@ export interface TaskFilters {
   /** Task có BẤT KỲ người nào trong danh sách */
   assigneeIds?: number[];
   statusId?: number;
+  sprintId?: number;
+  epicId?: number;
   statusCategory?: StatusCategory;
   types?: TaskType[];
   priority?: Priority;
@@ -292,4 +299,67 @@ export interface FileListParams {
   order?: 'asc' | 'desc';
   page?: number;
   pageSize?: number;
+}
+
+export interface SprintStats {
+  taskCount: number;
+  doneCount: number;
+  points: number;
+  donePoints: number;
+}
+
+export interface Sprint {
+  id: number;
+  projectId: number;
+  name: string;
+  goal: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  status: SprintStatus;
+  committedPoints: number | null;
+  completedPoints: number | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+}
+
+export type SprintWithStats = Sprint & { stats: SprintStats };
+
+export interface BacklogData {
+  sprints: (SprintWithStats & { tasks: Task[] })[];
+  /** Việc chưa thuộc sprint nào */
+  backlog: Task[];
+  epics: (Task & { stats: SprintStats })[];
+}
+
+export interface BurndownData {
+  sprint: Sprint;
+  unit: 'points' | 'tasks';
+  committed: number;
+  scope: number;
+  points: { date: string; ideal: number; remaining: number | null }[];
+}
+
+export interface VelocityData {
+  items: { id: number; name: string; committed: number; completed: number; completedAt: string | null }[];
+  average: number;
+}
+
+export interface WorkLog {
+  id: number;
+  taskId: number;
+  userId: number;
+  minutes: number;
+  workedOn: string;
+  note: string | null;
+  createdAt: string;
+  user: UserBrief;
+}
+
+export interface Timesheet {
+  from: string;
+  to: string;
+  totalMinutes: number;
+  byUser: { user: UserBrief; minutes: number; taskCount: number }[];
+  byDay: { date: string; minutes: number }[];
 }

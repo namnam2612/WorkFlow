@@ -11,7 +11,9 @@ import FilesProjectPage from './pages/files/FilesProjectPage';
 import FilesProjectsPage from './pages/files/FilesProjectsPage';
 import FilesTaskPage from './pages/files/FilesTaskPage';
 import DashboardPage from './pages/DashboardPage';
+import BacklogPage from './pages/BacklogPage';
 import MyWorkPage from './pages/MyWorkPage';
+import ReportsPage from './pages/ReportsPage';
 import KanbanPage from './pages/KanbanPage';
 import LoginPage from './pages/LoginPage';
 import MemberDetailPage from './pages/MemberDetailPage';
@@ -49,6 +51,8 @@ function AppRoutes() {
           <Route path="projects" element={<ProjectsPage />} />
           <Route path="projects/:id" element={<ProjectDetailPage />} />
           <Route path="projects/:id/board" element={<KanbanPage />} />
+          <Route path="projects/:id/backlog" element={<BacklogPage />} />
+          <Route path="projects/:id/reports" element={<ReportsPage />} />
           <Route path="tasks" element={<TasksPage />} />
           <Route path="files" element={<FilesLayout />}>
             <Route index element={<FilesProjectsPage />} />

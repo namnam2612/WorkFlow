@@ -59,3 +59,9 @@ export const ACTION_LABEL: Record<string, string> = {
   bug_info_changed: 'đã cập nhật thông tin Bug',
   attachment_removed: 'đã xóa file đính kèm',
 };
+
+/** Giao diện biểu đồ theo theme (lưới, chữ trục, nền cắt khe) */
+export const CHART_CHROME = {
+  dark: { surface: '#111111', grid: 'rgba(255,255,255,0.08)', ink: '#888888', cursor: 'rgba(255,255,255,0.05)', line: '#ffffff', accent: '#7ee2a8', warn: '#ffd561' },
+  light: { surface: '#ffffff', grid: 'rgba(0,0,0,0.1)', ink: '#6b6b6b', cursor: 'rgba(0,0,0,0.04)', line: '#0a0a0a', accent: '#2f9e44', warn: '#e0a100' },
+} as const;

@@ -58,6 +58,8 @@ export class TasksService {
     if (user.role !== 'admin') filters.push({ project: this.access.visibleProjectWhere(user) });
     if (query.projectId !== undefined) filters.push({ projectId: query.projectId });
     if (query.assigneeIds?.length) filters.push({ assignees: { some: { userId: { in: query.assigneeIds } } } });
+    if (query.sprintId !== undefined) filters.push({ sprintId: query.sprintId });
+    if (query.epicId !== undefined) filters.push({ epicId: query.epicId });
     if (query.statusId !== undefined) filters.push({ statusId: query.statusId });
     if (query.statusCategory) filters.push({ status: { category: query.statusCategory } });
     if (query.types?.length) filters.push({ type: { in: query.types } });
@@ -171,6 +173,7 @@ export class TasksService {
     await this.assertValidAssignees(project, assigneeIds);
 
     const status = await this.statuses.resolve(dto.projectId, scopeOfType(type), dto.statusId);
+    const placement = await this.resolvePlacement(dto.projectId, type, parent?.id ?? null, dto.sprintId, dto.epicId);
     const created = await this.prisma.$transaction(async (tx) => {
       const position = await this.nextPosition(tx, dto.projectId, status.id, parent?.id ?? null);
       const task = await tx.task.create({
@@ -184,6 +187,8 @@ export class TasksService {
           type,
           statusId: status.id,
           storyPoints: dto.storyPoints ?? null,
+          sprintId: placement.sprintId,
+          epicId: placement.epicId,
           severity: type === 'bug' ? (dto.severity ?? 'major') : null,
           environment: type === 'bug' ? (dto.environment ?? null) : null,
           priority: dto.priority ?? 'medium',
@@ -279,6 +284,19 @@ export class TasksService {
       nextStatus = await this.statuses.resolve(task.projectId, nextScope, dto.statusId);
     }
 
+    // Sprint / Epic: epic và công việc con không thuộc sprint/epic; đổi sang epic thì tự gỡ
+    const clearsPlacement = nextType === 'epic' || task.parentId !== null;
+    const placementTouched = dto.sprintId !== undefined || dto.epicId !== undefined || (typeChanged && nextType === 'epic');
+    const placement = placementTouched
+      ? await this.resolvePlacement(
+          task.projectId,
+          nextType,
+          task.parentId,
+          clearsPlacement ? null : dto.sprintId === undefined ? task.sprintId : dto.sprintId,
+          clearsPlacement ? null : dto.epicId === undefined ? task.epicId : dto.epicId,
+        )
+      : { sprintId: task.sprintId, epicId: task.epicId };
+
     const data: Prisma.TaskUncheckedUpdateInput = {};
     const logs: { action: Parameters<ActivityService['log']>[0]['action']; detail: Prisma.InputJsonValue }[] = [];
 
@@ -324,6 +342,14 @@ export class TasksService {
     if (nextEnvironment !== task.environment) {
       data.environment = nextEnvironment;
       logs.push({ action: 'bug_info_changed', detail: { field: 'environment', from: task.environment, to: nextEnvironment } });
+    }
+    if (placement.sprintId !== task.sprintId) {
+      data.sprintId = placement.sprintId;
+      logs.push({ action: 'sprint_changed', detail: { from: await this.sprintRef(task.sprintId), to: await this.sprintRef(placement.sprintId) } });
+    }
+    if (placement.epicId !== task.epicId) {
+      data.epicId = placement.epicId;
+      logs.push({ action: 'epic_changed', detail: { from: await this.epicRef(task.epicId), to: await this.epicRef(placement.epicId) } });
     }
     if (assigneesChanged) {
       data.updatedAt = new Date(); // chỉ đổi người được giao vẫn làm "mới cập nhật"
@@ -484,6 +510,42 @@ export class TasksService {
   private completedAtFor(task: Pick<Task, 'completedAt'> & { status: { category: string } }, next: { category: string }): Date | null {
     if (next.category !== 'done') return null;
     return task.status.category === 'done' && task.completedAt ? task.completedAt : new Date();
+  }
+
+  /**
+   * Sprint và Epic của một công việc. Chỉ công việc cấp cao, không phải Epic, mới thuộc sprint/epic;
+   * sprint phải của đúng dự án và chưa kết thúc; epic phải là task loại epic của đúng dự án.
+   */
+  private async resolvePlacement(
+    projectId: number,
+    type: TaskType,
+    parentId: number | null,
+    sprintId: number | null | undefined,
+    epicId: number | null | undefined,
+  ): Promise<{ sprintId: number | null; epicId: number | null }> {
+    const wantsSprint = sprintId !== undefined && sprintId !== null;
+    const wantsEpic = epicId !== undefined && epicId !== null;
+    if ((wantsSprint || wantsEpic) && (parentId !== null || type === 'epic')) {
+      throw new BadRequestException(parentId !== null ? 'Công việc con không thuộc sprint hay epic riêng' : 'Epic không thuộc sprint hay epic khác');
+    }
+    if (wantsSprint) {
+      const sprint = await this.prisma.sprint.findUnique({ where: { id: sprintId }, select: { projectId: true, status: true } });
+      if (!sprint || sprint.projectId !== projectId) throw new BadRequestException('Sprint không thuộc dự án này');
+      if (sprint.status === 'completed') throw new BadRequestException('Sprint đã kết thúc, không thể thêm công việc vào');
+    }
+    if (wantsEpic) {
+      const epic = await this.prisma.task.findUnique({ where: { id: epicId }, select: { projectId: true, type: true } });
+      if (!epic || epic.projectId !== projectId || epic.type !== 'epic') throw new BadRequestException('Epic không tồn tại trong dự án này');
+    }
+    return { sprintId: sprintId ?? null, epicId: epicId ?? null };
+  }
+
+  private async sprintRef(id: number | null): Promise<{ id: number; name: string } | null> {
+    return id === null ? null : this.prisma.sprint.findUnique({ where: { id }, select: { id: true, name: true } });
+  }
+
+  private async epicRef(id: number | null): Promise<{ id: number; title: string } | null> {
+    return id === null ? null : this.prisma.task.findUnique({ where: { id }, select: { id: true, title: true } });
   }
 
   /** Mức độ nghiêm trọng và môi trường chỉ có nghĩa với Bug */

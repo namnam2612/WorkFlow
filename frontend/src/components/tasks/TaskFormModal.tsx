@@ -6,7 +6,8 @@ import { useAuth } from '../../auth/useAuth';
 import { useFormAttachments } from '../../hooks/useFormAttachments';
 import { useProject, useProjects } from '../../hooks/useProjects';
 import { statusesOf, useProjectStatuses } from '../../hooks/useStatuses';
-import { useCreateTask, useUpdateTask } from '../../hooks/useTasks';
+import { useSprints } from '../../hooks/useSprints';
+import { useCreateTask, useTasks, useUpdateTask } from '../../hooks/useTasks';
 import { getErrorMessage } from '../../lib/api';
 import { ENVIRONMENT_LABEL, ENVIRONMENTS, PRIORITIES, PRIORITY_META, SEVERITIES, SEVERITY_META, TYPE_LABEL, TYPES } from '../../lib/constants';
 import { isoToVnDateTimeInput, vnDateTimeInputToIso } from '../../lib/format';
@@ -36,6 +37,8 @@ const schema = z.object({
   /** Rỗng = trạng thái đầu tiên của bộ (chỉ khi tạo mới) */
   statusId: z.string(),
   storyPoints: pointsField,
+  sprintId: z.string(),
+  epicId: z.string(),
   severity: z.enum(['', 'minor', 'major', 'critical', 'blocker']),
   environment: z.enum(['', 'dev', 'staging', 'prod']),
   priority: z.enum(['low', 'medium', 'high', 'urgent']),
@@ -53,6 +56,7 @@ interface TaskFormModalProps {
   defaultProjectId?: number;
   defaultStatusId?: number;
   defaultType?: TaskType;
+  defaultSprintId?: number;
   /** Tạo công việc con */
   parentId?: number;
   onSaved?: (taskId: number) => void;
@@ -60,7 +64,7 @@ interface TaskFormModalProps {
 
 const toNumberOrNull = (value: string): number | null => (value === '' ? null : Number(value));
 
-export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultStatusId, defaultType, parentId, onSaved }: TaskFormModalProps) {
+export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultStatusId, defaultType, defaultSprintId, parentId, onSaved }: TaskFormModalProps) {
   const { user } = useAuth();
   const toast = useToast();
   const create = useCreateTask();
@@ -87,6 +91,8 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
       type: task?.type ?? defaultType ?? 'task',
       statusId: task ? String(task.statusId) : defaultStatusId ? String(defaultStatusId) : '',
       storyPoints: task?.storyPoints != null ? String(task.storyPoints) : '',
+      sprintId: task?.sprintId != null ? String(task.sprintId) : defaultSprintId ? String(defaultSprintId) : '',
+      epicId: task?.epicId != null ? String(task.epicId) : '',
       severity: task?.severity ?? '',
       environment: task?.environment ?? '',
       priority: task?.priority ?? 'medium',
@@ -111,6 +117,11 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
   const isSubtask = parentId !== undefined || task?.parentId != null;
   // Công việc con chỉ là Task hoặc Bug; Story/Epic là công việc lớn
   const typeOptions = isSubtask ? TYPES.filter((t) => t === 'task' || t === 'bug') : TYPES;
+  // Sprint/Epic: chỉ leader/admin xếp, và chỉ cho công việc cấp cao không phải Epic
+  const showPlacement = canAssignOthers && !isSubtask && type !== 'epic';
+  const sprintsQuery = useSprints(showPlacement ? projectId : undefined);
+  const epicsQuery = useTasks({ projectId, types: ['epic'], pageSize: 100 }, showPlacement && projectId !== undefined);
+  const sprintOptions = (sprintsQuery.data ?? []).filter((s) => s.status !== 'completed' || String(s.id) === watch('sprintId'));
   const statusValue = watch('statusId');
   const statusFits = statusOptions.some((s) => String(s.id) === statusValue);
 
@@ -130,6 +141,7 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
       // Trạng thái không thuộc bộ của loại đã chọn (vd đổi sang Bug) thì để server chọn trạng thái tương ứng
       statusId: values.statusId && statusOptions.some((s) => String(s.id) === values.statusId) ? Number(values.statusId) : undefined,
       storyPoints: values.storyPoints === '' ? null : Number(values.storyPoints),
+      ...(showPlacement ? { sprintId: values.sprintId ? Number(values.sprintId) : null, epicId: values.epicId ? Number(values.epicId) : null } : {}),
       ...(values.type === 'bug' ? { severity: values.severity || null, environment: values.environment || null } : {}),
       priority: values.priority,
       deadline: vnDateTimeInputToIso(values.deadline),
@@ -222,6 +234,30 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
           <Field label="Story Point" htmlFor="task-points" error={errors.storyPoints?.message}>
             <input id="task-points" inputMode="numeric" className={inputClass} placeholder="VD: 3" {...register('storyPoints')} />
           </Field>
+          {showPlacement && (
+            <>
+              <Field label="Sprint" htmlFor="task-sprint">
+                <select id="task-sprint" className={inputClass} {...register('sprintId')}>
+                  <option value="">Backlog (chưa vào sprint)</option>
+                  {sprintOptions.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Epic" htmlFor="task-epic">
+                <select id="task-epic" className={inputClass} {...register('epicId')}>
+                  <option value="">Không thuộc epic</option>
+                  {(epicsQuery.data?.items ?? []).map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.title}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </>
+          )}
           {type === 'bug' && (
             <>
               <Field label="Mức độ nghiêm trọng" htmlFor="task-severity">

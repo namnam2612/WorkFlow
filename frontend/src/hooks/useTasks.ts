@@ -12,6 +12,8 @@ export interface TaskInput {
   type?: TaskType;
   statusId?: number;
   storyPoints?: number | null;
+  sprintId?: number | null;
+  epicId?: number | null;
   severity?: BugSeverity | null;
   environment?: Environment | null;
   priority?: Priority;

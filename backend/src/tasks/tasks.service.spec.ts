@@ -70,6 +70,8 @@ function buildTask(overrides: Partial<Task> & { assigneeIds?: number[] } = {}): 
     type: 'task',
     statusId,
     storyPoints: null,
+    sprintId: null,
+    epicId: null,
     severity: null,
     environment: null,
     priority: 'medium',
@@ -807,6 +809,53 @@ describe('TasksService', () => {
       } finally {
         STATUS_ROWS.pop();
       }
+    });
+  });
+  describe('sprint và epic', () => {
+    const sprintRow = (over: object = {}) => ({ id: 8, projectId: 1, status: 'planned', name: 'Sprint 1', ...over });
+    beforeEach(() => {
+      prisma.sprint.findUnique.mockResolvedValue(sprintRow());
+    });
+
+    it('thêm công việc vào sprint của dự án; sprint khác dự án hoặc đã kết thúc bị từ chối', async () => {
+      await service.create(owner, { projectId: 1, title: 'Việc', sprintId: 8 });
+      expect(callArg(prisma.task.create)).toMatchObject({ data: { sprintId: 8 } });
+      prisma.sprint.findUnique.mockResolvedValue(sprintRow({ projectId: 2 }));
+      await expect(service.create(owner, { projectId: 1, title: 'Việc', sprintId: 8 })).rejects.toBeInstanceOf(BadRequestException);
+      prisma.sprint.findUnique.mockResolvedValue(sprintRow({ status: 'completed' }));
+      await expect(service.create(owner, { projectId: 1, title: 'Việc', sprintId: 8 })).rejects.toThrow(/đã kết thúc/);
+    });
+
+    it('chỉ task loại epic của dự án mới làm được epic cha', async () => {
+      prisma.task.findUnique.mockResolvedValue({ projectId: 1, type: 'task' });
+      await expect(service.create(owner, { projectId: 1, title: 'Story', type: 'story', epicId: 3 })).rejects.toBeInstanceOf(BadRequestException);
+      prisma.task.findUnique.mockResolvedValue({ projectId: 1, type: 'epic' });
+      await service.create(owner, { projectId: 1, title: 'Story', type: 'story', epicId: 3 });
+      expect(callArg(prisma.task.create)).toMatchObject({ data: { epicId: 3 } });
+    });
+
+    it('Epic và công việc con không thuộc sprint/epic', async () => {
+      await expect(service.create(owner, { projectId: 1, title: 'Epic', type: 'epic', sprintId: 8 })).rejects.toBeInstanceOf(BadRequestException);
+      prisma.task.findUnique.mockResolvedValue(buildTask({ id: 7 }));
+      await expect(service.create(owner, { projectId: 1, parentId: 7, title: 'Con', sprintId: 8 })).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('đổi sprint ghi lịch sử và chỉ leader/admin được đổi, người được giao thì không', async () => {
+      prisma.task.findUnique.mockResolvedValue(buildTask({ sprintId: 8 }));
+      prisma.sprint.findUnique.mockImplementation(({ where }: { where: { id: number } }) => Promise.resolve(sprintRow({ id: where.id, name: `Sprint ${where.id}` })));
+      await service.update(owner, 5, { sprintId: 9 });
+      expect(callArg(prisma.task.update)).toMatchObject({ data: { sprintId: 9 } });
+      expect(activity.log).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'sprint_changed', detail: { from: expect.objectContaining({ id: 8, name: 'Sprint 8' }) as object, to: expect.objectContaining({ id: 9, name: 'Sprint 9' }) as object } }),
+        prisma,
+      );
+      await expect(service.update(assignee, 5, { sprintId: null })).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('đổi loại thành Epic thì tự gỡ khỏi sprint và epic', async () => {
+      prisma.task.findUnique.mockResolvedValue(buildTask({ type: 'story', sprintId: 8, epicId: 3 }));
+      await service.update(owner, 5, { type: 'epic' });
+      expect(callArg(prisma.task.update)).toMatchObject({ data: { type: 'epic', sprintId: null, epicId: null } });
     });
   });
 });

@@ -21,6 +21,12 @@ enum StatusCategory {
 }
 
 /// Bộ trạng thái dùng cho công việc thường hay cho Bug (Bug có vòng đời riêng)
+enum SprintStatus {
+  planned
+  active
+  completed
+}
+
 enum StatusScope {
   task
   bug
@@ -82,6 +88,7 @@ model User {
   createdProjects Project[]       @relation("ProjectCreator")
   memberships     ProjectMember[]
   assignedTasks   TaskAssignee[]
+  workLogs        WorkLog[]
   createdTasks    Task[]          @relation("TaskCreator")
   comments        Comment[]
   activityLogs    ActivityLog[]
@@ -126,6 +133,7 @@ model Project {
   createdBy   User            @relation("ProjectCreator", fields: [createdById], references: [id], onDelete: Restrict)
   members     ProjectMember[]
   statuses    ProjectStatus[]
+  sprints     Sprint[]
   tasks       Task[]
   attachments Attachment[]
 
@@ -171,6 +179,9 @@ model Task {
   type           TaskType     @default(task)
   statusId       Int
   storyPoints    Int?
+  sprintId       Int?
+  /// Epic (task type = epic) mà story/task này thuộc về
+  epicId         Int?
   /// Chỉ dùng cho type = bug
   severity       BugSeverity?
   environment    Environment?
@@ -183,11 +194,15 @@ model Task {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  project  Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  status   ProjectStatus @relation(fields: [statusId], references: [id], onDelete: Restrict)
-  parent   Task?         @relation("Subtasks", fields: [parentId], references: [id], onDelete: Cascade)
-  subtasks Task[]        @relation("Subtasks")
-  creator  User          @relation("TaskCreator", fields: [creatorId], references: [id], onDelete: Restrict)
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  status       ProjectStatus @relation(fields: [statusId], references: [id], onDelete: Restrict)
+  sprint       Sprint?       @relation(fields: [sprintId], references: [id], onDelete: SetNull)
+  epic         Task?         @relation("EpicChildren", fields: [epicId], references: [id], onDelete: SetNull)
+  epicChildren Task[]        @relation("EpicChildren")
+  workLogs     WorkLog[]
+  parent       Task?         @relation("Subtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  subtasks     Task[]        @relation("Subtasks")
+  creator      User          @relation("TaskCreator", fields: [creatorId], references: [id], onDelete: Restrict)
 
   assignees    TaskAssignee[]
   comments     Comment[]
@@ -199,6 +214,8 @@ model Task {
   @@index([projectId, statusId, position])
   @@index([statusId])
   @@index([projectId, type])
+  @@index([sprintId])
+  @@index([epicId])
   @@index([parentId])
 }
 
@@ -282,4 +299,45 @@ model Notification {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead, createdAt])
+}
+
+/// Chu kỳ làm việc (Sprint) của dự án. Mỗi dự án chỉ có tối đa một sprint đang chạy.
+model Sprint {
+  id              Int          @id @default(autoincrement())
+  projectId       Int
+  name            String       @db.VarChar(120)
+  goal            String?      @db.Text
+  startDate       DateTime?
+  endDate         DateTime?
+  status          SprintStatus @default(planned)
+  /// Tổng Story Point cam kết lúc bắt đầu (đường lý tưởng của burndown)
+  committedPoints Int?
+  /// Tổng Story Point đã xong lúc kết thúc (velocity)
+  completedPoints Int?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime     @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks   Task[]
+
+  @@index([projectId, status])
+}
+
+/// Một lần ghi nhận thời gian làm việc vào công việc
+model WorkLog {
+  id        Int      @id @default(autoincrement())
+  taskId    Int
+  userId    Int
+  minutes   Int
+  /// Ngày làm việc (00:00 giờ VN, lưu UTC)
+  workedOn  DateTime
+  note      String?  @db.VarChar(500)
+  createdAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([userId, workedOn])
 }

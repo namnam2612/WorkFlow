@@ -1,5 +1,6 @@
 import type { ActivityLogEntry } from '../types/api';
 import { PRIORITY_META, TYPE_LABEL, SEVERITY_META, ENVIRONMENT_LABEL } from './constants';
+import { formatMinutes } from './duration';
 import { formatDateTime } from './format';
 import type { BugSeverity, Environment, Priority, TaskType } from '../types/api';
 
@@ -63,6 +64,18 @@ export function describeActivity(entry: ActivityLogEntry): string {
       return `đã đổi loại từ "${typeLabel(detail.from)}" sang "${typeLabel(detail.to)}"`;
     case 'story_points_changed':
       return `đã đổi Story Point: ${String(detail.from ?? '—')} → ${String(detail.to ?? '—')}`;
+    case 'sprint_changed': {
+      const name = (v: unknown) => (v && typeof v === 'object' && 'name' in v ? String((v as { name: unknown }).name) : 'Backlog');
+      return `đã chuyển sprint từ "${name(detail.from)}" sang "${name(detail.to)}"`;
+    }
+    case 'epic_changed': {
+      const title = (v: unknown) => (v && typeof v === 'object' && 'title' in v ? String((v as { title: unknown }).title) : 'không có');
+      return `đã đổi epic từ "${title(detail.from)}" sang "${title(detail.to)}"`;
+    }
+    case 'worklog_added':
+      return `đã ghi nhận ${formatMinutes(Number(detail.minutes ?? 0))} làm việc${detail.note ? `: ${String(detail.note)}` : ''}`;
+    case 'worklog_removed':
+      return `đã xóa bản ghi ${formatMinutes(Number(detail.minutes ?? 0))} làm việc`;
     case 'bug_info_changed':
       return `đã đổi ${detail.field === 'severity' ? 'mức độ nghiêm trọng' : 'môi trường'} của Bug: ${bugValue(detail.field, detail.from)} → ${bugValue(detail.field, detail.to)}`;
     case 'priority_changed':

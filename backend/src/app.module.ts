@@ -17,9 +17,11 @@ import { PrismaModule } from './prisma/prisma.module';
 import { ProjectsModule } from './projects/projects.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
+import { SprintsModule } from './sprints/sprints.module';
 import { StatusesModule } from './statuses/statuses.module';
 import { TasksModule } from './tasks/tasks.module';
 import { UsersModule } from './users/users.module';
+import { WorkLogsModule } from './worklogs/worklogs.module';
 
 @Module({
   imports: [
@@ -35,6 +37,8 @@ import { UsersModule } from './users/users.module';
     UsersModule,
     ProjectsModule,
     StatusesModule,
+    SprintsModule,
+    WorkLogsModule,
     TasksModule,
     CommentsModule,
     AttachmentsModule,

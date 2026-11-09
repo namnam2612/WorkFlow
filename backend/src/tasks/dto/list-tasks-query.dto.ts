@@ -32,6 +32,16 @@ export class ListTasksQueryDto extends PaginationQueryDto {
   statusCategory?: StatusCategory;
 
   @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  sprintId?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  epicId?: number;
+
+  @IsOptional()
   @Transform(({ value }: { value: unknown }) => (typeof value === 'string' ? value.split(',').filter(Boolean) : value))
   @IsArray()
   @IsEnum(TaskType, { each: true })
