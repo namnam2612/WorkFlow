@@ -1,4 +1,4 @@
-import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Role, User } from '@prisma/client';
@@ -88,6 +88,40 @@ describe('AuthService', () => {
     it('từ chối tài khoản đã bị vô hiệu hóa dù mật khẩu đúng', async () => {
       prisma.user.findUnique.mockResolvedValue(buildUser({ isActive: false }));
       await expect(service.login('an@taskflow.vn', 'Password123!')).rejects.toThrow('vô hiệu hóa');
+    });
+  });
+
+  describe('register', () => {
+    it('luôn tạo tài khoản role member, lưu hash mật khẩu và trả token để đăng nhập luôn', async () => {
+      prisma.user.findUnique.mockResolvedValue(null);
+      prisma.user.create.mockImplementation(({ data }: { data: Partial<User> }) => Promise.resolve(buildUser({ id: 50, ...data })));
+
+      const result = await service.register('Người Mới', 'moi@taskflow.vn', 'MatKhau12345');
+
+      const arg = callArg(prisma.user.create) as { data: { role: string; passwordHash: string; email: string } };
+      expect(arg.data.role).toBe('member');
+      expect(arg.data.passwordHash).not.toBe('MatKhau12345');
+      expect(await bcrypt.compare('MatKhau12345', arg.data.passwordHash)).toBe(true);
+      expect(result.user.role).toBe('member');
+      expect(result.user).not.toHaveProperty('passwordHash');
+      expect(result.accessToken).toBeTruthy();
+      expect(prisma.refreshToken.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('từ chối email đã tồn tại', async () => {
+      prisma.user.findUnique.mockResolvedValue(buildUser());
+      await expect(service.register('A', 'an@taskflow.vn', 'MatKhau12345')).rejects.toBeInstanceOf(ConflictException);
+      expect(prisma.user.create).not.toHaveBeenCalled();
+    });
+
+    it('từ chối khi hệ thống tắt đăng ký (ALLOW_REGISTRATION=false)', async () => {
+      const closed = new AuthService(
+        asPrisma(prisma),
+        jwt,
+        new ConfigService({ JWT_ACCESS_SECRET: ACCESS_SECRET, JWT_REFRESH_SECRET: REFRESH_SECRET, ALLOW_REGISTRATION: 'false' }),
+      );
+      await expect(closed.register('A', 'a@x.vn', 'MatKhau12345')).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.user.create).not.toHaveBeenCalled();
     });
   });
 

@@ -63,3 +63,4 @@
 - Chưa có: upload ảnh đại diện (chỉ nhận URL), quên mật khẩu qua email, E2E tự động trong repo (đã chạy E2E bằng Playwright nhưng script nằm ngoài repo).
 - Token lưu `localStorage` (dễ bị XSS hơn cookie HttpOnly) — chấp nhận cho phạm vi hiện tại, xem README.
 - Cron chỉ chạy khi tiến trình backend chạy; nếu chạy nhiều bản backend song song sẽ trùng lần quét (đã chống tạo thông báo trùng ở mức DB-check, chưa có khóa phân tán).
+- Đăng ký công khai (`POST /auth/register`): luôn tạo `member`, DTO không có trường role (gửi `role` bị 400); tắt bằng `ALLOW_REGISTRATION=false`.

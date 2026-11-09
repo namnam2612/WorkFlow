@@ -77,7 +77,13 @@ docker compose exec backend npm run seed   # (tuỳ chọn) nạp dữ liệu m�
 - Backend tự chạy `prisma migrate deploy` khi khởi động.
 - Dừng: `docker compose down` (thêm `-v` để xóa cả dữ liệu MySQL).
 
-## Tài khoản mẫu
+## Tài khoản & đăng ký
+
+- Người dùng mới tự đăng ký ở trang `/register`: tài khoản luôn có vai trò **Thành viên** (không thể tự chọn vai trò). Admin vào **Thành viên** để nâng lên Trưởng nhóm, hoặc tự tạo tài khoản với vai trò bất kỳ.
+- Leader thêm thành viên vào dự án thì họ mới thấy dự án đó.
+- Muốn chỉ admin tạo tài khoản: đặt `ALLOW_REGISTRATION=false`.
+
+### Tài khoản mẫu
 
 Sau khi chạy `npm run seed`, mọi tài khoản dùng mật khẩu **`Password123!`** (đổi qua biến `SEED_DEFAULT_PASSWORD`):
 
@@ -113,6 +119,7 @@ npm run lint
 | `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` | — | Bí mật ký JWT, ≥ 32 ký tự (bắt buộc; app từ chối khởi động nếu ngắn hơn) |
 | `JWT_ACCESS_EXPIRES_IN` / `JWT_REFRESH_EXPIRES_IN` | `15m` / `7d` | Thời hạn token |
 | `CORS_ORIGIN` | `http://localhost:5173` | Origin được phép (phân tách bằng dấu phẩy) |
+| `ALLOW_REGISTRATION` | `true` | `false` để tắt đăng ký công khai (chỉ admin tạo tài khoản) |
 | `TRUST_PROXY` | `0` | Số reverse proxy phía trước API (docker/nginx = `1`) để rate limit theo IP client thật |
 | `PORT` | `3000` | Cổng API |
 | `SEED_DEFAULT_PASSWORD` | `Password123!` | Mật khẩu cho tài khoản mẫu |
@@ -147,7 +154,7 @@ Tiền tố `/api`. Mọi route cần `Authorization: Bearer <accessToken>` tr�
 
 | Nhóm | Endpoint | Quyền |
 |---|---|---|
-| Auth | `POST /auth/login` · `POST /auth/refresh` · `POST /auth/logout` · `GET /auth/me` · `POST /auth/change-password` | công khai / đăng nhập |
+| Auth | `POST /auth/login` · `POST /auth/register` (công khai, luôn tạo `member`) · `POST /auth/refresh` · `POST /auth/logout` · `GET /auth/me` · `POST /auth/change-password` | công khai / đăng nhập |
 | Users | `GET /users` (lọc, phân trang, kèm thống kê) · `GET /users/:id` · `POST /users` · `PATCH /users/:id` | list/get: theo phạm vi dự án; tạo: admin; sửa: admin hoặc chính mình (giới hạn trường) |
 | Projects | `GET /projects` · `POST /projects` · `GET/PATCH/DELETE /projects/:id` · `POST /projects/:id/members` · `DELETE /projects/:id/members/:userId` | tạo: admin/leader; sửa/xóa/thành viên: admin hoặc leader của dự án |
 | Tasks | `GET /tasks` (lọc, tìm kiếm, sắp xếp, phân trang) · `GET /tasks/board?projectId=` · `POST /tasks` (kèm `parentId` = subtask) · `GET/PATCH/DELETE /tasks/:id` · `PATCH /tasks/:id/move` (status + position) | tạo/xóa: leader của dự án/admin; sửa: leader/admin (mọi trường), assignee (status, actualHours); move: leader/admin hoặc assignee |

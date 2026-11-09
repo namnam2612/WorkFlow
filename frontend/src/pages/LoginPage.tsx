@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { CheckSquare } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { useAuth } from '../auth/useAuth';
 import { Button } from '../components/ui/Button';
@@ -71,6 +71,13 @@ export default function LoginPage() {
             Đăng nhập
           </Button>
         </form>
+
+        <p className="mt-4 text-center text-sm text-slate-600">
+          Chưa có tài khoản?{' '}
+          <Link to="/register" className="font-medium text-brand-600 hover:text-brand-700">
+            Đăng ký
+          </Link>
+        </p>
 
         {import.meta.env.DEV && (
           <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-white/60 p-3 text-center text-xs text-slate-500">

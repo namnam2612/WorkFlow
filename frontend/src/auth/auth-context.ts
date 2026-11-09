@@ -6,6 +6,7 @@ export interface AuthContextValue {
   /** true khi đang kiểm tra phiên đăng nhập ban đầu */
   loading: boolean;
   login: (email: string, password: string) => Promise<User>;
+  register: (input: { name: string; email: string; password: string }) => Promise<User>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }

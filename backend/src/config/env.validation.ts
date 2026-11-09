@@ -16,6 +16,11 @@ class EnvironmentVariables {
   @IsString()
   CORS_ORIGIN?: string;
 
+  /** 'false' để tắt đăng ký công khai (mặc định bật) */
+  @IsOptional()
+  @IsIn(['true', 'false'])
+  ALLOW_REGISTRATION?: string;
+
   /** Số reverse proxy phía trước API (0 = không có) */
   @IsOptional()
   @IsInt()

@@ -6,6 +6,7 @@ import { AuthUser } from '../common/types/auth-user';
 import { AuthService, AuthTokens, LoginResult, PublicUser } from './auth.service';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 @Controller('auth')
@@ -18,6 +19,13 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   login(@Body() dto: LoginDto): Promise<LoginResult> {
     return this.auth.login(dto.email, dto.password);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post('register')
+  register(@Body() dto: RegisterDto): Promise<LoginResult> {
+    return this.auth.register(dto.name, dto.email, dto.password);
   }
 
   @Public()

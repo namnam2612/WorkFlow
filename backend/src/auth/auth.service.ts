@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Role, User } from '@prisma/client';
@@ -70,6 +70,19 @@ export class AuthService {
     if (!user.isActive) {
       throw new UnauthorizedException('Tài khoản đã bị vô hiệu hóa');
     }
+    const tokens = await this.issueTokens(user);
+    return { ...tokens, user: AuthService.toPublicUser(user) };
+  }
+
+  /** Đăng ký công khai: luôn tạo member, đăng nhập luôn sau khi tạo */
+  async register(name: string, email: string, password: string): Promise<LoginResult> {
+    if (this.config.get<string>('ALLOW_REGISTRATION') === 'false') {
+      throw new ForbiddenException('Hệ thống đang tắt đăng ký tài khoản mới');
+    }
+    const existing = await this.prisma.user.findUnique({ where: { email } });
+    if (existing) throw new ConflictException('Email đã được sử dụng');
+    const passwordHash = await bcrypt.hash(password, 10);
+    const user = await this.prisma.user.create({ data: { name, email, passwordHash, role: 'member' } });
     const tokens = await this.issueTokens(user);
     return { ...tokens, user: AuthService.toPublicUser(user) };
   }

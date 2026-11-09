@@ -8,6 +8,7 @@ import MemberDetailPage from './pages/MemberDetailPage';
 import MembersPage from './pages/MembersPage';
 import NotFoundPage from './pages/NotFoundPage';
 import NotificationsPage from './pages/NotificationsPage';
+import RegisterPage from './pages/RegisterPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 import ProjectsPage from './pages/ProjectsPage';
 import TaskDetailPage from './pages/TaskDetailPage';
@@ -17,6 +18,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
           <Route index element={<DashboardPage />} />

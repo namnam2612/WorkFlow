@@ -3,7 +3,7 @@ import { PrismaService } from './prisma/prisma.service';
 type MockFn = jest.Mock;
 
 export interface PrismaMock {
-  user: Record<'findUnique' | 'findUniqueOrThrow' | 'update' | 'findMany', MockFn>;
+  user: Record<'findUnique' | 'findUniqueOrThrow' | 'update' | 'findMany' | 'create', MockFn>;
   refreshToken: Record<'create' | 'findUnique' | 'updateMany', MockFn>;
   project: Record<'findUnique', MockFn>;
   projectMember: Record<'findUnique', MockFn>;
@@ -14,7 +14,7 @@ export interface PrismaMock {
 /** Tạo Prisma giả: mọi phương thức là jest.fn(); $transaction chạy callback với chính mock này */
 export function createPrismaMock(): PrismaMock {
   const mock: PrismaMock = {
-    user: { findUnique: jest.fn(), findUniqueOrThrow: jest.fn(), update: jest.fn(), findMany: jest.fn() },
+    user: { findUnique: jest.fn(), findUniqueOrThrow: jest.fn(), update: jest.fn(), findMany: jest.fn(), create: jest.fn() },
     refreshToken: { create: jest.fn(), findUnique: jest.fn(), updateMany: jest.fn() },
     project: { findUnique: jest.fn() },
     projectMember: { findUnique: jest.fn() },

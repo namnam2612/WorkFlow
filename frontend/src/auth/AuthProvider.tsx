@@ -51,6 +51,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [queryClient],
   );
 
+  const register = useCallback(
+    async (input: { name: string; email: string; password: string }) => {
+      const result = await api.post<AuthResult>('/auth/register', input, true);
+      tokenStore.set(result.accessToken, result.refreshToken);
+      queryClient.clear();
+      setUser(result.user);
+      return result.user;
+    },
+    [queryClient],
+  );
+
   const logout = useCallback(async () => {
     const refreshToken = tokenStore.getRefresh();
     tokenStore.clear();
@@ -70,8 +81,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, loading, login, logout, refreshUser }),
-    [user, loading, login, logout, refreshUser],
+    () => ({ user, loading, login, register, logout, refreshUser }),
+    [user, loading, login, register, logout, refreshUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
