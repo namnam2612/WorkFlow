@@ -8,7 +8,7 @@
 
 ## Giai đoạn 2 — Auth
 - [x] Backend: login / refresh / logout / me / đổi mật khẩu, Guard theo role
-- [ ] Frontend: đăng nhập, tự refresh token, layout chung, route bảo vệ
+- [x] Frontend: đăng nhập, tự refresh token (single-flight), layout chung, route bảo vệ
 
 ## Giai đoạn 3 — CRUD
 - [ ] User, Project, ProjectMember
