@@ -343,9 +343,9 @@ export class TasksService {
     if (!this.access.canManage(user, project) && !this.isSubtaskCreator(user, task)) {
       throw new ForbiddenException('Chỉ trưởng nhóm của dự án, quản trị viên hoặc người tạo công việc con mới được xóa');
     }
-    const files = await this.attachmentCleanup.collectTaskFiles(id);
+    const targets = await this.attachmentCleanup.collectTaskTargets(id);
     await this.prisma.task.delete({ where: { id } });
-    await this.attachmentCleanup.deleteFiles(files);
+    await this.attachmentCleanup.cleanup(targets);
     this.realtime.taskChanged(task.projectId, id);
   }
 

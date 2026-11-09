@@ -118,3 +118,8 @@ export function validateIncomingFiles(existing: File[], incoming: File[]): { acc
   }
   return { accepted, errors };
 }
+
+/** "12 file · 35 MB" hoặc "Chưa có file" (dòng ghi dưới mỗi thư mục trong Kho tài liệu) */
+export function folderSummary(stats: { fileCount: number; totalSize: number }): string {
+  return stats.fileCount === 0 ? 'Chưa có file' : `${stats.fileCount} file · ${formatBytes(stats.totalSize)}`;
+}

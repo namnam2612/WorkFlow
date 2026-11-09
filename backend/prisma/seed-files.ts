@@ -12,6 +12,7 @@ export async function clearAttachments(prisma: PrismaClient): Promise<void> {
   const rows = await prisma.attachment.findMany({ select: { path: true } });
   await Promise.all(rows.map((r) => rm(join(uploadRoot(), r.path), { force: true })));
   await prisma.attachment.deleteMany();
+  await rm(join(uploadRoot(), 'projects'), { recursive: true, force: true }); // cả thư mục rỗng còn sót
 }
 
 export interface SampleFile {
@@ -20,12 +21,18 @@ export interface SampleFile {
   data: Buffer;
 }
 
-/** Ghi file vào UPLOAD_DIR theo đúng quy ước của StorageService (YYYY/MM/<uuid>.<đuôi>) và trả về metadata */
-export async function writeSample(file: SampleFile): Promise<{ storedName: string; path: string; size: number }> {
-  const now = new Date();
+/** Nơi file được đính vào: dự án (taskId = null) hoặc công việc. Khớp src/attachments/file-layout.ts */
+export interface SampleOwner {
+  projectId: number;
+  taskId: number | null;
+}
+
+/** Ghi file vào UPLOAD_DIR theo đúng quy ước của StorageService (projects/{id}/... hoặc projects/{id}/tasks/{id}/..., tên UUID) và trả về metadata */
+export async function writeSample(file: SampleFile, owner: SampleOwner): Promise<{ storedName: string; path: string; size: number }> {
   const ext = file.name.includes('.') ? file.name.split('.').pop() : '';
   const storedName = `${randomUUID()}${ext ? `.${ext}` : ''}`;
-  const path = `${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, '0')}/${storedName}`;
+  const folder = owner.taskId === null ? `projects/${owner.projectId}` : `projects/${owner.projectId}/tasks/${owner.taskId}`;
+  const path = `${folder}/${storedName}`;
   const full = join(uploadRoot(), path);
   await mkdir(dirname(full), { recursive: true });
   await writeFile(full, file.data);

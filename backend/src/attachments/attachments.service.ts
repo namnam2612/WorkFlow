@@ -24,6 +24,7 @@ import {
   sanitizeFileName,
   matchesPreviewSignature,
 } from './file-types';
+import { storagePath } from './file-layout';
 import { StorageService } from './storage.service';
 
 export const DEFAULT_MAX_UPLOAD_SIZE = 20 * 1024 * 1024;
@@ -37,13 +38,13 @@ export interface IncomingFile {
 
 const projectRefSelect = { id: true, name: true, createdById: true } satisfies Prisma.ProjectSelect;
 
-const attachmentInclude = {
+export const attachmentInclude = {
   uploader: { select: USER_BRIEF_SELECT },
   task: { select: { id: true, title: true, status: true, project: { select: projectRefSelect } } },
   project: { select: projectRefSelect },
 } satisfies Prisma.AttachmentInclude;
 
-type AttachmentRow = Prisma.AttachmentGetPayload<{ include: typeof attachmentInclude }>;
+export type AttachmentRow = Prisma.AttachmentGetPayload<{ include: typeof attachmentInclude }>;
 
 /** Số file theo loại; `file` = mọi thứ không phải ảnh */
 export type AttachmentCounts = Record<FileCategory | 'all' | 'file', number>;
@@ -99,8 +100,7 @@ export class AttachmentsService {
    * Kèm `counts` theo loại (áp dụng cùng bộ lọc, trừ bộ lọc loại) để hiển thị số trên các tab Ảnh / Tài liệu.
    */
   async list(user: AuthUser, query: ListAttachmentsQueryDto): Promise<AttachmentPage> {
-    const visible = this.access.visibleProjectWhere(user);
-    const base: Prisma.AttachmentWhereInput[] = [{ OR: [{ task: { project: visible } }, { project: visible }] }];
+    const base: Prisma.AttachmentWhereInput[] = [this.visibleWhere(user)];
     if (query.search) base.push({ originalName: { contains: query.search } });
     if (query.projectId !== undefined) base.push({ OR: [{ projectId: query.projectId }, { task: { projectId: query.projectId } }] });
     if (query.source === 'project') base.push({ projectId: { not: null } });
@@ -194,13 +194,11 @@ export class AttachmentsService {
     // Kiểm tra TOÀN BỘ trước khi lưu để một file xấu không làm lệch cả lô
     const prepared = files.map((file) => this.validate(file));
 
-    const now = new Date();
-    const folder = `${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
     const saved: string[] = [];
     try {
       for (const item of prepared) {
         const storedName = `${randomUUID()}${item.ext ? `.${item.ext}` : ''}`;
-        const path = `${folder}/${storedName}`;
+        const path = storagePath({ projectId, taskId: owner.taskId }, storedName);
         await this.storage.save(path, item.buffer);
         saved.push(path);
         item.storedName = storedName;
@@ -286,7 +284,15 @@ export class AttachmentsService {
     return row.uploaderId === user.id || this.access.canManage(user, this.projectOf(row));
   }
 
-  private toView(user: AuthUser, row: AttachmentRow) {
+  /** Điều kiện Prisma: file thuộc các dự án người dùng được xem (của dự án hoặc của công việc trong dự án) */
+  visibleWhere(user: AuthUser): Prisma.AttachmentWhereInput {
+    // Admin thấy tất cả: KHÔNG dùng `{ project: {} }` (bộ lọc rỗng trên quan hệ tùy chọn loại mất file của dự án)
+    if (user.role === 'admin') return {};
+    const visible = this.access.visibleProjectWhere(user);
+    return { OR: [{ task: { project: visible } }, { project: visible }] };
+  }
+
+  toView(user: AuthUser, row: AttachmentRow) {
     const project = this.projectOf(row);
     return {
       id: row.id,

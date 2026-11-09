@@ -52,7 +52,7 @@ describe('TasksService', () => {
   let activity: { log: jest.Mock };
   let notifications: { notify: jest.Mock };
   let realtime: { taskChanged: jest.Mock };
-  let cleanup: { collectTaskFiles: jest.Mock; deleteFiles: jest.Mock };
+  let cleanup: { collectTaskTargets: jest.Mock; cleanup: jest.Mock };
   let service: TasksService;
 
   beforeEach(() => {
@@ -73,7 +73,10 @@ describe('TasksService', () => {
       Promise.resolve(buildTask({ id: where.id, ...data })),
     );
 
-    cleanup = { collectTaskFiles: jest.fn().mockResolvedValue(['2026/11/a.pdf']), deleteFiles: jest.fn().mockResolvedValue(undefined) };
+    cleanup = {
+      collectTaskTargets: jest.fn().mockResolvedValue({ files: ['projects/1/tasks/5/a.pdf'], dirs: ['projects/1/tasks/5'] }),
+      cleanup: jest.fn().mockResolvedValue(undefined),
+    };
     const prismaService = asPrisma(prisma);
     service = new TasksService(
       prismaService,
@@ -404,8 +407,8 @@ describe('TasksService', () => {
     it('xóa task => dọn cả file đính kèm trên ổ đĩa (sau khi xóa DB)', async () => {
       prisma.task.findUnique.mockResolvedValue(buildTask());
       await service.remove(owner, 5);
-      expect(cleanup.collectTaskFiles).toHaveBeenCalledWith(5);
-      expect(cleanup.deleteFiles).toHaveBeenCalledWith(['2026/11/a.pdf']);
+      expect(cleanup.collectTaskTargets).toHaveBeenCalledWith(5);
+      expect(cleanup.cleanup).toHaveBeenCalledWith({ files: ['projects/1/tasks/5/a.pdf'], dirs: ['projects/1/tasks/5'] });
     });
 
     it('leader sở hữu và admin xóa được', async () => {

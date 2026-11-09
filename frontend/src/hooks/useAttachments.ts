@@ -19,7 +19,7 @@ export function useScopeAttachments(scope: AttachmentScope) {
 /** Làm mới mọi thứ có thể đổi sau khi file của task/dự án thay đổi (số file trên thẻ, Kho tài liệu...) */
 export async function invalidateAttachmentRelated(queryClient: QueryClient, scope: AttachmentScope): Promise<void> {
   if (scope.kind === 'task') return invalidateTaskRelated(queryClient, scope.id);
-  await Promise.all(['attachments', 'projects', 'project'].map((key) => queryClient.invalidateQueries({ queryKey: [key] })));
+  await Promise.all(['attachments', 'files', 'projects', 'project'].map((key) => queryClient.invalidateQueries({ queryKey: [key] })));
 }
 
 /** Kho tài liệu: toàn bộ file trong các dự án người dùng được xem */

@@ -50,7 +50,7 @@ const projectRow = (overrides: Record<string, unknown> = {}) => row({ taskId: nu
 
 describe('AttachmentsService', () => {
   let prisma: PrismaMock;
-  let storage: Record<'save' | 'read' | 'readHead' | 'delete', jest.Mock>;
+  let storage: Record<'save' | 'read' | 'readHead' | 'delete' | 'deleteDirectory', jest.Mock>;
   let activity: { log: jest.Mock };
   let realtime: { taskChanged: jest.Mock };
   let service: AttachmentsService;
@@ -62,6 +62,7 @@ describe('AttachmentsService', () => {
       read: jest.fn().mockImplementation(() => Promise.resolve(Readable.from(['x']))),
       readHead: jest.fn().mockResolvedValue(PDF),
       delete: jest.fn().mockResolvedValue(undefined),
+      deleteDirectory: jest.fn().mockResolvedValue(undefined),
     };
     activity = { log: jest.fn().mockResolvedValue({}) };
     realtime = { taskChanged: jest.fn() };
@@ -189,7 +190,7 @@ describe('AttachmentsService', () => {
       expect(result).toHaveLength(2);
       expect(storage.save).toHaveBeenCalledTimes(2);
       const key = callArg(storage.save, 0, 0) as string;
-      expect(key).toMatch(/^\d{4}\/\d{2}\/[0-9a-f-]{36}\.pdf$/);
+      expect(key).toMatch(/^projects\/1\/tasks\/7\/[0-9a-f-]{36}\.pdf$/); // theo cấu trúc projects/{dự án}/tasks/{task}/uuid
       expect(key).not.toContain('Báo cáo');
       expect(callArg(prisma.attachment.create) as { data: Record<string, unknown> }).toMatchObject({
         data: { taskId: 7, uploaderId: 21, originalName: 'Báo cáo tháng 11.pdf', mimeType: 'application/pdf' },
@@ -366,7 +367,7 @@ describe('AttachmentsService', () => {
 
     it('admin xem tất cả (không giới hạn dự án)', async () => {
       await service.list(admin, query());
-      expect(whereOf().AND[0]).toEqual({ OR: [{ task: { project: {} } }, { project: {} }] });
+      expect(whereOf().AND[0]).toEqual({}); // không giới hạn (và không dùng bộ lọc quan hệ rỗng làm mất file dự án)
     });
 
     it('lọc theo tên, dự án, người gửi, loại, khoảng ngày; sắp xếp theo tên', async () => {

@@ -5,6 +5,11 @@ import { LoadingScreen } from './components/fx/LoadingScreen';
 import { ParticleBackground } from './components/fx/ParticleBackground';
 import { Layout } from './components/layout/Layout';
 import DocumentsPage from './pages/DocumentsPage';
+import FilesCommonPage from './pages/files/FilesCommonPage';
+import FilesLayout from './pages/files/FilesLayout';
+import FilesProjectPage from './pages/files/FilesProjectPage';
+import FilesProjectsPage from './pages/files/FilesProjectsPage';
+import FilesTaskPage from './pages/files/FilesTaskPage';
 import DashboardPage from './pages/DashboardPage';
 import KanbanPage from './pages/KanbanPage';
 import LoginPage from './pages/LoginPage';
@@ -43,6 +48,12 @@ function AppRoutes() {
           <Route path="projects/:id" element={<ProjectDetailPage />} />
           <Route path="projects/:id/board" element={<KanbanPage />} />
           <Route path="tasks" element={<TasksPage />} />
+          <Route path="files" element={<FilesLayout />}>
+            <Route index element={<FilesProjectsPage />} />
+            <Route path="projects/:projectId" element={<FilesProjectPage />} />
+            <Route path="projects/:projectId/common" element={<FilesCommonPage />} />
+            <Route path="tasks/:taskId" element={<FilesTaskPage />} />
+          </Route>
           <Route path="documents" element={<DocumentsPage />} />
           <Route path="tasks/:id" element={<TaskDetailPage />} />
           <Route path="notifications" element={<NotificationsPage />} />

@@ -3,7 +3,7 @@ import { Readable } from 'stream';
 /**
  * Cổng lưu trữ file. Hiện dùng ổ đĩa local (LocalStorageService); muốn chuyển sang S3/MinIO chỉ cần viết
  * một lớp khác kế thừa StorageService và đổi provider trong AttachmentsModule — phần còn lại không đổi.
- * `key` là đường dẫn tương đối (vd 2026/11/<uuid>.pdf), cũng là giá trị lưu ở cột Attachment.path.
+ * `key` là đường dẫn tương đối (vd projects/3/tasks/12/<uuid>.pdf, xem file-layout.ts), cũng là giá trị lưu ở cột Attachment.path.
  */
 export abstract class StorageService {
   abstract save(key: string, data: Buffer): Promise<void>;
@@ -13,4 +13,6 @@ export abstract class StorageService {
   abstract readHead(key: string, length: number): Promise<Buffer>;
   /** Xóa file; không lỗi nếu file đã không còn */
   abstract delete(key: string): Promise<void>;
+  /** Xóa cả thư mục (và mọi thứ bên trong); không lỗi nếu thư mục không tồn tại */
+  abstract deleteDirectory(prefix: string): Promise<void>;
 }

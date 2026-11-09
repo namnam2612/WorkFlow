@@ -205,3 +205,58 @@ export interface AttachmentFilters {
   page?: number;
   pageSize?: number;
 }
+
+// ---- Kho tài liệu dạng thư mục (Dự án → Công việc → File)
+
+/** Số file, tổng dung lượng và thời điểm file mới nhất của một thư mục */
+export interface FolderStats {
+  fileCount: number;
+  totalSize: number;
+  latestAt: string | null;
+}
+
+export interface ProjectFolder extends FolderStats {
+  id: number;
+  name: string;
+}
+
+export interface TaskFolder extends FolderStats {
+  id: number;
+  /** Tiêu đề task */
+  name: string;
+  status: TaskStatus;
+  /** Task cha nếu đây là công việc con */
+  parent: { id: number; title: string } | null;
+}
+
+/** Cấp 2: trong một dự án */
+export type ProjectContents = Paginated<TaskFolder> & {
+  project: { id: number; name: string };
+  /** File chung của dự án (đính trực tiếp vào dự án) */
+  common: FolderStats;
+  canUpload: boolean;
+};
+
+export type ProjectFilesPage = Paginated<Attachment> & { project: { id: number; name: string }; canUpload: boolean };
+
+export type TaskFilesPage = Paginated<Attachment> & {
+  task: { id: number; title: string; status: TaskStatus; projectId: number; projectName: string; parent: { id: number; title: string } | null };
+  canUpload: boolean;
+};
+
+export interface FolderParams {
+  search?: string;
+  sortBy?: 'name' | 'updatedAt';
+  order?: 'asc' | 'desc';
+  includeEmpty?: boolean;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface FileListParams {
+  search?: string;
+  sortBy?: 'name' | 'updatedAt' | 'size';
+  order?: 'asc' | 'desc';
+  page?: number;
+  pageSize?: number;
+}

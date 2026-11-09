@@ -5,6 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { ActivityModule } from './activity/activity.module';
 import { AttachmentsModule } from './attachments/attachments.module';
+import { FilesModule } from './files/files.module';
 import { AuthModule } from './auth/auth.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -35,6 +36,7 @@ import { UsersModule } from './users/users.module';
     TasksModule,
     CommentsModule,
     AttachmentsModule,
+    FilesModule,
     DashboardModule,
   ],
   providers: [

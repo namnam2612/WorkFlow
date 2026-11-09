@@ -17,7 +17,8 @@
     "seed": "ts-node prisma/seed.ts",
     "seed:admin": "ts-node prisma/seed-admin.ts",
     "reset": "ts-node prisma/seed-admin.ts --reset",
-    "verify:assignee-migration": "ts-node scripts/verify-assignee-migration.ts"
+    "verify:assignee-migration": "ts-node scripts/verify-assignee-migration.ts",
+    "migrate:files": "node dist/attachments/migrate-file-layout.cli.js"
   },
   "dependencies": {
     "@nestjs/common": "^11.2.8",

@@ -104,9 +104,9 @@ export class ProjectsService {
 
   async remove(user: AuthUser, id: number): Promise<void> {
     await this.access.assertCanManage(user, id);
-    const files = await this.attachmentCleanup.collectProjectFiles(id);
+    const targets = await this.attachmentCleanup.collectProjectTargets(id);
     await this.prisma.project.delete({ where: { id } });
-    await this.attachmentCleanup.deleteFiles(files);
+    await this.attachmentCleanup.cleanup(targets);
   }
 
   async addMember(user: AuthUser, projectId: number, userId: number) {

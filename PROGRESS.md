@@ -58,7 +58,16 @@
 - [x] Frontend: `AssigneePicker` (nhiều người, có tìm kiếm), `AssigneeStack` (chồng avatar, "+N"), `AssigneeFilter` (lọc nhiều người, URL `?assigneeIds=`), thêm/bớt trực tiếp ở chi tiết task
 - [x] Seed: một số task giao 2–3 người; test phân quyền/thông báo/lịch sử/lọc, thống kê, scanner, gỡ thành viên
 
+## Giai đoạn 11 — Kho tài liệu dạng thư mục (Dự án → Công việc → File)
+- [x] Cấu trúc lưu file theo thư mục: `projects/{id}/{uuid}.ext` và `projects/{id}/tasks/{id}/{uuid}.ext` (`attachments/file-layout.ts`); `StorageService.deleteDirectory`; xóa task/dự án xóa cả thư mục (kể cả công việc con)
+- [x] Script `npm run migrate:files` (`--dry-run`): chuyển file cũ `YYYY/MM/...` sang cấu trúc mới + cập nhật `Attachment.path`; chạy lại an toàn, phục hồi khi bị ngắt, không ghi đè, báo file mất, dọn thư mục cũ rỗng (có test với thư mục thật)
+- [x] API `GET /files/projects`, `/files/projects/:id` (`includeEmpty`), `/files/projects/:id/files`, `/files/tasks/:id`, `/files/search?q=`: phân trang (20), tìm kiếm, sắp xếp, lọc quyền; số file/dung lượng/file mới nhất bằng truy vấn gộp GROUP BY
+- [x] Frontend `/files`, `/files/projects/:id`, `/files/projects/:id/common`, `/files/tasks/:id`: breadcrumb, thư mục (biểu tượng khác cho "File chung"), lưới ⇄ danh sách ghi nhớ, phân trang, sắp xếp theo tên/cập nhật mới nhất, ô tìm toàn kho với đường dẫn bấm được, "Mở dự án"/"Mở công việc", "Tải lên file" (dùng lại `AttachmentPicker`), trạng thái rỗng
+- [x] Sửa lỗi cũ: Kho tài liệu dạng phẳng và tìm kiếm bỏ sót file dự án khi xem bằng admin (`visibleWhere` trả `{}` cho admin)
+- [x] Seed: 3 dự án, mỗi dự án có file chung và task có 2–5 file (một số task không có file); test phân quyền từng cấp, số đếm, script migrate
+
 ## Quyết định thiết kế
+- Kho tài liệu dạng thư mục: danh sách phẳng cũ giữ ở `/documents` (nút "Xem tất cả file"). Cấp 1/2 sắp xếp và phân trang ở bộ nhớ sau khi đếm bằng GROUP BY (số dự án/task mỗi dự án nhỏ); cấp 3 và tìm kiếm phân trang ở DB. Số đếm của cấp 1 dùng SQL thô (`Attachment LEFT JOIN Task`) vì Prisma không groupBy qua quan hệ.
 - Giao nhiều người: thành viên (không phải leader/admin) chỉ thêm/bớt được CHÍNH MÌNH trong danh sách của công việc con mình tạo (không động tới người khác). Người đã được giao nhưng sau đó rời dự án được giữ nguyên cho tới khi bị bớt; khi gỡ thành viên khỏi dự án họ bị gỡ khỏi mọi task của dự án đó. Thống kê tính trên bảng nối ở bộ nhớ (MySQL không groupBy qua quan hệ), đủ cho quy mô hiện tại; nếu task lên tới hàng trăm nghìn hãy chuyển sang truy vấn SQL thô.
 - MySQL của dự án map ra cổng host **3307** vì máy đã có MySQL khác ở 3306.
 - Hồ sơ cá nhân (`/profile`): chức danh, SĐT, email liên hệ, giới thiệu, link GitHub/LinkedIn/Facebook (kiểm tra tên miền ở backend). Ảnh đại diện lưu trong DB (bảng `UserAvatar`, MEDIUMBLOB) để không phụ thuộc ổ đĩa container; trình duyệt tự cắt vuông 256px trước khi gửi, backend nhận tối đa 1MB và kiểm tra JPEG/PNG/WebP bằng chữ ký file. `GET /users/:id/avatar` công khai (thẻ <img> không gửi được header Authorization).

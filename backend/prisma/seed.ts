@@ -181,7 +181,7 @@ async function main(): Promise<void> {
       { name: `Sơ đồ tổ chức.png`, mime: 'image/png', data: makePng(360, 240, projectIndexHue(def.name)), ago: 8 },
     ];
     for (const sample of projectSamples) {
-      const stored = await writeSample(sample);
+      const stored = await writeSample(sample, { projectId: project.id, taskId: null });
       await prisma.attachment.create({
         data: {
           projectId: project.id,
@@ -285,9 +285,12 @@ async function main(): Promise<void> {
           },
           { name: `Số liệu ${index + 1}.csv`, mime: 'text/csv', data: Buffer.from('Hạng mục,Số giờ\nThiết kế,8\nLập trình,16\nKiểm thử,6\n', 'utf8'), by: uploaders[0], ago: 2 },
         ];
-        const take = index % 2 === 0 ? samples : samples.slice(0, 2);
+        // Mỗi task có file được 2–5 file, xoay vòng loại file để có đủ mẫu (pdf, ảnh, txt, docx, xlsx, pptx, html, csv)
+        const count = 2 + (index % 4);
+        const start = index % samples.length;
+        const take = [...samples, ...samples].slice(start, start + count);
         for (const sample of take) {
-          const stored = await writeSample(sample);
+          const stored = await writeSample(sample, { projectId: project.id, taskId: task.id });
           const attachment = await prisma.attachment.create({
             data: {
               taskId: task.id,

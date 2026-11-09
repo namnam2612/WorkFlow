@@ -21,5 +21,6 @@ import { StorageModule } from './storage.module';
   ],
   controllers: [AttachmentsController],
   providers: [AttachmentsService],
+  exports: [AttachmentsService],
 })
 export class AttachmentsModule {}

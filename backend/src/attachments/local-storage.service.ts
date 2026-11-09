@@ -50,6 +50,14 @@ export class LocalStorageService extends StorageService {
     }
   }
 
+  async deleteDirectory(prefix: string): Promise<void> {
+    try {
+      await rm(this.resolveKey(prefix), { recursive: true, force: true });
+    } catch (error) {
+      this.logger.warn(`Không xóa được thư mục ${prefix}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
   async delete(key: string): Promise<void> {
     try {
       await rm(this.resolveKey(key), { force: true });

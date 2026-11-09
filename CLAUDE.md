@@ -22,7 +22,7 @@ Web app để Leader giao việc và theo dõi tiến độ/deadline; thành vi�
 - Task → `done` set `completedAt`; rời `done` thì xóa.
 
 ## File đính kèm
-- `backend/src/attachments/`: lưu qua `StorageService` (đổi sang S3/MinIO bằng cách thay provider trong `StorageModule`). Thư mục `UPLOAD_DIR` (mặc định `./uploads`, đã `.gitignore`); Docker dùng volume `uploads_data`. Một file thuộc ĐÚNG MỘT nơi: task (`taskId`) hoặc dự án (`projectId`) — `AttachmentsService.store` kiểm tra; file dự án chỉ leader/admin tải lên, không có ActivityLog (log gắn với task). Xóa task/dự án phải dọn file (`AttachmentCleanupService`). Form tạo/sửa dùng `AttachmentPicker` + `useFormAttachments`: gọi API tạo trước, có id mới tải từng file. Frontend tải/xem file bằng `fetchBlob` (có Authorization), không dùng thẻ `<a href>`/`<img src>` trực tiếp tới API.
+- `backend/src/attachments/`: lưu qua `StorageService` (đổi sang S3/MinIO bằng cách thay provider trong `StorageModule`). Thư mục `UPLOAD_DIR` (mặc định `./uploads`, đã `.gitignore`); cấu trúc `projects/{projectId}/{uuid}.ext` và `projects/{projectId}/tasks/{taskId}/{uuid}.ext` (`attachments/file-layout.ts`, chuyển file cũ bằng `npm run migrate:files`); Docker dùng volume `uploads_data`. Một file thuộc ĐÚNG MỘT nơi: task (`taskId`) hoặc dự án (`projectId`) — `AttachmentsService.store` kiểm tra; file dự án chỉ leader/admin tải lên, không có ActivityLog (log gắn với task). Xóa task/dự án phải dọn file (`AttachmentCleanupService`). Form tạo/sửa dùng `AttachmentPicker` + `useFormAttachments`: gọi API tạo trước, có id mới tải từng file. Frontend tải/xem file bằng `fetchBlob` (có Authorization), không dùng thẻ `<a href>`/`<img src>` trực tiếp tới API.
 
 ## Lệnh chạy
 ```bash
@@ -30,7 +30,7 @@ cp .env.example .env && docker compose up -d mysql     # MySQL ở localhost:330
 cd backend && npm i && cp .env.example .env
 npx prisma migrate deploy && npm run seed
 npm run start:dev                          # API http://localhost:3000/api
-npm run build && npm run lint && npm test  # 223 unit test
+npm run build && npm run lint && npm test  # 261 unit test
 VERIFY_DATABASE_URL=mysql://.../taskflow_migtest npm run verify:assignee-migration  # diễn tập migration trên DB tạm
 cd ../frontend && npm i && npm run dev     # http://localhost:5173 (proxy /api, /socket.io)
 npm run build && npm run lint
@@ -43,6 +43,7 @@ Máy dev có MySQL riêng ở cổng 3306 — KHÔNG đụng vào; MySQL của d
 - Đổi `schema.prisma` → `npm run migrate:dev -- --name <ten>` (cần quyền shadow DB, đã cấp trong `docker/mysql-init`).
 - Phân quyền theo dự án/task nằm ở `ProjectAccessService` + `TasksService`; thêm endpoint mới phải kiểm tra ở backend và có test.
 - Frontend: không dùng `eslint-disable`; màu trạng thái/biểu đồ ở `lib/constants.ts`.
+- Kho tài liệu: `/files` (thư mục Dự án → Task → File, API `GET /files/...` trong `backend/src/files/`); danh sách phẳng cũ ở `/documents`. Điều kiện quyền file luôn qua `AttachmentsService.visibleWhere` (admin = `{}`, đừng dùng `{ project: {} }`).
 - Giao diện: nền tối đơn sắc (cảm hứng Lusion), trắng là màu nhấn. Token màu + keyframes ở `frontend/src/index.css` (thang `slate/brand/red/...` của Tailwind được ánh xạ lại sang bảng tối nên class cũ vẫn đúng). Hiệu ứng ở `components/fx/` (Reveal, TiltCard, ParticleBackground, LoadingScreen, HeroScene/three.js); tôn trọng `prefers-reduced-motion`. Có 2 giao diện Tối (mặc định) / Sáng: `<html data-theme>`, ghi nhớ ở localStorage `taskflow.theme`; bản sáng đảo `--color-white/--color-black` + ghi đè token trong `index.css`. Màu cố định trong code (biểu đồ, hạt, 3D) phải đọc `useTheme()`.
 
 ## Tài liệu

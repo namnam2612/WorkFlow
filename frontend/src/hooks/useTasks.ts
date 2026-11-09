@@ -18,7 +18,7 @@ export interface TaskInput {
 
 /** Làm mới mọi dữ liệu có thể bị ảnh hưởng bởi thay đổi task */
 export async function invalidateTaskRelated(queryClient: QueryClient, taskId?: number): Promise<void> {
-  const keys: unknown[][] = [['tasks'], ['board'], ['dashboard'], ['projects'], ['project'], ['users'], ['user'], ['attachments']];
+  const keys: unknown[][] = [['tasks'], ['board'], ['dashboard'], ['projects'], ['project'], ['users'], ['user'], ['attachments'], ['files']];
   if (taskId !== undefined) keys.push(['task', taskId], ['activity', taskId]);
   await Promise.all(keys.map((queryKey) => queryClient.invalidateQueries({ queryKey })));
 }

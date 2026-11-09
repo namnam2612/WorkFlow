@@ -1,11 +1,11 @@
 import clsx from 'clsx';
-import { FileText, Image as ImageIcon, LayoutGrid, Rows3, Search, X } from 'lucide-react';
+import { FileText, FolderTree, Image as ImageIcon, LayoutGrid, Rows3, Search, X } from 'lucide-react';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { AttachmentActions } from '../components/attachments/AttachmentActions';
 import { FileIcon } from '../components/attachments/FileIcon';
 import { FilePreviewModal } from '../components/attachments/FilePreviewModal';
-import { Thumbnail } from '../components/attachments/Thumbnail';
+import { FileCard } from '../components/files/FileCard';
 import { Uploader } from '../components/attachments/Uploader';
 import { Button } from '../components/ui/Button';
 import { PageHeader } from '../components/ui/Card';
@@ -39,57 +39,6 @@ function readView(): View {
   } catch {
     return 'table';
   }
-}
-
-/** Nơi file được đính vào: công việc (kèm dự án) hoặc chính dự án. Bấm vào tên để mở chi tiết. */
-function FileOwner({ file }: { file: Attachment }) {
-  const link = 'block truncate underline decoration-white/20 underline-offset-4 hover:decoration-white';
-  if (file.task) {
-    return (
-      <>
-        <Link to={`/tasks/${file.task.id}`} title={file.task.title} className={clsx(link, 'text-xs text-slate-600')}>
-          {file.task.title}
-        </Link>
-        <Link to={`/projects/${file.project.id}`} title={file.project.name} className="block truncate text-xs text-slate-500 hover:text-white">
-          {file.project.name}
-        </Link>
-      </>
-    );
-  }
-  return (
-    <>
-      <span className="mb-0.5 inline-block rounded-full border border-white/[0.14] px-2 py-px text-[10px] font-medium uppercase tracking-[1px] text-slate-600">{SOURCE_LABEL.project}</span>
-      <Link to={`/projects/${file.project.id}`} title={file.project.name} className={clsx(link, 'text-xs text-slate-600')}>
-        {file.project.name}
-      </Link>
-    </>
-  );
-}
-
-/** Thẻ file (dạng lưới): ảnh thu nhỏ hoặc biểu tượng loại file, tên, task, người gửi */
-function FileCard({ file, onOpen, onPreview, onDelete }: { file: Attachment; onOpen: (f: Attachment) => void; onPreview: (f: Attachment) => void; onDelete: (f: Attachment) => void }) {
-  return (
-    <li className="flex flex-col gap-3 rounded-2xl border border-white/[0.08] bg-card p-3 transition-colors duration-300 hover:border-white/20">
-      <button type="button" onClick={() => onOpen(file)} aria-label={file.previewable ? `Xem trước ${file.originalName}` : `Tải về ${file.originalName}`}>
-        <Thumbnail attachment={file} />
-      </button>
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-slate-900" title={file.originalName}>
-          {file.originalName}
-        </p>
-        <FileOwner file={file} />
-      </div>
-      <div className="mt-auto space-y-2 border-t border-white/[0.08] pt-3">
-        <Uploader attachment={file} />
-        <div className="flex items-center justify-between gap-2">
-          <p className="tabular text-xs text-slate-500">
-            {formatBytes(file.size)} · {formatDateTime(file.createdAt)}
-          </p>
-          <AttachmentActions attachment={file} onPreview={onPreview} onDelete={onDelete} />
-        </div>
-      </div>
-    </li>
-  );
 }
 
 export default function DocumentsPage() {
@@ -243,10 +192,16 @@ export default function DocumentsPage() {
   return (
     <>
       <PageHeader
-        title="Kho tài liệu"
-        description="Toàn bộ file đính kèm của dự án và công việc, tách riêng ảnh và tài liệu, xếp theo ngày gửi."
+        title="Tất cả file"
+        description="Danh sách phẳng mọi file của dự án và công việc, tách riêng ảnh và tài liệu, xếp theo ngày gửi."
         actions={
-          tab === 'docs' && (
+          <>
+            <Link to="/files">
+              <Button variant="secondary" size="sm" icon={<FolderTree className="h-4 w-4" />}>
+                Xem theo thư mục
+              </Button>
+            </Link>
+            {tab === 'docs' && (
             <div className="inline-flex gap-1" role="group" aria-label="Kiểu hiển thị">
               <Button variant={view === 'table' ? 'primary' : 'secondary'} size="sm" icon={<Rows3 className="h-4 w-4" />} aria-pressed={view === 'table'} onClick={() => setView('table')}>
                 Bảng
@@ -255,7 +210,8 @@ export default function DocumentsPage() {
                 Lưới
               </Button>
             </div>
-          )
+            )}
+          </>
         }
       />
 
