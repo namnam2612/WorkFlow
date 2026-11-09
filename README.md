@@ -182,4 +182,4 @@ Tiền tố `/api`. Mọi route cần `Authorization: Bearer <accessToken>` tr�
 LE_EMAIL=ban@example.com DOMAIN=alpha.hopphu.vn ./deploy/deploy.sh user@103.175.146.251
 ```
 
-Script `deploy/remote-setup.sh` chạy trên server: cài Docker/nginx/certbot, clone mã nguồn, sinh `.env` với secret ngẫu nhiên (giữ nguyên nếu đã có), chạy `deploy/docker-compose.prod.yml` (MySQL và backend không mở cổng ra ngoài; frontend chỉ ở `127.0.0.1:18080`), tạo tài khoản admin nếu DB trống, cấu hình vhost nginx và cấp chứng chỉ Let's Encrypt. Mật khẩu admin được in ra ở cuối nếu không đặt `ADMIN_PASSWORD`. Chạy lại script để cập nhật phiên bản mới.
+Script `deploy/remote-setup.sh` chạy trên server: cài Docker/nginx/certbot, nhận mã nguồn đã commit qua SSH (không cần quyền GitHub), sinh `.env` với secret ngẫu nhiên (giữ nguyên nếu đã có), chạy `deploy/docker-compose.prod.yml` (MySQL và backend không mở cổng ra ngoài; frontend chỉ ở `127.0.0.1:18080`), tạo tài khoản admin nếu DB trống, cấu hình vhost nginx và cấp chứng chỉ Let's Encrypt. Mật khẩu admin được in ra ở cuối nếu không đặt `ADMIN_PASSWORD`. Chạy lại script để cập nhật phiên bản mới.

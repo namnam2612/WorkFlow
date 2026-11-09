@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 # Chạy TRÊN máy chủ (Ubuntu) với quyền root. Thường được gọi qua deploy/deploy.sh.
 # Lưu ý: không đụng cấu hình nginx/site khác; chỉ thêm /etc/nginx/conf.d/<domain>.conf
-# Biến môi trường: DOMAIN, REPO_URL, BRANCH, LE_EMAIL, ADMIN_EMAIL, ADMIN_PASSWORD (tuỳ chọn), APP_DIR
+# Biến môi trường: DOMAIN, LE_EMAIL, ADMIN_EMAIL, ADMIN_PASSWORD (tuỳ chọn), APP_DIR
 set -euo pipefail
 
 DOMAIN="${DOMAIN:?cần DOMAIN}"
-REPO_URL="${REPO_URL:?cần REPO_URL}"
-BRANCH="${BRANCH:-main}"
 LE_EMAIL="${LE_EMAIL:?cần LE_EMAIL}"
 APP_DIR="${APP_DIR:-/opt/taskflow-alpha}"
 FRONTEND_PORT="${FRONTEND_PORT:-18080}"
@@ -18,17 +16,13 @@ export DEBIAN_FRONTEND=noninteractive
 log "Cài gói cần thiết (git, nginx, certbot, docker nếu chưa có)"
 apt-get update -y
 # --no-upgrade: chỉ cài gói còn thiếu, KHÔNG nâng cấp nginx/certbot đã có (tránh khởi động lại site khác trên server)
-apt-get install -y --no-upgrade git nginx certbot python3-certbot-nginx curl openssl
+apt-get install -y --no-upgrade nginx certbot python3-certbot-nginx curl openssl
 if ! command -v docker >/dev/null 2>&1; then curl -fsSL https://get.docker.com | sh; fi
 docker compose version >/dev/null 2>&1 || apt-get install -y docker-compose-plugin
 systemctl enable --now docker
 
-log "Lấy mã nguồn ($REPO_URL @ $BRANCH) vào $APP_DIR"
-if [ -d "$APP_DIR/.git" ]; then
-  git -C "$APP_DIR" fetch origin "$BRANCH" && git -C "$APP_DIR" checkout -B "$BRANCH" "origin/$BRANCH"
-else
-  git clone --branch "$BRANCH" "$REPO_URL" "$APP_DIR"
-fi
+log "Kiểm tra mã nguồn tại $APP_DIR (do deploy.sh gửi lên qua SSH)"
+[ -f "$APP_DIR/deploy/docker-compose.prod.yml" ] || { echo "Không thấy mã nguồn ở $APP_DIR — hãy chạy qua deploy/deploy.sh"; exit 1; }
 cd "$APP_DIR"
 
 log "Tạo file .env (giữ nguyên nếu đã có để không đổi secret/mật khẩu DB)"
