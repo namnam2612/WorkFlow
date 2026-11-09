@@ -28,11 +28,11 @@ export function KanbanCard({ task, overlay = false, dimmed = false, locked = fal
   return (
     <div
       className={clsx(
-        'relative overflow-hidden rounded-lg border bg-white p-3 pl-4 shadow-sm',
+        'relative overflow-hidden rounded-xl border bg-card p-3 pl-4 transition-[border-color,box-shadow] duration-300',
         overdue ? 'border-red-300' : 'border-slate-200',
-        overlay && 'rotate-2 cursor-grabbing shadow-xl ring-2 ring-brand-500/30',
+        overlay && 'rotate-2 cursor-grabbing shadow-[0_22px_50px_var(--shadow-lift)] ring-1 ring-white/30',
         dimmed && 'opacity-40',
-        !overlay && !locked && 'cursor-grab hover:border-slate-300 hover:shadow',
+        !overlay && !locked && 'cursor-grab hover:border-slate-300 hover:shadow-[0_22px_50px_var(--shadow-lift)]',
       )}
     >
       <span className={clsx('absolute inset-y-0 left-0 w-1', PRIORITY_BAR[task.priority])} aria-hidden />

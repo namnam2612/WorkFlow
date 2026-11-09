@@ -18,6 +18,9 @@ function safeSet(key: string, value: string | null): void {
   }
 }
 
+/** Khóa localStorage chứa token — dùng để nhận biết tab khác vừa đổi phiên đăng nhập */
+export const TOKEN_STORAGE_KEYS: readonly string[] = [ACCESS_KEY, REFRESH_KEY];
+
 export const tokenStore = {
   getAccess: (): string | null => safeGet(ACCESS_KEY),
   getRefresh: (): string | null => safeGet(REFRESH_KEY),

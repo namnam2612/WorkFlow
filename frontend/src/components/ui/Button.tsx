@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 type Variant = 'primary' | 'secondary' | 'danger' | 'ghost';
-type Size = 'sm' | 'md';
+type Size = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
@@ -13,34 +13,25 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const VARIANTS: Record<Variant, string> = {
-  primary: 'bg-brand-600 text-white shadow-sm hover:bg-brand-700 focus-visible:outline-brand-600',
-  secondary: 'bg-white text-slate-700 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus-visible:outline-slate-400',
-  danger: 'bg-red-600 text-white shadow-sm hover:bg-red-700 focus-visible:outline-red-600',
-  ghost: 'text-slate-600 hover:bg-slate-100 focus-visible:outline-slate-400',
+  primary: 'bg-white text-black hover:scale-[1.04] hover:-translate-y-0.5 hover:shadow-[0_12px_36px_var(--glow)]',
+  secondary: 'border border-white/[0.08] bg-transparent text-white hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/5',
+  danger: 'border border-red-200 bg-red-50 text-red-600 hover:-translate-y-0.5 hover:border-red-400/60 hover:bg-red-100',
+  ghost: 'bg-transparent text-slate-600 hover:bg-white/5 hover:text-white',
 };
 
 const SIZES: Record<Size, string> = {
-  sm: 'px-2.5 py-1.5 text-xs gap-1.5',
-  md: 'px-3.5 py-2 text-sm gap-2',
+  sm: 'px-3.5 py-1.5 text-xs gap-1.5',
+  md: 'px-5 py-2.5 text-sm gap-2',
+  lg: 'px-8 py-[15px] text-sm gap-2',
 };
 
-export function Button({
-  variant = 'primary',
-  size = 'md',
-  loading = false,
-  icon,
-  className,
-  children,
-  disabled,
-  type = 'button',
-  ...rest
-}: ButtonProps) {
+export function Button({ variant = 'primary', size = 'md', loading = false, icon, className, children, disabled, type = 'button', ...rest }: ButtonProps) {
   return (
     <button
       type={type}
       disabled={disabled || loading}
       className={clsx(
-        'inline-flex items-center justify-center rounded-lg font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60',
+        'inline-flex items-center justify-center rounded-full font-semibold transition-[transform,box-shadow,background-color,border-color,color] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:scale-100 disabled:hover:shadow-none',
         VARIANTS[variant],
         SIZES[size],
         className,

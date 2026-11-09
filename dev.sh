@@ -81,3 +81,6 @@ printf '  Nhấn Ctrl+C để dừng.\n\n'
 [[ "$(uname)" == "Darwin" ]] && open http://localhost:5173 || true
 
 wait
+
+
+

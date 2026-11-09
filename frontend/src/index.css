@@ -1,12 +1,345 @@
 @import 'tailwindcss';
 
+/*
+ * Hệ thống thiết kế: tối giản, nền tối, đơn sắc trắng–đen–xám (cảm hứng Lusion).
+ * Màu chỉ dùng cho ý nghĩa (lỗi, thành công, trạng thái). Trắng chính là màu nhấn.
+ * Các thang màu slate/brand/semantic của Tailwind được ánh xạ lại sang bảng màu tối
+ * nên mọi class sẵn có (text-slate-500, bg-red-50...) tự đúng phong cách mới.
+ */
+:root {
+  --bg: #050505;
+  --bg-elevated: #0c0c0c;
+  --bg-card: #111111;
+  --text: #ffffff;
+  --text-muted: #888888;
+  --border: rgba(255, 255, 255, 0.08);
+  --hover: rgba(255, 255, 255, 0.05);
+  --surface-modal: #0e0e0e;
+  --surface-drawer: #0a0a0a;
+  --surface-sidebar: #080808;
+  --surface-input: #151515;
+  --glow: rgba(255, 255, 255, 0.18);
+  --shadow-lift: rgba(0, 0, 0, 0.5);
+  --shadow-deep: rgba(0, 0, 0, 0.7);
+  --skeleton-a: #101010;
+  --skeleton-b: #181818;
+  --scroll-thumb: rgba(255, 255, 255, 0.16);
+  --selection-bg: rgba(255, 255, 255, 0.9);
+  --selection-fg: #050505;
+  --particle-rgb: 255, 255, 255;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-hover: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  color-scheme: dark;
+}
+
 @theme {
-  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --color-brand-50: #eef2ff;
-  --color-brand-100: #e0e7ff;
-  --color-brand-500: #6366f1;
-  --color-brand-600: #4f46e5;
-  --color-brand-700: #4338ca;
+  --font-sans: 'Inter', -apple-system, ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
+
+  --color-bg: #050505;
+  --color-elevated: #0c0c0c;
+  --color-card: #111111;
+  --color-sidebar: #080808;
+  --color-field: #151515;
+  --color-modal: #0e0e0e;
+  --color-muted: #888888;
+  --color-scrim: rgba(0, 0, 0, 0.85);
+  --color-scrim-soft: rgba(0, 0, 0, 0.6);
+
+  /* Thang xám đảo ngược: 50 = nền mờ nhất ... 900 = chữ trắng */
+  --color-slate-50: rgba(255, 255, 255, 0.05);
+  --color-slate-100: rgba(255, 255, 255, 0.06);
+  --color-slate-200: rgba(255, 255, 255, 0.1);
+  --color-slate-300: rgba(255, 255, 255, 0.18);
+  --color-slate-400: #6b6b6b;
+  --color-slate-500: #888888;
+  --color-slate-600: #a8a8a8;
+  --color-slate-700: #cccccc;
+  --color-slate-800: #eeeeee;
+  --color-slate-900: #ffffff;
+
+  /* Không có màu thương hiệu: trắng là màu nhấn */
+  --color-brand-50: rgba(255, 255, 255, 0.07);
+  --color-brand-100: rgba(255, 255, 255, 0.1);
+  --color-brand-500: rgba(255, 255, 255, 0.35);
+  --color-brand-600: #ffffff;
+  --color-brand-700: #e6e6e6;
+
+  /* Màu ngữ nghĩa: lỗi (đỏ), cảnh báo (cam/vàng), thành công (xanh lá), thông tin (xanh dương/tím) */
+  --color-red-50: rgba(255, 107, 107, 0.08);
+  --color-red-100: rgba(255, 107, 107, 0.12);
+  --color-red-200: rgba(255, 107, 107, 0.3);
+  --color-red-300: rgba(255, 107, 107, 0.4);
+  --color-red-400: #ff6b6b;
+  --color-red-500: #ff6b6b;
+  --color-red-600: #ff8a8a;
+  --color-red-700: #ff8a8a;
+  --color-red-800: #ff8a8a;
+
+  --color-rose-50: rgba(255, 107, 107, 0.08);
+  --color-rose-200: rgba(255, 107, 107, 0.3);
+  --color-rose-400: #ff6b6b;
+  --color-rose-500: #ff6b6b;
+  --color-rose-700: #ff8a8a;
+
+  --color-orange-50: rgba(255, 179, 92, 0.08);
+  --color-orange-100: rgba(255, 179, 92, 0.12);
+  --color-orange-200: rgba(255, 179, 92, 0.3);
+  --color-orange-400: #ffb35c;
+  --color-orange-500: #ffb35c;
+  --color-orange-600: #ffb35c;
+  --color-orange-700: #ffb35c;
+
+  --color-amber-50: rgba(255, 213, 97, 0.08);
+  --color-amber-100: rgba(255, 213, 97, 0.12);
+  --color-amber-200: rgba(255, 213, 97, 0.3);
+  --color-amber-400: #ffd561;
+  --color-amber-500: #ffd561;
+  --color-amber-600: #ffd561;
+  --color-amber-700: #ffd561;
+
+  --color-emerald-50: rgba(126, 226, 168, 0.08);
+  --color-emerald-100: rgba(126, 226, 168, 0.12);
+  --color-emerald-200: rgba(126, 226, 168, 0.3);
+  --color-emerald-400: #7ee2a8;
+  --color-emerald-500: #7ee2a8;
+  --color-emerald-600: #7ee2a8;
+  --color-emerald-700: #7ee2a8;
+  --color-emerald-800: #7ee2a8;
+
+  --color-teal-100: rgba(126, 226, 168, 0.12);
+  --color-teal-500: #7ee2a8;
+  --color-teal-600: #7ee2a8;
+
+  --color-sky-50: rgba(140, 192, 255, 0.08);
+  --color-sky-100: rgba(140, 192, 255, 0.12);
+  --color-sky-200: rgba(140, 192, 255, 0.3);
+  --color-sky-400: #8cc0ff;
+  --color-sky-500: #8cc0ff;
+  --color-sky-600: #8cc0ff;
+  --color-sky-700: #8cc0ff;
+  --color-sky-800: #8cc0ff;
+
+  --color-blue-50: rgba(140, 192, 255, 0.08);
+  --color-blue-200: rgba(140, 192, 255, 0.3);
+  --color-blue-400: #8cc0ff;
+  --color-blue-500: #8cc0ff;
+  --color-blue-700: #8cc0ff;
+
+  --color-indigo-50: rgba(197, 166, 255, 0.08);
+  --color-indigo-100: rgba(197, 166, 255, 0.12);
+  --color-indigo-500: #c5a6ff;
+  --color-indigo-600: #c5a6ff;
+
+  --color-violet-100: rgba(197, 166, 255, 0.12);
+  --color-violet-500: #c5a6ff;
+  --color-violet-600: #c5a6ff;
+
+  --animate-fade-up: fade-up 0.9s var(--ease-out) both;
+  --animate-shimmer: shimmer 1.4s linear infinite;
+}
+
+/* ===== Giao diện sáng: cùng hệ đơn sắc, đảo ngược trắng/đen. Chọn bằng <html data-theme="light"> ===== */
+:root[data-theme='light'] {
+  --bg: #fafafa;
+  --bg-elevated: #f3f3f3;
+  --bg-card: #ffffff;
+  --text: #0a0a0a;
+  --text-muted: #6b6b6b;
+  --border: rgba(0, 0, 0, 0.1);
+  --hover: rgba(0, 0, 0, 0.05);
+  --glow: rgba(0, 0, 0, 0.22);
+  --shadow-lift: rgba(0, 0, 0, 0.12);
+  --shadow-deep: rgba(0, 0, 0, 0.2);
+  --skeleton-a: #ececec;
+  --skeleton-b: #f6f6f6;
+  --scroll-thumb: rgba(0, 0, 0, 0.18);
+  --selection-bg: rgba(0, 0, 0, 0.85);
+  --selection-fg: #fafafa;
+  --particle-rgb: 0, 0, 0;
+  color-scheme: light;
+
+  --color-bg: #fafafa;
+  --color-elevated: #f3f3f3;
+  --color-card: #ffffff;
+  --color-sidebar: #f5f5f5;
+  --color-field: #f2f2f2;
+  --color-modal: #ffffff;
+  --color-muted: #6b6b6b;
+  --color-scrim: rgba(255, 255, 255, 0.8);
+  --color-scrim-soft: rgba(255, 255, 255, 0.6);
+
+  /* Trắng/đen đảo ngược: text-white => mực đen, bg-white => nút đen, text-black => chữ trắng trên nút đen */
+  --color-white: #0a0a0a;
+  --color-black: #ffffff;
+
+  --color-slate-50: rgba(0, 0, 0, 0.04);
+  --color-slate-100: rgba(0, 0, 0, 0.05);
+  --color-slate-200: rgba(0, 0, 0, 0.1);
+  --color-slate-300: rgba(0, 0, 0, 0.18);
+  --color-slate-400: #9a9a9a;
+  --color-slate-500: #6b6b6b;
+  --color-slate-600: #555555;
+  --color-slate-700: #333333;
+  --color-slate-800: #1a1a1a;
+  --color-slate-900: #0a0a0a;
+
+  --color-brand-50: rgba(0, 0, 0, 0.06);
+  --color-brand-100: rgba(0, 0, 0, 0.1);
+  --color-brand-500: rgba(0, 0, 0, 0.35);
+  --color-brand-600: #0a0a0a;
+  --color-brand-700: #262626;
+
+  --color-red-50: rgba(224, 49, 49, 0.08);
+  --color-red-100: rgba(224, 49, 49, 0.12);
+  --color-red-200: rgba(224, 49, 49, 0.3);
+  --color-red-300: rgba(224, 49, 49, 0.4);
+  --color-red-400: #e03131;
+  --color-red-500: #e03131;
+  --color-red-600: #c92a2a;
+  --color-red-700: #c92a2a;
+  --color-red-800: #c92a2a;
+  --color-rose-50: rgba(224, 49, 49, 0.08);
+  --color-rose-200: rgba(224, 49, 49, 0.3);
+  --color-rose-400: #e03131;
+  --color-rose-500: #e03131;
+  --color-rose-700: #c92a2a;
+
+  --color-orange-50: rgba(230, 119, 0, 0.08);
+  --color-orange-100: rgba(230, 119, 0, 0.12);
+  --color-orange-200: rgba(230, 119, 0, 0.3);
+  --color-orange-400: #e67700;
+  --color-orange-500: #e67700;
+  --color-orange-600: #b35900;
+  --color-orange-700: #b35900;
+
+  --color-amber-50: rgba(212, 160, 0, 0.1);
+  --color-amber-100: rgba(212, 160, 0, 0.14);
+  --color-amber-200: rgba(212, 160, 0, 0.35);
+  --color-amber-400: #d4a000;
+  --color-amber-500: #d4a000;
+  --color-amber-600: #8a6500;
+  --color-amber-700: #8a6500;
+
+  --color-emerald-50: rgba(47, 158, 68, 0.08);
+  --color-emerald-100: rgba(47, 158, 68, 0.12);
+  --color-emerald-200: rgba(47, 158, 68, 0.3);
+  --color-emerald-400: #2f9e44;
+  --color-emerald-500: #2f9e44;
+  --color-emerald-600: #1f7a3a;
+  --color-emerald-700: #1f7a3a;
+  --color-emerald-800: #1f7a3a;
+  --color-teal-100: rgba(47, 158, 68, 0.12);
+  --color-teal-500: #2f9e44;
+  --color-teal-600: #1f7a3a;
+
+  --color-sky-50: rgba(34, 114, 230, 0.08);
+  --color-sky-100: rgba(34, 114, 230, 0.12);
+  --color-sky-200: rgba(34, 114, 230, 0.3);
+  --color-sky-400: #2272e6;
+  --color-sky-500: #2272e6;
+  --color-sky-600: #1c62c4;
+  --color-sky-700: #1c62c4;
+  --color-sky-800: #1c62c4;
+  --color-blue-50: rgba(34, 114, 230, 0.08);
+  --color-blue-200: rgba(34, 114, 230, 0.3);
+  --color-blue-400: #2272e6;
+  --color-blue-500: #2272e6;
+  --color-blue-700: #1c62c4;
+
+  --color-indigo-50: rgba(112, 72, 232, 0.08);
+  --color-indigo-100: rgba(112, 72, 232, 0.12);
+  --color-indigo-500: #7048e8;
+  --color-indigo-600: #5b3bc4;
+  --color-violet-100: rgba(112, 72, 232, 0.12);
+  --color-violet-500: #7048e8;
+  --color-violet-600: #5b3bc4;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+@keyframes pulse-glow {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+}
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(-12px);
+  }
+  50% {
+    transform: translateY(12px);
+  }
+}
+@keyframes pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.4);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+@keyframes drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(80px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 html,
@@ -16,14 +349,162 @@ body,
 }
 
 body {
-  @apply bg-slate-50 text-slate-800 antialiased;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
-/* Thanh cuộn gọn cho các cột kanban */
-.thin-scroll::-webkit-scrollbar {
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+::selection {
+  background: var(--selection-bg);
+  color: var(--selection-fg);
+}
+
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: #ffffff;
+}
+
+:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.6);
+  outline-offset: 2px;
+}
+
+/* Số liệu căn đều */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Nhãn nhỏ phía trên tiêu đề */
+.eyebrow {
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  color: var(--text-muted);
+}
+
+/* Tiêu đề hero: hai vế, vế sau mảnh và xám */
+.hero-title {
+  font-size: clamp(42px, 6.5vw, 80px);
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: -2.5px;
+}
+.hero-title span {
+  display: block;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+/* Link gạch chân chạy từ trái sang khi hover */
+.link-underline {
+  position: relative;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+.link-underline::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -3px;
+  height: 1px;
+  width: 0;
+  background: currentColor;
+  transition: width 0.4s var(--ease-hover);
+}
+.link-underline:hover::after,
+.link-underline:focus-visible::after {
+  width: 100%;
+}
+
+/* Hiện dần khi cuộn tới */
+.reveal {
+  opacity: 0;
+  transform: translateY(50px);
+  transition:
+    opacity 0.85s var(--ease-out),
+    transform 0.85s var(--ease-out);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* Skeleton */
+.skeleton {
+  background: linear-gradient(90deg, var(--skeleton-a) 25%, var(--skeleton-b) 50%, var(--skeleton-a) 75%);
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+  border-radius: 10px;
+}
+
+/* Hamburger 2 gạch xoay thành dấu X */
+.burger {
+  position: relative;
+  display: block;
+  width: 20px;
+  height: 12px;
+}
+.burger i {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 1.5px;
+  background: currentColor;
+  transition:
+    transform 0.4s var(--ease-hover),
+    top 0.4s var(--ease-hover);
+}
+.burger i:first-child {
+  top: 1px;
+}
+.burger i:last-child {
+  top: 9px;
+}
+.burger.open i:first-child {
+  top: 5px;
+  transform: rotate(45deg);
+}
+.burger.open i:last-child {
+  top: 5px;
+  transform: rotate(-45deg);
+}
+
+/* Thanh cuộn gọn */
+.thin-scroll::-webkit-scrollbar,
+main::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-.thin-scroll::-webkit-scrollbar-thumb {
-  @apply rounded-full bg-slate-300;
+.thin-scroll::-webkit-scrollbar-thumb,
+main::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: var(--scroll-thumb);
+}
+
+/* Truy cập: tôn trọng prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
 }

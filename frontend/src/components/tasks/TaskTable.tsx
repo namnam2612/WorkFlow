@@ -20,7 +20,7 @@ interface TaskTableProps {
 function SortableTh({ label, field, sortBy, order, onSort, className }: { label: string; field: SortKey } & Pick<TaskTableProps, 'sortBy' | 'order' | 'onSort'> & { className?: string }) {
   const active = sortBy === field;
   return (
-    <th scope="col" className={clsx('px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500', className)}>
+    <th scope="col" className={clsx('px-4 py-3 text-left text-[11px] font-medium uppercase tracking-[1px] text-slate-500', className)}>
       {onSort ? (
         <button type="button" onClick={() => onSort(field)} className={clsx('inline-flex items-center gap-1 uppercase hover:text-slate-800', active && 'text-brand-700')}>
           {label}
@@ -35,12 +35,12 @@ function SortableTh({ label, field, sortBy, order, onSort, className }: { label:
 
 export function TaskTable({ tasks, showProject = true, sortBy, order, onSort }: TaskTableProps) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div className="overflow-x-auto rounded-2xl border border-white/[0.08] bg-card">
       <table className="min-w-full divide-y divide-slate-200">
-        <thead className="bg-slate-50">
+        <thead className="bg-white/[0.02]">
           <tr>
             <SortableTh label="Công việc" field="title" sortBy={sortBy} order={order} onSort={onSort} />
-            <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <th scope="col" className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-[1px] text-slate-500">
               Người thực hiện
             </th>
             <SortableTh label="Trạng thái" field="status" sortBy={sortBy} order={order} onSort={onSort} />

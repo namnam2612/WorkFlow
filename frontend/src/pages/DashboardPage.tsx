@@ -1,4 +1,3 @@
-import clsx from 'clsx';
 import { AlertTriangle, CalendarClock } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -10,7 +9,7 @@ import { Card, PageHeader } from '../components/ui/Card';
 import { EmptyState, ErrorState, PageLoader } from '../components/ui/States';
 import { useDashboard } from '../hooks/useDashboard';
 import { useProjects } from '../hooks/useProjects';
-import { inputClass } from '../lib/styles';
+import { chipClass, inputClass } from '../lib/styles';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -26,7 +25,7 @@ export default function DashboardPage() {
     <button
       type="button"
       onClick={() => setMine(value)}
-      className={clsx('rounded-md px-3 py-1.5 text-sm font-medium transition', mine === value ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-600 hover:text-slate-900')}
+      className={chipClass(mine === value)}
     >
       {label}
     </button>
@@ -40,7 +39,7 @@ export default function DashboardPage() {
         actions={
           <>
             {!isMember && (
-              <div className="inline-flex rounded-lg bg-slate-100 p-1" role="group" aria-label="Phạm vi thống kê">
+              <div className="inline-flex gap-1" role="group" aria-label="Phạm vi thống kê">
                 {scopeButton(false, 'Cả nhóm')}
                 {scopeButton(true, 'Của tôi')}
               </div>
@@ -78,7 +77,7 @@ export default function DashboardPage() {
                 <>
                   <TaskMiniList tasks={data.overdue} tone="danger" />
                   {data.overdueCount > data.overdue.length && (
-                    <Link to="/tasks?sortBy=deadline&order=asc" className="mt-2 block text-sm font-medium text-brand-600 hover:text-brand-700">
+                    <Link to="/tasks?sortBy=deadline&order=asc" className="mt-2 block link-underline text-white">
                       Xem thêm {data.overdueCount - data.overdue.length} công việc
                     </Link>
                   )}

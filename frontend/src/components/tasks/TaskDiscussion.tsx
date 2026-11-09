@@ -151,7 +151,7 @@ export function TaskDiscussion({ taskId, canComment, canModerate }: TaskDiscussi
             <ol className="relative space-y-4 border-l border-slate-200 pl-5">
               {activityQuery.data?.map((entry) => (
                 <li key={entry.id} className="relative">
-                  <span className="absolute -left-[26px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-brand-500 ring-1 ring-slate-200" />
+                  <span className="absolute -left-[26px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-bg bg-brand-500 ring-1 ring-slate-200" />
                   <p className="text-sm text-slate-700">
                     <span className="font-medium text-slate-900">{entry.user.name}</span> {describeActivity(entry)}
                   </p>

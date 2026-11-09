@@ -1,3 +1,5 @@
+import { Reveal } from '../components/fx/Reveal';
+import { TiltCard } from '../components/fx/TiltCard';
 import { Pencil, Plus, Search } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -60,18 +62,20 @@ export default function MembersPage() {
         <EmptyState title="Không tìm thấy thành viên" description="Thử đổi từ khóa hoặc bộ lọc vai trò." />
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {usersQuery.data?.items.map((member) => (
-            <article key={member.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md">
+          {usersQuery.data?.items.map((member, index) => (
+            <Reveal key={member.id} index={index}>
+            <TiltCard className="rounded-2xl border border-white/[0.08] bg-card hover:border-white/20">
+            <article className="p-5">
               <div className="flex items-start gap-3">
                 <Avatar name={member.name} avatarUrl={member.avatarUrl} size="md" />
                 <div className="min-w-0 flex-1">
-                  <Link to={`/members/${member.id}`} className="block truncate font-semibold text-slate-900 hover:text-brand-700">
+                  <Link to={`/members/${member.id}`} className="block truncate font-semibold text-slate-900 hover:text-white/70">
                     {member.name}
                   </Link>
                   <p className="truncate text-xs text-slate-500">{member.email}</p>
                   <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                    <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600">{ROLE_LABEL[member.role]}</span>
-                    {!member.isActive && <span className="rounded bg-red-50 px-1.5 py-0.5 text-[11px] font-medium text-red-700">Đã vô hiệu hóa</span>}
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">{ROLE_LABEL[member.role]}</span>
+                    {!member.isActive && <span className="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700">Đã vô hiệu hóa</span>}
                   </div>
                 </div>
                 {isAdmin && (
@@ -84,6 +88,8 @@ export default function MembersPage() {
                 <StatChips stats={member.stats} />
               </div>
             </article>
+            </TiltCard>
+            </Reveal>
           ))}
         </div>
       )}

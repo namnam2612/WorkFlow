@@ -120,7 +120,7 @@ export default function TasksPage() {
         }
       />
 
-      <div className="mb-4 space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="mb-4 space-y-3 rounded-xl border border-slate-200 bg-card p-4 shadow-sm">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
           <input value={searchInput} onChange={(e) => onSearchChange(e.target.value)} placeholder="Tìm theo tiêu đề hoặc mô tả..." className={`${inputClass} pl-9`} aria-label="Tìm công việc" />

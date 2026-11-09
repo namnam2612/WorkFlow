@@ -11,15 +11,27 @@ export const STATUS_META: Record<TaskStatus, { label: string; badge: string; dot
   blocked: { label: 'Bị chặn', badge: 'bg-rose-50 text-rose-700 ring-rose-200', dot: 'bg-rose-500', column: 'border-rose-400' },
 };
 
-// Bảng màu phân loại đã qua validate_palette (nền sáng) — dùng đúng thứ tự cố định, không xoay vòng.
-// Kèm mã hóa phụ (legend, nhãn số, khe 2px, tooltip, bảng) vì vàng < 3:1 trên nền sáng.
-export const STATUS_CHART_COLORS: Record<TaskStatus, string> = {
-  todo: '#2a78d6',
-  in_progress: '#eda100',
-  review: '#6250d6',
-  done: '#008300',
-  blocked: '#e34948',
+// Màu trạng thái trên nền tối (màu chỉ mang ý nghĩa trạng thái). Kèm mã hóa phụ (legend, nhãn số, khe 2px, tooltip, bảng).
+const STATUS_CHART_COLORS_DARK: Record<TaskStatus, string> = {
+  todo: '#8cc0ff',
+  in_progress: '#ffd561',
+  review: '#c5a6ff',
+  done: '#7ee2a8',
+  blocked: '#ff8a8a',
 };
+
+// Bản cho nền sáng: đậm hơn để đủ tương phản trên nền trắng
+const STATUS_CHART_COLORS_LIGHT: Record<TaskStatus, string> = {
+  todo: '#2272e6',
+  in_progress: '#e0a100',
+  review: '#7048e8',
+  done: '#2f9e44',
+  blocked: '#e03131',
+};
+
+export function statusChartColors(theme: 'dark' | 'light'): Record<TaskStatus, string> {
+  return theme === 'light' ? STATUS_CHART_COLORS_LIGHT : STATUS_CHART_COLORS_DARK;
+}
 
 export const PRIORITY_META: Record<Priority, { label: string; badge: string }> = {
   low: { label: 'Thấp', badge: 'bg-slate-100 text-slate-600 ring-slate-200' },

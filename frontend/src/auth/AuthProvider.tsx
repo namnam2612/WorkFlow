@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { api, ApiError, AUTH_LOGOUT_EVENT } from '../lib/api';
-import { tokenStore } from '../lib/tokens';
+import { TOKEN_STORAGE_KEYS, tokenStore } from '../lib/tokens';
 import type { AuthResult, User } from '../types/api';
 import { AuthContext, type AuthContextValue } from './auth-context';
 
@@ -38,6 +38,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
     window.addEventListener(AUTH_LOGOUT_EVENT, onForcedLogout);
     return () => window.removeEventListener(AUTH_LOGOUT_EVENT, onForcedLogout);
+  }, [queryClient]);
+
+  // Token dùng chung giữa các tab (localStorage). Khi tab khác đăng nhập/đăng xuất, đồng bộ lại tab này
+  // để giao diện luôn khớp tài khoản đang dùng token — tránh tab Admin hiển thị dữ liệu/thông báo của Member (và ngược lại).
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== null && !TOKEN_STORAGE_KEYS.includes(event.key)) return;
+      queryClient.clear();
+      if (!tokenStore.getAccess() && !tokenStore.getRefresh()) {
+        setUser(null);
+        return;
+      }
+      api
+        .get<User>('/auth/me')
+        .then(setUser)
+        .catch(() => setUser(null));
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
   }, [queryClient]);
 
   const login = useCallback(
