@@ -1,6 +1,6 @@
 import { PrismaClient, Priority, Role, TaskStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { clearAttachments, makePdf, makePng, writeSample } from './seed-files';
+import { clearAttachments, makeDocx, makePdf, makePng, makeXlsx, writeSample } from './seed-files';
 
 const prisma = new PrismaClient();
 
@@ -213,6 +213,20 @@ async function main(): Promise<void> {
           { name: `Yêu cầu - ${t.title}.pdf`, mime: 'application/pdf', data: makePdf(`Yeu cau: ${t.title}`), by: uploaders[1], ago: 6 },
           { name: `Ảnh minh họa ${index + 1}.png`, mime: 'image/png', data: makePng(320, 220, index * 40), by: uploaders[0], ago: 3 },
           { name: `Ghi chú họp ${index + 1}.txt`, mime: 'text/plain', data: Buffer.from(`Ghi chú họp cho "${t.title}"\n- Thống nhất phạm vi\n- Phân công người thực hiện\n`, 'utf8'), by: uploaders[2], ago: 1 },
+          {
+            name: `Báo cáo tiến độ ${index + 1}.docx`,
+            mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            data: makeDocx(`Báo cáo tiến độ: ${t.title}`, ['Tình hình: đang triển khai đúng kế hoạch.', 'Rủi ro: phụ thuộc vào đối tác bên ngoài.', 'Đề xuất: họp nhanh vào đầu tuần sau.']),
+            by: uploaders[1],
+            ago: 5,
+          },
+          {
+            name: `Bảng kế hoạch ${index + 1}.xlsx`,
+            mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            data: makeXlsx('Kế hoạch', [['Hạng mục', 'Người phụ trách', 'Số giờ'], ['Thiết kế', 'Cường', 8], ['Lập trình', 'Dung', 16], ['Kiểm thử', 'Em', 6]]),
+            by: uploaders[2],
+            ago: 4,
+          },
           { name: `Số liệu ${index + 1}.csv`, mime: 'text/csv', data: Buffer.from('Hạng mục,Số giờ\nThiết kế,8\nLập trình,16\nKiểm thử,6\n', 'utf8'), by: uploaders[0], ago: 2 },
         ];
         const take = index % 2 === 0 ? samples : samples.slice(0, 2);

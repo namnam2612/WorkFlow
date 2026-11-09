@@ -178,11 +178,17 @@ export interface Attachment {
   canDelete: boolean;
 }
 
+/** Số file theo loại (cùng bộ lọc trừ loại); `file` = mọi thứ không phải ảnh */
+export type AttachmentCounts = Record<FileCategory | 'all' | 'file', number>;
+
+export type AttachmentPage = Paginated<Attachment> & { counts: AttachmentCounts };
+
 export interface AttachmentFilters {
   search?: string;
   projectId?: number;
   uploaderId?: number;
-  type?: FileCategory;
+  /** `file` = mọi thứ không phải ảnh (tab Tài liệu) */
+  type?: FileCategory | 'file';
   from?: string;
   to?: string;
   sortBy?: 'createdAt' | 'name' | 'size';

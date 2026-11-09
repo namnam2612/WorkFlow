@@ -1,7 +1,10 @@
 import { extname } from 'path';
 
 export type FileCategory = 'image' | 'pdf' | 'document' | 'spreadsheet' | 'other';
+/** `file` = mọi thứ không phải ảnh (tab "Tài liệu" trong Kho tài liệu) */
+export type FileTypeFilter = FileCategory | 'file';
 export const FILE_CATEGORIES: readonly FileCategory[] = ['image', 'pdf', 'document', 'spreadsheet', 'other'];
+export const FILE_TYPE_FILTERS: readonly FileTypeFilter[] = [...FILE_CATEGORIES, 'file'];
 
 interface TypeInfo {
   mime: string;
@@ -66,9 +69,23 @@ export function allKnownNonOtherMimes(): string[] {
   return (['image', 'pdf', 'document', 'spreadsheet'] as const).flatMap(mimesOfCategory);
 }
 
-/** Chỉ ảnh raster và PDF mới được xem trực tiếp (SVG có thể chứa script nên không cho) */
-const PREVIEWABLE = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf']);
+const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+const TEXT_PREVIEW = new Set(['text/plain', 'text/markdown', 'text/csv']);
+
+/**
+ * Xem trực tiếp trên web: ảnh raster (SVG bị loại vì có thể chứa script), PDF, văn bản thuần/Markdown/CSV,
+ * Word (.docx) và Excel (.xlsx). Giao diện tự dựng bản xem trước ở trình duyệt, không gửi file cho dịch vụ bên thứ ba.
+ */
+const PREVIEWABLE = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf', DOCX, XLSX, ...TEXT_PREVIEW]);
 export const isPreviewableMime = (mime: string): boolean => PREVIEWABLE.has(mime);
+
+/** Nội dung thật có khớp loại khai báo không (không tin đuôi file). `head` = vài trăm byte đầu. */
+export function matchesPreviewSignature(mime: string, head: Buffer): boolean {
+  if (TEXT_PREVIEW.has(mime)) return head.length > 0 && !head.includes(0); // văn bản thuần không chứa byte NUL
+  if (mime === DOCX || mime === XLSX) return head.length >= 4 && head[0] === 0x50 && head[1] === 0x4b && head[2] === 0x03 && head[3] === 0x04; // ZIP
+  return sniffMime(head) === mime;
+}
 
 /** Nhận diện nội dung thực thi bằng chữ ký (phòng trường hợp đổi đuôi file) */
 export function looksExecutable(buf: Buffer): boolean {

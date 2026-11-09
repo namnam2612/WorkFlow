@@ -48,6 +48,25 @@ export function iconFor(mime: string): LucideIcon {
   }
 }
 
+export type PreviewKind = 'image' | 'pdf' | 'text' | 'csv' | 'docx' | 'xlsx';
+
+const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+/** Cách dựng bản xem trước theo loại file; null = không xem trực tiếp được (khớp danh sách ở backend) */
+export function previewKind(mime: string): PreviewKind | null {
+  if (['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(mime)) return 'image';
+  if (mime === 'application/pdf') return 'pdf';
+  if (mime === 'text/plain' || mime === 'text/markdown') return 'text';
+  if (mime === 'text/csv') return 'csv';
+  if (mime === DOCX_MIME) return 'docx';
+  if (mime === XLSX_MIME) return 'xlsx';
+  return null;
+}
+
+/** Word/Excel được dựng ngay trong trình duyệt nên giới hạn dung lượng để không treo trang */
+export const MAX_OFFICE_PREVIEW_BYTES = 10 * 1024 * 1024;
+
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(bytes < 10 * 1024 ? 1 : 0)} KB`;

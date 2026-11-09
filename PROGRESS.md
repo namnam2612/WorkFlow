@@ -38,6 +38,7 @@
 - [x] Prisma `Attachment` (+ migration), `StorageService` (local, UUID, `UPLOAD_DIR`), Multer 20MB/file (`MAX_UPLOAD_SIZE`), chặn file thực thi
 - [x] API upload/list theo task, Kho tài liệu `GET /attachments` (tìm tên, dự án, người gửi, loại, ngày, sắp xếp, phân trang), download (tên tiếng Việt), preview ảnh/PDF, xóa; phân quyền theo dự án; ActivityLog
 - [x] Frontend: khu "File đính kèm" trong chi tiết task (kéo thả, tiến trình), trang Kho tài liệu (bảng/lưới, link tới task, "Người gửi"), xem trước trong modal, số file 📎 trên Kanban và danh sách task
+- [x] Kho tài liệu tách tab Tài liệu/Ảnh, nhóm theo ngày; xem trước thêm txt/md/csv/docx/xlsx
 - [x] Seed có file mẫu do nhiều người gửi; test phân quyền AttachmentsService; docker volume `uploads_data`, nginx cho phép body lớn
 
 ## Quyết định thiết kế

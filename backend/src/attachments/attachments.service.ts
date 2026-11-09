@@ -13,6 +13,8 @@ import { RealtimeService } from '../realtime/realtime.service';
 import { ListAttachmentsQueryDto } from './dto/list-attachments-query.dto';
 import {
   allKnownNonOtherMimes,
+  categoryOfMime,
+  FileCategory,
   BLOCKED_EXTENSIONS,
   extensionOf,
   isPreviewableMime,
@@ -20,7 +22,7 @@ import {
   mimeFor,
   mimesOfCategory,
   sanitizeFileName,
-  sniffMime,
+  matchesPreviewSignature,
 } from './file-types';
 import { StorageService } from './storage.service';
 
@@ -39,6 +41,11 @@ const attachmentInclude = {
 } satisfies Prisma.AttachmentInclude;
 
 type AttachmentRow = Prisma.AttachmentGetPayload<{ include: typeof attachmentInclude }>;
+
+/** Số file theo loại; `file` = mọi thứ không phải ảnh */
+export type AttachmentCounts = Record<FileCategory | 'all' | 'file', number>;
+
+export type AttachmentPage = Paginated<ReturnType<AttachmentsService['toView']>> & { counts: AttachmentCounts };
 
 @Injectable()
 export class AttachmentsService {
@@ -68,19 +75,24 @@ export class AttachmentsService {
     return rows.map((row) => this.toView(user, row));
   }
 
-  /** Kho tài liệu: mọi file thuộc các dự án người dùng được xem */
-  async list(user: AuthUser, query: ListAttachmentsQueryDto): Promise<Paginated<ReturnType<AttachmentsService['toView']>>> {
-    const filters: Prisma.AttachmentWhereInput[] = [{ task: { project: this.access.visibleProjectWhere(user) } }];
-    if (query.search) filters.push({ originalName: { contains: query.search } });
-    if (query.projectId !== undefined) filters.push({ task: { projectId: query.projectId } });
-    if (query.uploaderId !== undefined) filters.push({ uploaderId: query.uploaderId });
+  /**
+   * Kho tài liệu: mọi file thuộc các dự án người dùng được xem.
+   * Kèm `counts` theo loại (áp dụng cùng bộ lọc, trừ bộ lọc loại) để hiển thị số trên các tab Ảnh / Tài liệu.
+   */
+  async list(user: AuthUser, query: ListAttachmentsQueryDto): Promise<AttachmentPage> {
+    const base: Prisma.AttachmentWhereInput[] = [{ task: { project: this.access.visibleProjectWhere(user) } }];
+    if (query.search) base.push({ originalName: { contains: query.search } });
+    if (query.projectId !== undefined) base.push({ task: { projectId: query.projectId } });
+    if (query.uploaderId !== undefined) base.push({ uploaderId: query.uploaderId });
+    if (query.from || query.to) base.push({ createdAt: { ...(query.from ? { gte: query.from } : {}), ...(query.to ? { lte: query.to } : {}) } });
+    const filters = [...base];
     if (query.type === 'other') filters.push({ mimeType: { notIn: allKnownNonOtherMimes() } });
+    else if (query.type === 'file') filters.push({ mimeType: { notIn: mimesOfCategory('image') } });
     else if (query.type) filters.push({ mimeType: { in: mimesOfCategory(query.type) } });
-    if (query.from || query.to) filters.push({ createdAt: { ...(query.from ? { gte: query.from } : {}), ...(query.to ? { lte: query.to } : {}) } });
     const where: Prisma.AttachmentWhereInput = { AND: filters };
 
     const sortField = query.sortBy === 'name' ? 'originalName' : query.sortBy;
-    const [rows, total] = await Promise.all([
+    const [rows, total, grouped] = await Promise.all([
       this.prisma.attachment.findMany({
         where,
         orderBy: [{ [sortField]: query.order }, { id: query.order }],
@@ -89,13 +101,29 @@ export class AttachmentsService {
         include: attachmentInclude,
       }),
       this.prisma.attachment.count({ where }),
+      this.prisma.attachment.groupBy({ by: ['mimeType'], where: { AND: base }, _count: { _all: true } }),
     ]);
-    return toPaginated(
-      rows.map((row) => this.toView(user, row)),
-      total,
-      query.page,
-      query.pageSize,
-    );
+    return {
+      ...toPaginated(
+        rows.map((row) => this.toView(user, row)),
+        total,
+        query.page,
+        query.pageSize,
+      ),
+      counts: this.countByType(grouped),
+    };
+  }
+
+  private countByType(grouped: { mimeType: string; _count: { _all: number } }[]): AttachmentCounts {
+    const counts: AttachmentCounts = { all: 0, file: 0, image: 0, pdf: 0, document: 0, spreadsheet: 0, other: 0 };
+    for (const group of grouped) {
+      const n = group._count._all;
+      const category = categoryOfMime(group.mimeType);
+      counts.all += n;
+      counts[category] += n;
+      if (category !== 'image') counts.file += n;
+    }
+    return counts;
   }
 
   /** Mở luồng tải về. Trả về cả metadata để controller đặt header. */
@@ -110,11 +138,11 @@ export class AttachmentsService {
     if (!isPreviewableMime(row.mimeType)) throw new BadRequestException('Loại file này không hỗ trợ xem trực tiếp, hãy tải về');
     let head: Buffer;
     try {
-      head = await this.storage.readHead(row.path, 16);
+      head = await this.storage.readHead(row.path, 512);
     } catch {
       throw new NotFoundException('File không còn trên máy chủ');
     }
-    if (sniffMime(head) !== row.mimeType) throw new BadRequestException('Nội dung file không khớp định dạng, hãy tải về');
+    if (!matchesPreviewSignature(row.mimeType, head)) throw new BadRequestException('Nội dung file không khớp định dạng, hãy tải về');
     return { stream: await this.openStream(row), name: row.originalName, mime: row.mimeType, size: row.size };
   }
 

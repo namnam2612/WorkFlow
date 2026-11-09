@@ -69,6 +69,12 @@ describe('AttachmentsService', () => {
     prisma.attachment.findUnique.mockResolvedValue(row());
     prisma.attachment.findMany.mockResolvedValue([row()]);
     prisma.attachment.count.mockResolvedValue(1);
+    prisma.attachment.groupBy.mockResolvedValue([
+      { mimeType: 'image/png', _count: { _all: 3 } },
+      { mimeType: 'application/pdf', _count: { _all: 2 } },
+      { mimeType: 'text/csv', _count: { _all: 1 } },
+      { mimeType: 'application/zip', _count: { _all: 4 } },
+    ]);
     prisma.attachment.create.mockImplementation(({ data }: { data: Record<string, unknown> }) => Promise.resolve(row({ id: 6, ...data })));
     prisma.attachment.delete.mockResolvedValue({});
 
@@ -119,14 +125,47 @@ describe('AttachmentsService', () => {
       await expect(service.openPreview(teammate, 5)).resolves.toMatchObject({ mime: 'application/pdf' });
     });
 
-    it('từ chối loại không xem được (docx, svg...) và file có đuôi giả (nội dung không khớp)', async () => {
-      prisma.attachment.findUnique.mockResolvedValue(row({ mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }));
-      await expect(service.openPreview(teammate, 5)).rejects.toBeInstanceOf(BadRequestException);
+    it('từ chối loại không xem được (doc cũ, pptx, zip, svg...) và file có đuôi giả (nội dung không khớp)', async () => {
+      for (const mimeType of ['application/msword', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/zip']) {
+        prisma.attachment.findUnique.mockResolvedValue(row({ mimeType }));
+        await expect(service.openPreview(teammate, 5)).rejects.toBeInstanceOf(BadRequestException);
+      }
       prisma.attachment.findUnique.mockResolvedValue(row({ mimeType: 'image/svg+xml' }));
       await expect(service.openPreview(teammate, 5)).rejects.toBeInstanceOf(BadRequestException);
       // khai báo là png nhưng nội dung thật là PDF
       prisma.attachment.findUnique.mockResolvedValue(row({ mimeType: 'image/png' }));
       await expect(service.openPreview(teammate, 5)).rejects.toBeInstanceOf(BadRequestException);
+    });
+  });
+
+  describe('xem trực tiếp văn bản / Word / Excel', () => {
+    const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    const ZIP = Buffer.from([0x50, 0x4b, 0x03, 0x04, 0, 0, 0, 0]);
+
+    it.each([
+      ['text/plain', Buffer.from('xin chào', 'utf8')],
+      ['text/csv', Buffer.from('a,b\n1,2\n')],
+      [DOCX, ZIP],
+      [XLSX, ZIP],
+    ])('cho xem %s khi nội dung khớp', async (mimeType, head) => {
+      prisma.attachment.findUnique.mockResolvedValue(row({ mimeType }));
+      storage.readHead.mockResolvedValue(head);
+      await expect(service.openPreview(teammate, 5)).resolves.toMatchObject({ mime: mimeType });
+    });
+
+    it('từ chối .txt chứa nhị phân (byte NUL) và .docx/.xlsx không phải ZIP', async () => {
+      prisma.attachment.findUnique.mockResolvedValue(row({ mimeType: 'text/plain' }));
+      storage.readHead.mockResolvedValue(Buffer.from([0x68, 0x00, 0x69]));
+      await expect(service.openPreview(teammate, 5)).rejects.toBeInstanceOf(BadRequestException);
+      prisma.attachment.findUnique.mockResolvedValue(row({ mimeType: DOCX }));
+      storage.readHead.mockResolvedValue(Buffer.from('không phải zip'));
+      await expect(service.openPreview(teammate, 5)).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('người ngoài dự án vẫn không xem trước được các loại này', async () => {
+      prisma.attachment.findUnique.mockResolvedValue(row({ mimeType: DOCX }));
+      await expect(service.openPreview(outsider, 5)).rejects.toBeInstanceOf(ForbiddenException);
     });
   });
 
@@ -255,6 +294,20 @@ describe('AttachmentsService', () => {
         ]),
       );
       expect((callArg(prisma.attachment.findMany) as { orderBy: unknown[] }).orderBy[0]).toEqual({ originalName: 'asc' });
+    });
+
+    it('tab Tài liệu (type=file) = mọi thứ không phải ảnh', async () => {
+      await service.list(uploader, query({ type: 'file' }));
+      const filter = whereOf().AND.find((f) => 'mimeType' in f) as { mimeType: { notIn: string[] } };
+      expect(filter.mimeType.notIn).toEqual(expect.arrayContaining(['image/png', 'image/jpeg']));
+      expect(filter.mimeType.notIn).not.toContain('application/pdf');
+    });
+
+    it('trả kèm số file theo loại (không bị ảnh hưởng bởi bộ lọc loại)', async () => {
+      const result = await service.list(uploader, query({ type: 'pdf' }));
+      expect(result.counts).toEqual({ all: 10, image: 3, file: 7, pdf: 2, document: 0, spreadsheet: 1, other: 4 });
+      const groupWhere = (callArg(prisma.attachment.groupBy) as { where: { AND: Record<string, unknown>[] } }).where.AND;
+      expect(groupWhere.some((f) => 'mimeType' in f)).toBe(false);
     });
 
     it('loại "other" = mọi mime không thuộc ảnh/PDF/văn bản/bảng tính', async () => {

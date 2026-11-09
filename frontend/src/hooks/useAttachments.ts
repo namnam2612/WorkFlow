@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { api, fetchBlob, uploadFiles } from '../lib/api';
-import type { Attachment, AttachmentFilters, Paginated } from '../types/api';
+import type { Attachment, AttachmentFilters, AttachmentPage } from '../types/api';
 import { invalidateTaskRelated } from './useTasks';
 
 export function useTaskAttachments(taskId: number) {
@@ -12,7 +12,7 @@ export function useTaskAttachments(taskId: number) {
 export function useAttachmentList(filters: AttachmentFilters) {
   return useQuery({
     queryKey: ['attachments', 'list', filters],
-    queryFn: () => api.get<Paginated<Attachment>>('/attachments', { ...filters }),
+    queryFn: () => api.get<AttachmentPage>('/attachments', { ...filters }),
     placeholderData: keepPreviousData,
   });
 }
@@ -81,6 +81,33 @@ export function usePreviewUrl(attachmentId: number | null, enabled = true) {
   const current = state && state.id === attachmentId ? state : null;
   return {
     url: current && 'url' in current ? current.url : null,
+    error: current && 'error' in current ? current.error : null,
+    loading: attachmentId !== null && enabled && current === null,
+  };
+}
+
+/** Tải nội dung bản xem trước (đã xác thực) dưới dạng Blob để tự dựng khung xem ở trình duyệt */
+export function usePreviewBlob(attachmentId: number | null, enabled = true) {
+  const [state, setState] = useState<{ id: number; blob: Blob } | { id: number; error: Error } | null>(null);
+
+  useEffect(() => {
+    if (attachmentId === null || !enabled) return;
+    let cancelled = false;
+    fetchBlob(`/attachments/${attachmentId}/preview`)
+      .then((blob) => {
+        if (!cancelled) setState({ id: attachmentId, blob });
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) setState({ id: attachmentId, error: error instanceof Error ? error : new Error('Không xem trước được') });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [attachmentId, enabled]);
+
+  const current = state && state.id === attachmentId ? state : null;
+  return {
+    blob: current && 'blob' in current ? current.blob : null,
     error: current && 'error' in current ? current.error : null,
     loading: attachmentId !== null && enabled && current === null,
   };

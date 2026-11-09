@@ -2,7 +2,7 @@ import { Transform, Type } from 'class-transformer';
 import { IsDate, IsIn, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { trimString } from '../../common/utils/transforms';
-import { FILE_CATEGORIES, FileCategory } from '../file-types';
+import { FILE_TYPE_FILTERS, FileTypeFilter } from '../file-types';
 
 export const ATTACHMENT_SORT_FIELDS = ['createdAt', 'name', 'size'] as const;
 
@@ -27,8 +27,8 @@ export class ListAttachmentsQueryDto extends PaginationQueryDto {
   uploaderId?: number;
 
   @IsOptional()
-  @IsIn(FILE_CATEGORIES, { message: 'Loại file không hợp lệ' })
-  type?: FileCategory;
+  @IsIn(FILE_TYPE_FILTERS, { message: 'Loại file không hợp lệ' })
+  type?: FileTypeFilter;
 
   @IsOptional()
   @Type(() => Date)

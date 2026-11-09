@@ -4,7 +4,7 @@ type MockFn = jest.Mock;
 
 export interface PrismaMock {
   user: Record<'findUnique' | 'findUniqueOrThrow' | 'update' | 'findMany' | 'create', MockFn>;
-  attachment: Record<'findMany' | 'findUnique' | 'create' | 'delete' | 'count', MockFn>;
+  attachment: Record<'findMany' | 'findUnique' | 'create' | 'delete' | 'count' | 'groupBy', MockFn>;
   userAvatar: Record<'findUnique' | 'upsert' | 'deleteMany', MockFn>;
   refreshToken: Record<'create' | 'findUnique' | 'updateMany', MockFn>;
   comment: Record<'findMany' | 'create' | 'findUnique' | 'delete', MockFn>;
@@ -18,7 +18,7 @@ export interface PrismaMock {
 export function createPrismaMock(): PrismaMock {
   const mock: PrismaMock = {
     user: { findUnique: jest.fn(), findUniqueOrThrow: jest.fn(), update: jest.fn(), findMany: jest.fn(), create: jest.fn() },
-    attachment: { findMany: jest.fn(), findUnique: jest.fn(), create: jest.fn(), delete: jest.fn(), count: jest.fn() },
+    attachment: { findMany: jest.fn(), findUnique: jest.fn(), create: jest.fn(), delete: jest.fn(), count: jest.fn(), groupBy: jest.fn() },
     userAvatar: { findUnique: jest.fn(), upsert: jest.fn(), deleteMany: jest.fn() },
     refreshToken: { create: jest.fn(), findUnique: jest.fn(), updateMany: jest.fn() },
     comment: { findMany: jest.fn(), create: jest.fn(), findUnique: jest.fn(), delete: jest.fn() },
