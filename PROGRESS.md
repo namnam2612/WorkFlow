@@ -11,12 +11,12 @@
 - [x] Frontend: đăng nhập, tự refresh token (single-flight), layout chung, route bảo vệ
 
 ## Giai đoạn 3 — CRUD
-- [ ] User, Project, ProjectMember
-- [ ] Task + subtask, danh sách có lọc/phân trang
+- [x] Backend: User, Project, ProjectMember
+- [x] Backend: Task + subtask, danh sách có lọc/sắp xếp/phân trang, board, move
 - [ ] Frontend: Dự án, Danh sách task, Thành viên
 
 ## Giai đoạn 4 — Kanban
-- [ ] API status + position
+- [x] API status + position (PATCH /tasks/:id/move, đánh số lại cột trong transaction)
 - [ ] Frontend dnd-kit, optimistic update, lọc người/ưu tiên
 
 ## Giai đoạn 5 — Tương tác
@@ -44,3 +44,8 @@
 - Người dùng bị vô hiệu hóa (`isActive=false`) thay vì xóa cứng, để giữ lịch sử task/bình luận.
 - Refresh token lưu dạng hash SHA-256 trong bảng `RefreshToken` (rotate mỗi lần refresh, thu hồi khi logout).
 - User MySQL `taskflow` được cấp quyền shadow DB (`docker/mysql-init`) để chạy `prisma migrate dev`.
+- Subtask chỉ 1 cấp. Thống kê/dashboard/danh sách mặc định chỉ tính task cấp cao (subtask xem trong chi tiết task cha; danh sách có tùy chọn `includeSubtasks`).
+- Admin tạo dự án thì không tự thành thành viên (quản lý bằng quyền hệ thống); leader tạo dự án thì tự là thành viên.
+- Member xem được danh sách/thống kê của người cùng dự án; thống kê chỉ tính trong các dự án người xem được phép thấy.
+- Sắp xếp `deadline` tăng dần luôn đẩy task không có deadline xuống cuối (MySQL mặc định xếp NULL lên đầu).
+- Đăng nhập giới hạn 10 lần/phút/IP (Throttler); refresh token tái sử dụng sẽ thu hồi toàn bộ phiên của user.
