@@ -1,4 +1,4 @@
-import clsx from 'clsx';
+import { chipClass } from '../lib/styles';
 import { CheckCheck } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -30,7 +30,7 @@ export default function NotificationsPage() {
         setUnreadOnly(value);
         setPage(1);
       }}
-      className={clsx('rounded-lg px-3 py-1.5 text-sm font-medium transition', unreadOnly === value ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100')}
+      className={chipClass(unreadOnly === value)}
     >
       {label}
     </button>
@@ -61,7 +61,7 @@ export default function NotificationsPage() {
       ) : (
         listQuery.data && (
           <>
-            <div className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-card shadow-sm">
               {listQuery.data.items.map((notification) => (
                 <NotificationItem key={notification.id} notification={notification} onClick={() => open(notification)} />
               ))}

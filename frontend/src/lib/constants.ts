@@ -11,14 +11,13 @@ export const STATUS_META: Record<TaskStatus, { label: string; badge: string; dot
   blocked: { label: 'Bị chặn', badge: 'bg-rose-50 text-rose-700 ring-rose-200', dot: 'bg-rose-500', column: 'border-rose-400' },
 };
 
-// Bảng màu phân loại đã qua validate_palette (nền sáng) — dùng đúng thứ tự cố định, không xoay vòng.
-// Kèm mã hóa phụ (legend, nhãn số, khe 2px, tooltip, bảng) vì vàng < 3:1 trên nền sáng.
+// Màu trạng thái trên nền tối (màu chỉ mang ý nghĩa trạng thái). Kèm mã hóa phụ (legend, nhãn số, khe 2px, tooltip, bảng).
 export const STATUS_CHART_COLORS: Record<TaskStatus, string> = {
-  todo: '#2a78d6',
-  in_progress: '#eda100',
-  review: '#6250d6',
-  done: '#008300',
-  blocked: '#e34948',
+  todo: '#8cc0ff',
+  in_progress: '#ffd561',
+  review: '#c5a6ff',
+  done: '#7ee2a8',
+  blocked: '#ff8a8a',
 };
 
 export const PRIORITY_META: Record<Priority, { label: string; badge: string }> = {

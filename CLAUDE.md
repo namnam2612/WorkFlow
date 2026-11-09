@@ -38,7 +38,8 @@ Máy dev có MySQL riêng ở cổng 3306 — KHÔNG đụng vào; MySQL của d
 ## Lưu ý khi sửa code
 - Đổi `schema.prisma` → `npm run migrate:dev -- --name <ten>` (cần quyền shadow DB, đã cấp trong `docker/mysql-init`).
 - Phân quyền theo dự án/task nằm ở `ProjectAccessService` + `TasksService`; thêm endpoint mới phải kiểm tra ở backend và có test.
-- Frontend: không dùng `eslint-disable`; màu biểu đồ theo bảng đã validate (`lib/constants.ts`).
+- Frontend: không dùng `eslint-disable`; màu trạng thái/biểu đồ ở `lib/constants.ts`.
+- Giao diện: nền tối đơn sắc (cảm hứng Lusion), trắng là màu nhấn. Token màu + keyframes ở `frontend/src/index.css` (thang `slate/brand/red/...` của Tailwind được ánh xạ lại sang bảng tối nên class cũ vẫn đúng). Hiệu ứng ở `components/fx/` (Reveal, TiltCard, ParticleBackground, LoadingScreen, HeroScene/three.js); tôn trọng `prefers-reduced-motion`.
 
 ## Tài liệu
 - `PROGRESS.md`: checklist tiến độ + "Quyết định thiết kế".

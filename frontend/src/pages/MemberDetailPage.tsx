@@ -50,7 +50,7 @@ export default function MemberDetailPage() {
         <ArrowLeft className="h-4 w-4" /> Danh sách thành viên
       </Link>
 
-      <div className="mb-6 flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="mb-6 flex items-center gap-4 rounded-xl border border-slate-200 bg-card p-5 shadow-sm">
         <Avatar name={member.name} avatarUrl={member.avatarUrl} size="lg" />
         <div className="min-w-0">
           <h1 className="truncate text-xl font-semibold text-slate-900">{member.name}</h1>
@@ -70,7 +70,7 @@ export default function MemberDetailPage() {
             type="button"
             onClick={() => setTab(t.key)}
             className={clsx(
-              'rounded-xl border bg-white p-4 text-left shadow-sm transition',
+              'rounded-xl border bg-card p-4 text-left shadow-sm transition',
               tab === t.key ? 'border-brand-500 ring-2 ring-brand-500/20' : 'border-slate-200 hover:border-slate-300',
             )}
           >

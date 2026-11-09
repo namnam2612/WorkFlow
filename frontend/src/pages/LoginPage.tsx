@@ -1,10 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CheckSquare } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { useAuth } from '../auth/useAuth';
+import { AuthShell } from '../components/auth/AuthShell';
 import { Button } from '../components/ui/Button';
 import { Field } from '../components/ui/Field';
 import { InlineError } from '../components/ui/States';
@@ -49,57 +49,51 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-full items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-sky-50 px-4 py-10">
-      <div className="w-full max-w-md">
-        <div className="mb-8 flex flex-col items-center text-center">
-          <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-600/30">
-            <CheckSquare className="h-6 w-6" />
-          </span>
-          <h1 className="text-2xl font-bold text-slate-900">Đăng nhập TaskFlow</h1>
-          <p className="mt-1 text-sm text-slate-500">Quản lý công việc nhóm rõ ràng, đúng hạn</p>
-        </div>
-
-        <form onSubmit={(event) => void handleSubmit(onSubmit)(event)} noValidate className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <InlineError message={serverError} />
-          <Field label="Email" htmlFor="email" error={errors.email?.message}>
-            <input id="email" type="email" autoComplete="username" placeholder="ban@congty.vn" className={inputClass} {...register('email')} />
-          </Field>
-          <Field label="Mật khẩu" htmlFor="password" error={errors.password?.message}>
-            <input id="password" type="password" autoComplete="current-password" className={inputClass} {...register('password')} />
-          </Field>
-          <Button type="submit" className="w-full" loading={isSubmitting}>
-            Đăng nhập
-          </Button>
-        </form>
-
-        <p className="mt-4 text-center text-sm text-slate-600">
+    <AuthShell
+      eyebrow="Chào mừng trở lại"
+      title="Đăng nhập."
+      footer={
+        <>
           Chưa có tài khoản?{' '}
-          <Link to="/register" className="font-medium text-brand-600 hover:text-brand-700">
+          <Link to="/register" className="link-underline text-white">
             Đăng ký
           </Link>
-        </p>
+        </>
+      }
+    >
+      <form onSubmit={(event) => void handleSubmit(onSubmit)(event)} noValidate className="space-y-4">
+        <InlineError message={serverError} />
+        <Field label="Email" htmlFor="email" error={errors.email?.message}>
+          <input id="email" type="email" autoComplete="username" placeholder="ban@congty.vn" className={inputClass} {...register('email')} />
+        </Field>
+        <Field label="Mật khẩu" htmlFor="password" error={errors.password?.message}>
+          <input id="password" type="password" autoComplete="current-password" className={inputClass} {...register('password')} />
+        </Field>
+        <Button type="submit" size="lg" className="w-full" loading={isSubmitting}>
+          Đăng nhập
+        </Button>
+      </form>
 
-        {import.meta.env.DEV && (
-          <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-white/60 p-3 text-center text-xs text-slate-500">
-            Tài khoản mẫu (mật khẩu <code className="font-semibold">Password123!</code>):
-            <div className="mt-2 flex justify-center gap-2">
-              {DEMO_ACCOUNTS.map((account) => (
-                <button
-                  key={account.email}
-                  type="button"
-                  onClick={() => {
-                    setValue('email', account.email);
-                    setValue('password', 'Password123!');
-                  }}
-                  className="rounded-md bg-slate-100 px-2.5 py-1 font-medium text-slate-700 hover:bg-slate-200"
-                >
-                  {account.label}
-                </button>
-              ))}
-            </div>
+      {import.meta.env.DEV && (
+        <div className="mt-6 border-t border-white/[0.08] pt-4 text-xs text-muted">
+          Tài khoản mẫu (mật khẩu <code className="font-semibold text-white">Password123!</code>):
+          <div className="mt-2 flex flex-wrap gap-2">
+            {DEMO_ACCOUNTS.map((account) => (
+              <button
+                key={account.email}
+                type="button"
+                onClick={() => {
+                  setValue('email', account.email);
+                  setValue('password', 'Password123!');
+                }}
+                className="rounded-full border border-white/[0.08] px-3 py-1 font-medium text-slate-600 transition hover:border-white/25 hover:bg-white/5 hover:text-white"
+              >
+                {account.label}
+              </button>
+            ))}
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      )}
+    </AuthShell>
   );
 }

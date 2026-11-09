@@ -8,9 +8,10 @@ type WorkloadRow = DashboardData['workload'][number];
 
 // Thứ tự xếp chồng cố định: khớp thứ tự màu đã validate
 const STACK_ORDER: TaskStatus[] = ['todo', 'in_progress', 'review', 'done', 'blocked'];
-const SURFACE = '#ffffff';
-const GRID = '#e2e8f0';
-const INK_SECONDARY = '#475569';
+const SURFACE = '#111111';
+const GRID = 'rgba(255,255,255,0.08)';
+const INK_SECONDARY = '#888888';
+const INK_ON_COLOR = '#050505';
 
 interface TooltipEntry {
   dataKey?: string | number;
@@ -21,7 +22,7 @@ function WorkloadTooltip({ active, payload, label }: { active?: boolean; payload
   if (!active || !payload || payload.length === 0) return null;
   const values = new Map(payload.map((p) => [String(p.dataKey), Number(p.value ?? 0)]));
   return (
-    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-lg">
+    <div className="rounded-xl border border-white/[0.14] bg-card px-3 py-2 text-xs shadow-[0_22px_50px_rgba(0,0,0,0.5)]">
       <p className="mb-1 font-semibold text-slate-900">{label}</p>
       {STACK_ORDER.map((status) => (
         <p key={status} className="flex items-center gap-2 text-slate-600">
@@ -90,7 +91,7 @@ export function WorkloadChart({ data }: { data: WorkloadRow[] }) {
               <CartesianGrid horizontal={false} stroke={GRID} strokeDasharray="3 3" />
               <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: INK_SECONDARY }} axisLine={false} tickLine={false} />
               <YAxis type="category" dataKey="name" width={118} tick={{ fontSize: 12, fill: INK_SECONDARY }} axisLine={false} tickLine={false} />
-              <Tooltip cursor={{ fill: 'rgba(148,163,184,0.12)' }} content={<WorkloadTooltip />} />
+              <Tooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} content={<WorkloadTooltip />} />
               {STACK_ORDER.map((status, index) => (
                 <Bar
                   key={status}
@@ -103,7 +104,7 @@ export function WorkloadChart({ data }: { data: WorkloadRow[] }) {
                   radius={index === STACK_ORDER.length - 1 ? [0, 4, 4, 0] : 0}
                   isAnimationActive={false}
                 >
-                  <LabelList dataKey={status} position="center" formatter={(value: unknown) => (Number(value) > 0 ? String(value) : '')} fill="#ffffff" fontSize={11} fontWeight={600} />
+                  <LabelList dataKey={status} position="center" formatter={(value: unknown) => (Number(value) > 0 ? String(value) : '')} fill={INK_ON_COLOR} fontSize={11} fontWeight={600} />
                 </Bar>
               ))}
             </BarChart>

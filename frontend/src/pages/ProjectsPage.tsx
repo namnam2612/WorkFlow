@@ -1,3 +1,5 @@
+import { Reveal } from '../components/fx/Reveal';
+import { TiltCard } from '../components/fx/TiltCard';
 import { AlertTriangle, FolderKanban, KanbanSquare, Plus, Search } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -50,14 +52,16 @@ export default function ProjectsPage() {
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {projectsQuery.data?.map((project) => (
-            <article key={project.id} className="flex flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
+          {projectsQuery.data?.map((project, index) => (
+            <Reveal key={project.id} index={index}>
+            <TiltCard className="rounded-2xl border border-white/[0.08] bg-card hover:border-white/20">
+            <article className="flex h-full flex-col p-5">
               <div className="flex items-start gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-gradient-to-br from-[#1a1a1a] to-[#0d0d0d] text-white/70">
                   <FolderKanban className="h-5 w-5" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <Link to={`/projects/${project.id}`} className="block truncate font-semibold text-slate-900 hover:text-brand-700">
+                  <Link to={`/projects/${project.id}`} className="block truncate font-semibold text-slate-900 hover:text-white/70">
                     {project.name}
                   </Link>
                   <p className="mt-0.5 text-xs text-slate-500">
@@ -74,22 +78,22 @@ export default function ProjectsPage() {
                   </span>
                   <span className="font-semibold text-slate-700">{project.progress}%</span>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-valuenow={project.progress} aria-valuemin={0} aria-valuemax={100}>
-                  <div className="h-full rounded-full bg-brand-600 transition-all" style={{ width: `${project.progress}%` }} />
+                <div className="h-1 overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-valuenow={project.progress} aria-valuemin={0} aria-valuemax={100}>
+                  <div className="h-full rounded-full bg-white transition-all" style={{ width: `${project.progress}%` }} />
                 </div>
               </div>
 
               <div className="mt-4 flex items-center justify-between">
                 <div className="flex -space-x-2">
                   {project.members.slice(0, 5).map((m) => (
-                    <Avatar key={m.id} name={m.name} avatarUrl={m.avatarUrl} size="sm" className="ring-2 ring-white" />
+                    <Avatar key={m.id} name={m.name} avatarUrl={m.avatarUrl} size="sm" className="ring-2 ring-bg" />
                   ))}
                   {project.members.length > 5 && (
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-[11px] font-medium text-slate-600 ring-2 ring-white">+{project.members.length - 5}</span>
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-[11px] font-medium text-slate-600 ring-2 ring-bg">+{project.members.length - 5}</span>
                   )}
                 </div>
                 {project.overdueCount > 0 && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-200">
                     <AlertTriangle className="h-3.5 w-3.5" /> {project.overdueCount} quá hạn
                   </span>
                 )}
@@ -104,6 +108,8 @@ export default function ProjectsPage() {
                 </Button>
               </div>
             </article>
+            </TiltCard>
+            </Reveal>
           ))}
         </div>
       )}

@@ -38,16 +38,16 @@ export function KanbanColumn({ status, totalCount, tasks, canDrag, onAdd }: Kanb
   const { setNodeRef, isOver } = useDroppable({ id: columnDroppableId(status) });
 
   return (
-    <section className="flex w-[288px] shrink-0 flex-col rounded-xl bg-slate-100/80 lg:w-auto lg:min-w-0 lg:flex-1" aria-label={meta.label}>
-      <header className={clsx('flex items-center justify-between rounded-t-xl border-t-4 px-3 py-2.5', meta.column)}>
+    <section className="flex w-[288px] shrink-0 flex-col rounded-2xl border border-white/[0.08] bg-elevated lg:w-auto lg:min-w-0 lg:flex-1" aria-label={meta.label}>
+      <header className={clsx('flex items-center justify-between rounded-t-2xl border-t-2 px-3 py-2.5', meta.column)}>
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-semibold text-slate-800">{meta.label}</h2>
-          <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-slate-600 shadow-sm">
+          <h2 className="text-xs font-semibold uppercase tracking-[1.5px] text-slate-800">{meta.label}</h2>
+          <span className="tabular rounded-full border border-white/[0.08] px-2 py-0.5 text-xs font-medium text-slate-600">
             {tasks.length === totalCount ? totalCount : `${tasks.length}/${totalCount}`}
           </span>
         </div>
         {onAdd && (
-          <button type="button" onClick={onAdd} aria-label={`Thêm công việc vào cột ${meta.label}`} className="rounded-md p-1 text-slate-500 hover:bg-white hover:text-slate-800">
+          <button type="button" onClick={onAdd} aria-label={`Thêm công việc vào cột ${meta.label}`} className="rounded-md p-1 text-slate-500 hover:bg-white/10 hover:text-white">
             <Plus className="h-4 w-4" />
           </button>
         )}

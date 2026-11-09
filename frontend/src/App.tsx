@@ -1,5 +1,8 @@
+import { useState } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { ProtectedRoute } from './auth/ProtectedRoute';
+import { LoadingScreen } from './components/fx/LoadingScreen';
+import { ParticleBackground } from './components/fx/ParticleBackground';
 import { Layout } from './components/layout/Layout';
 import DashboardPage from './pages/DashboardPage';
 import KanbanPage from './pages/KanbanPage';
@@ -15,6 +18,18 @@ import TaskDetailPage from './pages/TaskDetailPage';
 import TasksPage from './pages/TasksPage';
 
 export default function App() {
+  // Trang chỉ vào cảnh (fade-up) sau khi màn hình loading kết thúc
+  const [ready, setReady] = useState(false);
+  return (
+    <>
+      <ParticleBackground />
+      <LoadingScreen onDone={() => setReady(true)} />
+      {ready && <AppRoutes />}
+    </>
+  );
+}
+
+function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />

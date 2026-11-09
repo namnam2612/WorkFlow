@@ -1,7 +1,8 @@
 import clsx from 'clsx';
 import { initials } from '../../lib/format';
 
-const COLORS = ['bg-indigo-500', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500', 'bg-sky-500', 'bg-violet-500', 'bg-teal-500', 'bg-orange-500'];
+// Đơn sắc: các sắc độ xám khác nhau để phân biệt người, không dùng màu thương hiệu
+const COLORS = ['bg-[#2a2a2a]', 'bg-[#333]', 'bg-[#3d3d3d]', 'bg-[#262626]', 'bg-[#474747]', 'bg-[#303030]', 'bg-[#3a3a3a]', 'bg-[#2e2e2e]'];
 
 interface AvatarProps {
   name: string;
@@ -20,7 +21,7 @@ export function Avatar({ name, avatarUrl, size = 'md', className }: AvatarProps)
   return (
     <span
       title={name}
-      className={clsx('inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white', color, SIZES[size], className)}
+      className={clsx('inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white ring-1 ring-inset ring-white/10', color, SIZES[size], className)}
     >
       {initials(name)}
     </span>

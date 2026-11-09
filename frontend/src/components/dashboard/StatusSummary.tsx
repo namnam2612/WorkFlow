@@ -10,12 +10,12 @@ interface StatusSummaryProps {
 
 function Tile({ label, value, accent, icon }: { label: string; value: number; accent?: string; icon?: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-center gap-2 text-sm text-slate-500">
+    <div className="rounded-2xl border border-white/[0.08] bg-card p-4 transition-colors duration-300 hover:border-white/20">
+      <div className="flex items-center gap-2 text-xs uppercase tracking-[1px] text-slate-500">
         {icon ?? <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: accent }} aria-hidden />}
         {label}
       </div>
-      <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900">{value}</p>
+      <p className="mt-2 text-3xl font-bold tracking-tight tabular-nums text-slate-900">{value}</p>
     </div>
   );
 }
@@ -29,16 +29,16 @@ export function StatusSummary({ counts, total, overdueCount }: StatusSummaryProp
         {STATUSES.map((status) => (
           <Tile key={status} label={STATUS_META[status].label} value={counts[status]} accent={STATUS_CHART_COLORS[status]} />
         ))}
-        <div className={`rounded-xl border p-4 shadow-sm ${overdueCount > 0 ? 'border-red-200 bg-red-50' : 'border-slate-200 bg-white'}`}>
-          <div className={`flex items-center gap-2 text-sm ${overdueCount > 0 ? 'text-red-700' : 'text-slate-500'}`}>
+        <div className={`rounded-2xl border p-4 ${overdueCount > 0 ? 'border-red-200 bg-red-50' : 'border-slate-200 bg-card'}`}>
+          <div className={`flex items-center gap-2 text-xs uppercase tracking-[1px] ${overdueCount > 0 ? 'text-red-700' : 'text-slate-500'}`}>
             <AlertTriangle className="h-4 w-4" /> Quá hạn
           </div>
-          <p className={`mt-1 text-2xl font-bold tabular-nums ${overdueCount > 0 ? 'text-red-700' : 'text-slate-900'}`}>{overdueCount}</p>
+          <p className={`mt-2 text-3xl font-bold tracking-tight tabular-nums ${overdueCount > 0 ? 'text-red-700' : 'text-slate-900'}`}>{overdueCount}</p>
         </div>
       </div>
 
       {total > 0 && (
-        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="mt-4 rounded-2xl border border-white/[0.08] bg-card p-4">
           <div className="flex h-3 gap-0.5 overflow-hidden rounded-full" role="img" aria-label={STATUSES.map((s) => `${STATUS_META[s].label}: ${counts[s]}`).join(', ')}>
             {STATUSES.filter((s) => counts[s] > 0).map((status) => (
               <div key={status} title={`${STATUS_META[status].label}: ${counts[status]} (${Math.round((counts[status] / total) * 100)}%)`} style={{ width: `${(counts[status] / total) * 100}%`, backgroundColor: STATUS_CHART_COLORS[status] }} />
