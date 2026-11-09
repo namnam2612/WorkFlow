@@ -40,7 +40,7 @@ Phân quyền được kiểm tra **ở backend** (`JwtAuthGuard` toàn cục, `
 ./dev.sh
 ```
 
-Script tự bật Docker/MySQL, cài thư viện (lần đầu), áp dụng migration, nạp dữ liệu mẫu nếu DB trống, chạy backend (`:3000`) và frontend (`:5173`) rồi mở trình duyệt. Dừng bằng `Ctrl+C` (hoặc nút Stop); MySQL vẫn chạy nền.
+Script tự bật Docker/MySQL, cài thư viện (lần đầu), áp dụng migration, tạo tài khoản admin nếu DB trống, chạy backend (`:3000`) và frontend (`:5173`) rồi mở trình duyệt. Dừng bằng `Ctrl+C` (hoặc nút Stop); MySQL vẫn chạy nền.
 Trong VS Code: mở `dev.sh` và bấm ▶ của **Code Runner** (đã cấu hình trong `.vscode/settings.json`), hoặc `Cmd+Shift+B` để chạy task mặc định.
 
 ## Chạy để phát triển (từng bước thủ công)
@@ -55,7 +55,7 @@ cd backend
 npm install
 cp .env.example .env
 npx prisma migrate deploy      # áp dụng migration
-npm run seed                   # dữ liệu mẫu (xóa dữ liệu cũ rồi nạp lại)
+npm run seed:admin             # tạo tài khoản admin (hoặc: npm run seed = dữ liệu mẫu đầy đủ)
 npm run start:dev              # API: http://localhost:3000/api
 
 # 3) Frontend (terminal khác)
@@ -103,6 +103,9 @@ Dữ liệu mẫu: 3 dự án, 40 task (+ 8 subtask) với deadline đa dạng (
 npm run build        # prisma generate + nest build
 npm run lint
 npm test             # 73 unit test (auth, tasks, users, RolesGuard)
+npm run seed:admin   # đảm bảo có admin (giữ nguyên dữ liệu), cấu hình qua ADMIN_EMAIL/ADMIN_PASSWORD
+npm run reset        # XÓA TOÀN BỘ dữ liệu, chỉ giữ lại admin
+npm run seed         # xóa hết rồi nạp dữ liệu mẫu để dùng thử
 npm run migrate:dev -- --name <ten>   # tạo migration mới khi đổi schema.prisma
 npx prisma studio    # xem dữ liệu
 

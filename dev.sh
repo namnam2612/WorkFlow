@@ -2,7 +2,7 @@
 # Chạy toàn bộ TaskFlow ở chế độ phát triển chỉ bằng MỘT lệnh: ./dev.sh
 # (hoặc mở file này và bấm ▶ của Code Runner). Dừng bằng Ctrl+C / nút Stop.
 #
-# Tự động: bật Docker → MySQL → cài thư viện (lần đầu) → migrate → seed (nếu DB trống)
+# Tự động: bật Docker → MySQL → cài thư viện (lần đầu) → migrate → tạo admin (nếu DB trống)
 #          → chạy backend (:3000) + frontend (:5173) → mở trình duyệt.
 
 set -euo pipefail
@@ -48,7 +48,7 @@ for _ in $(seq 1 60); do
 done
 [[ "$(docker inspect -f '{{.State.Health.Status}}' taskflow-mysql 2>/dev/null)" == "healthy" ]] || fail "MySQL chưa sẵn sàng."
 
-# 3) Backend: cài thư viện, migrate, seed nếu chưa có user
+# 3) Backend: cài thư viện, migrate, tạo admin nếu chưa có user
 cd backend
 [[ -f .env ]] || cp .env.example .env
 [[ -d node_modules ]] || { log "Cài thư viện backend..."; npm install; }
@@ -56,8 +56,8 @@ log "Áp dụng migration..."
 npx prisma migrate deploy
 USERS=$(docker exec taskflow-mysql sh -c 'mysql -N -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "SELECT COUNT(*) FROM User" 2>/dev/null' | tr -d '[:space:]' || echo 0)
 if [[ "${USERS:-0}" == "0" ]]; then
-  log "DB trống — nạp dữ liệu mẫu..."
-  npm run seed
+  log "DB trống — tạo tài khoản admin (admin@taskflow.vn / Password123!)..."
+  npm run seed:admin
 fi
 cd ..
 
@@ -76,7 +76,7 @@ PIDS+=($!)
 # Mở trình duyệt khi frontend sẵn sàng
 for _ in $(seq 1 60); do curl -s -o /dev/null http://127.0.0.1:5173 && break; sleep 1; done
 printf '\n\033[1;32m✔ Sẵn sàng: http://localhost:5173\033[0m\n'
-printf '  Đăng nhập: leader1@taskflow.vn / Password123!   (admin@taskflow.vn, member1@taskflow.vn ...)\n'
+printf '  Đăng nhập admin: admin@taskflow.vn / Password123!   (người khác: bấm Đăng ký)\n'
 printf '  Nhấn Ctrl+C để dừng.\n\n'
 [[ "$(uname)" == "Darwin" ]] && open http://localhost:5173 || true
 
