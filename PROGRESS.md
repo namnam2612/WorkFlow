@@ -29,7 +29,7 @@
 - [x] Dashboard (Recharts, bảng thay thế), trang thành viên (đã làm ở giai đoạn 3)
 
 ## Giai đoạn 7 — Hoàn thiện
-- [ ] Unit test auth + tasks
+- [x] Unit test: auth (16), tasks (~35), users + RolesGuard — tổng 73 test, mock Prisma
 - [ ] Rà soát phân quyền, lỗi thống nhất, loading/empty state
 - [ ] Dockerfile backend + frontend
 - [ ] Kiểm tra cuối, README
