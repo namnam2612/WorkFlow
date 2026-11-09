@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Chạy TRÊN máy chủ (Ubuntu) với quyền root. Thường được gọi qua deploy/deploy.sh.
+# Lưu ý: không đụng cấu hình nginx/site khác; chỉ thêm /etc/nginx/conf.d/<domain>.conf
 # Biến môi trường: DOMAIN, REPO_URL, BRANCH, LE_EMAIL, ADMIN_EMAIL, ADMIN_PASSWORD (tuỳ chọn), APP_DIR
 set -euo pipefail
 
@@ -8,7 +9,7 @@ REPO_URL="${REPO_URL:?cần REPO_URL}"
 BRANCH="${BRANCH:-main}"
 LE_EMAIL="${LE_EMAIL:?cần LE_EMAIL}"
 APP_DIR="${APP_DIR:-/opt/taskflow}"
-FRONTEND_PORT="${FRONTEND_PORT:-8080}"
+FRONTEND_PORT="${FRONTEND_PORT:-18080}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-admin@${DOMAIN#*.}}"
 
 log() { printf '\n\033[1;34m▶ %s\033[0m\n' "$1"; }
@@ -16,7 +17,8 @@ export DEBIAN_FRONTEND=noninteractive
 
 log "Cài gói cần thiết (git, nginx, certbot, docker nếu chưa có)"
 apt-get update -y
-apt-get install -y git nginx certbot python3-certbot-nginx curl openssl
+# --no-upgrade: chỉ cài gói còn thiếu, KHÔNG nâng cấp nginx/certbot đã có (tránh khởi động lại site khác trên server)
+apt-get install -y --no-upgrade git nginx certbot python3-certbot-nginx curl openssl
 if ! command -v docker >/dev/null 2>&1; then curl -fsSL https://get.docker.com | sh; fi
 docker compose version >/dev/null 2>&1 || apt-get install -y docker-compose-plugin
 systemctl enable --now docker
