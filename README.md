@@ -174,3 +174,12 @@ Tiền tố `/api`. Mọi route cần `Authorization: Bearer <accessToken>` tr�
 - Đăng nhập giới hạn 10 lần/phút/IP; toàn API 600 request/phút/IP.
 - Task kéo ra khỏi/vào `done` tự xóa/đặt `completedAt`. Subtask chỉ 1 cấp.
 - Chưa có: upload ảnh đại diện (chỉ nhận URL), quên mật khẩu qua email, test e2e tự động trong repo.
+
+## Deploy lên máy chủ (Ubuntu + Docker + nginx + HTTPS)
+
+```bash
+# Từ máy của bạn (cần đăng nhập SSH được vào server, tài khoản có sudo)
+LE_EMAIL=ban@example.com DOMAIN=alpha.hopphu.vn ./deploy/deploy.sh user@103.175.146.251
+```
+
+Script `deploy/remote-setup.sh` chạy trên server: cài Docker/nginx/certbot, clone mã nguồn, sinh `.env` với secret ngẫu nhiên (giữ nguyên nếu đã có), chạy `deploy/docker-compose.prod.yml` (MySQL và backend không mở cổng ra ngoài; frontend chỉ ở `127.0.0.1:8080`), tạo tài khoản admin nếu DB trống, cấu hình vhost nginx và cấp chứng chỉ Let's Encrypt. Mật khẩu admin được in ra ở cuối nếu không đặt `ADMIN_PASSWORD`. Chạy lại script để cập nhật phiên bản mới.
