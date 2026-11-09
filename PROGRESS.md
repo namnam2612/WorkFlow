@@ -17,7 +17,7 @@
 
 ## Giai đoạn 4 — Kanban
 - [x] API status + position (PATCH /tasks/:id/move, đánh số lại cột trong transaction)
-- [ ] Frontend dnd-kit, optimistic update, lọc người/ưu tiên
+- [x] Frontend dnd-kit (kéo thả đổi cột + thứ tự), optimistic update có rollback, lọc người/ưu tiên (đã E2E bằng Playwright)
 
 ## Giai đoạn 5 — Tương tác
 - [ ] Bình luận, activity log tự ghi
@@ -49,3 +49,5 @@
 - Member xem được danh sách/thống kê của người cùng dự án; thống kê chỉ tính trong các dự án người xem được phép thấy.
 - Sắp xếp `deadline` tăng dần luôn đẩy task không có deadline xuống cuối (MySQL mặc định xếp NULL lên đầu).
 - Đăng nhập giới hạn 10 lần/phút/IP (Throttler); refresh token tái sử dụng sẽ thu hồi toàn bộ phiên của user.
+- Kanban tải toàn bộ task cấp cao của dự án, lọc người/ưu tiên ở client để vị trí kéo thả luôn tính trên cột đầy đủ.
+- Member chỉ kéo được thẻ giao cho mình (leader/admin của dự án kéo được tất cả); backend kiểm tra lại ở `PATCH /tasks/:id/move`.

@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { Layout } from './components/layout/Layout';
 import DashboardPage from './pages/DashboardPage';
+import KanbanPage from './pages/KanbanPage';
 import LoginPage from './pages/LoginPage';
 import MemberDetailPage from './pages/MemberDetailPage';
 import MembersPage from './pages/MembersPage';
@@ -20,6 +21,7 @@ export default function App() {
           <Route index element={<DashboardPage />} />
           <Route path="projects" element={<ProjectsPage />} />
           <Route path="projects/:id" element={<ProjectDetailPage />} />
+          <Route path="projects/:id/board" element={<KanbanPage />} />
           <Route path="tasks" element={<TasksPage />} />
           <Route path="tasks/:id" element={<TaskDetailPage />} />
           <Route path="members" element={<MembersPage />} />

@@ -181,7 +181,7 @@ export default function TaskDetailPage() {
               <MetaRow label="Người tạo">{task.creator.name}</MetaRow>
               <MetaRow label="Trạng thái">
                 {canUpdateProgress ? (
-                  <select aria-label="Trạng thái" value={task.status} disabled={update.isPending} onChange={(e) => void changeStatus(e.target.value as TaskStatus)} className={`${inputClass} w-auto py-1`}>
+                  <select aria-label="Trạng thái" value={task.status} disabled={update.isPending} onChange={(e) => void changeStatus(e.target.value as TaskStatus)} className={`${inputClass} w-auto! py-1`}>
                     {STATUSES.map((s) => (
                       <option key={s} value={s}>
                         {STATUS_META[s].label}
@@ -210,7 +210,7 @@ export default function TaskDetailPage() {
                       inputMode="decimal"
                       value={hoursDraft ?? String(task.actualHours ?? '')}
                       onChange={(e) => setHoursDraft(e.target.value)}
-                      className={`${inputClass} w-20 py-1 text-right`}
+                      className={`${inputClass} w-20! py-1 text-right`}
                     />
                     {hoursDraft !== null && (
                       <Button size="sm" loading={update.isPending} onClick={() => void saveHours()}>

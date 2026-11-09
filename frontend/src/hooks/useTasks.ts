@@ -15,11 +15,6 @@ export interface TaskInput {
   actualHours?: number | null;
 }
 
-export interface BoardFilters {
-  assigneeId?: number;
-  priority?: Priority;
-}
-
 /** Làm mới mọi dữ liệu có thể bị ảnh hưởng bởi thay đổi task */
 export async function invalidateTaskRelated(queryClient: QueryClient, taskId?: number): Promise<void> {
   const keys: unknown[][] = [['tasks'], ['board'], ['dashboard'], ['projects'], ['project'], ['users'], ['user']];
@@ -68,10 +63,39 @@ export function useDeleteTask() {
   });
 }
 
-export function useBoard(projectId: number, filters: BoardFilters) {
+export function useBoard(projectId: number) {
   return useQuery({
-    queryKey: ['board', projectId, filters],
-    queryFn: () => api.get<Task[]>('/tasks/board', { projectId, ...filters }),
+    queryKey: boardKey(projectId),
+    queryFn: () => api.get<Task[]>('/tasks/board', { projectId }),
     enabled: !Number.isNaN(projectId),
+  });
+}
+
+export const boardKey = (projectId: number) => ['board', projectId] as const;
+
+interface MoveVariables {
+  id: number;
+  status: TaskStatus;
+  position: number;
+  /** Trạng thái bảng sau khi kéo thả, dùng để cập nhật cache ngay (optimistic) */
+  optimistic: Task[];
+}
+
+/** Di chuyển task trên Kanban: cập nhật cache ngay, lỗi thì hoàn tác về trạng thái trước */
+export function useMoveTask(projectId: number, onError?: (error: unknown) => void) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status, position }: MoveVariables) => api.patch<TaskDetail>(`/tasks/${id}/move`, { status, position }),
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: boardKey(projectId) });
+      const previous = queryClient.getQueryData<Task[]>(boardKey(projectId));
+      queryClient.setQueryData<Task[]>(boardKey(projectId), variables.optimistic);
+      return { previous };
+    },
+    onError: (error, _variables, context) => {
+      if (context?.previous) queryClient.setQueryData<Task[]>(boardKey(projectId), context.previous);
+      onError?.(error);
+    },
+    onSettled: () => invalidateTaskRelated(queryClient),
   });
 }
