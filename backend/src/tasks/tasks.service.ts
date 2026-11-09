@@ -108,18 +108,18 @@ export class TasksService {
   async create(user: AuthUser, dto: CreateTaskDto) {
     const project = await this.access.assertCanView(user, dto.projectId);
     const canManage = this.access.canManage(user, project);
-    // Thành viên chỉ được thêm công việc con (không tạo công việc lớn mới)
-    if (!canManage && !dto.parentId) {
-      throw new ForbiddenException('Chỉ trưởng nhóm của dự án hoặc quản trị viên mới tạo được công việc mới');
-    }
     const parent = dto.parentId ? await this.assertValidParent(dto.parentId, dto.projectId) : null;
-    if (!canManage && parent) {
-      if (parent.assigneeId !== user.id) {
+    // Người không quản lý dự án chỉ được tạo công việc cho chính mình
+    let assigneeId = dto.assigneeId;
+    if (!canManage) {
+      if (parent && parent.assigneeId !== user.id) {
         throw new ForbiddenException('Bạn chỉ được thêm công việc con vào công việc được giao cho mình');
       }
       this.assertSelfAssignment(user, dto.assigneeId);
+      // Công việc lớn tự giao cho người tạo; công việc con được phép để trống
+      if (!parent) assigneeId = user.id;
     }
-    await this.assertValidAssignee(project, dto.assigneeId);
+    await this.assertValidAssignee(project, assigneeId);
 
     const status = dto.status ?? 'todo';
     const created = await this.prisma.$transaction(async (tx) => {
@@ -130,7 +130,7 @@ export class TasksService {
           parentId: parent?.id ?? null,
           title: dto.title,
           description: dto.description ?? null,
-          assigneeId: dto.assigneeId ?? null,
+          assigneeId: assigneeId ?? null,
           creatorId: user.id,
           status,
           priority: dto.priority ?? 'medium',
@@ -339,7 +339,7 @@ export class TasksService {
   /** Thành viên chỉ được giao việc cho chính mình hoặc để trống */
   private assertSelfAssignment(user: AuthUser, assigneeId: number | null | undefined): void {
     if (assigneeId !== null && assigneeId !== undefined && assigneeId !== user.id) {
-      throw new ForbiddenException('Thành viên chỉ được giao công việc con cho chính mình');
+      throw new ForbiddenException('Bạn chỉ được giao công việc cho chính mình');
     }
   }
 

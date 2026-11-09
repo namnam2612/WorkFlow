@@ -210,11 +210,9 @@ export default function KanbanPage() {
               Xóa lọc
             </Button>
           )}
-          {canManage && (
-            <Button icon={<Plus className="h-4 w-4" />} onClick={() => setCreatingIn('todo')}>
-              Thêm công việc
-            </Button>
-          )}
+          <Button icon={<Plus className="h-4 w-4" />} onClick={() => setCreatingIn('todo')}>
+            Thêm công việc
+          </Button>
         </div>
       </div>
 
@@ -227,7 +225,7 @@ export default function KanbanPage() {
               tasks={visible[status]}
               totalCount={columns[status].length}
               canDrag={canDrag}
-              onAdd={canManage ? () => setCreatingIn(status) : undefined}
+              onAdd={() => setCreatingIn(status)}
             />
           ))}
         </div>
