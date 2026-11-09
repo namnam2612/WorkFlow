@@ -18,7 +18,7 @@ type Tab = 'comments' | 'activity';
 
 interface TaskDiscussionProps {
   taskId: number;
-  /** Người dùng hiện tại được phép bình luận (leader/admin của dự án hoặc người được giao) */
+  /** Người dùng hiện tại được phép bình luận (leader/admin của dự án, người được giao, hoặc người phụ trách công việc con) */
   canComment: boolean;
   /** Được xóa bình luận của người khác (leader/admin của dự án) */
   canModerate: boolean;
@@ -133,7 +133,7 @@ export function TaskDiscussion({ taskId, canComment, canModerate }: TaskDiscussi
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-slate-500">Bạn chỉ có thể bình luận trên công việc được giao cho mình.</p>
+              <p className="text-sm text-slate-500">Bạn chỉ có thể bình luận trên công việc được giao cho mình hoặc công việc con bạn phụ trách.</p>
             )}
           </div>
         </div>

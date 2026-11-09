@@ -5,6 +5,7 @@ type MockFn = jest.Mock;
 export interface PrismaMock {
   user: Record<'findUnique' | 'findUniqueOrThrow' | 'update' | 'findMany' | 'create', MockFn>;
   refreshToken: Record<'create' | 'findUnique' | 'updateMany', MockFn>;
+  comment: Record<'findMany' | 'create' | 'findUnique' | 'delete', MockFn>;
   project: Record<'findUnique', MockFn>;
   projectMember: Record<'findUnique', MockFn>;
   task: Record<'findUnique' | 'findMany' | 'create' | 'update' | 'delete' | 'count' | 'aggregate', MockFn>;
@@ -16,6 +17,7 @@ export function createPrismaMock(): PrismaMock {
   const mock: PrismaMock = {
     user: { findUnique: jest.fn(), findUniqueOrThrow: jest.fn(), update: jest.fn(), findMany: jest.fn(), create: jest.fn() },
     refreshToken: { create: jest.fn(), findUnique: jest.fn(), updateMany: jest.fn() },
+    comment: { findMany: jest.fn(), create: jest.fn(), findUnique: jest.fn(), delete: jest.fn() },
     project: { findUnique: jest.fn() },
     projectMember: { findUnique: jest.fn() },
     task: {

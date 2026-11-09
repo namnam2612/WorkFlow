@@ -20,7 +20,7 @@ const detailInclude = {
   assignee: { select: USER_BRIEF_SELECT },
   creator: { select: USER_BRIEF_SELECT },
   project: { select: { id: true, name: true, createdById: true } },
-  parent: { select: { id: true, title: true } },
+  parent: { select: { id: true, title: true, assigneeId: true } },
   subtasks: { include: taskInclude, orderBy: [{ position: 'asc' }, { id: 'asc' }] },
   _count: { select: { comments: true } },
 } satisfies Prisma.TaskInclude;

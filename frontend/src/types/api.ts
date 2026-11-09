@@ -79,7 +79,7 @@ export interface Task {
 export interface TaskDetail extends Task {
   creator: UserBrief;
   project: { id: number; name: string; createdById: number };
-  parent: { id: number; title: string } | null;
+  parent: { id: number; title: string; assigneeId: number | null } | null;
   subtasks: Task[];
 }
 

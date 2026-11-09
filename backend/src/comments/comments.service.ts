@@ -32,9 +32,11 @@ export class CommentsService {
   async create(user: AuthUser, taskId: number, content: string) {
     const task = await this.findTaskOrThrow(taskId);
     const project = await this.access.assertCanView(user, task.projectId);
-    // Leader/admin của dự án bình luận mọi task; member chỉ trên task được giao cho mình
-    if (!this.access.canManage(user, project) && task.assigneeId !== user.id) {
-      throw new ForbiddenException('Bạn chỉ được bình luận trên công việc được giao cho mình');
+    // Leader/admin bình luận mọi task. Member: task được giao cho mình; với công việc con thì thêm
+    // người tạo việc con và người được giao task cha (vì họ chịu trách nhiệm phần việc đó)
+    const isOwnSubtask = task.parentId !== null && (task.creatorId === user.id || task.parent?.assigneeId === user.id);
+    if (!this.access.canManage(user, project) && task.assigneeId !== user.id && !isOwnSubtask) {
+      throw new ForbiddenException('Bạn chỉ được bình luận trên công việc được giao cho mình hoặc công việc con bạn phụ trách');
     }
 
     const comment = await this.prisma.$transaction(async (tx) => {
@@ -73,7 +75,7 @@ export class CommentsService {
   }
 
   private async findTaskOrThrow(taskId: number) {
-    const task = await this.prisma.task.findUnique({ where: { id: taskId } });
+    const task = await this.prisma.task.findUnique({ where: { id: taskId }, include: { parent: { select: { assigneeId: true } } } });
     if (!task) throw new NotFoundException('Không tìm thấy công việc');
     return task;
   }

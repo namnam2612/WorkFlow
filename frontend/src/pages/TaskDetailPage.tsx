@@ -51,11 +51,15 @@ export default function TaskDetailPage() {
   if (taskQuery.isError || !task) return <ErrorState error={taskQuery.error} onRetry={() => void taskQuery.refetch()} />;
 
   const canManage = canManageProject(user, task.project);
-  const canUpdateProgress = canManage || isAssignee(user, task);
   const isSubtask = task.parentId !== null;
+  const isSubtaskCreator = isSubtask && task.creatorId === user?.id;
   // Member được thêm công việc con vào task lớn giao cho mình, và sửa/xóa công việc con do mình tạo
   const canAddSubtask = canManage || isAssignee(user, task);
-  const canEditTask = canManage || (isSubtask && task.creatorId === user?.id);
+  const canEditTask = canManage || isSubtaskCreator;
+  // Đổi trạng thái / giờ làm: leader-admin, người được giao, hoặc người tạo công việc con
+  const canUpdateProgress = canManage || isAssignee(user, task) || isSubtaskCreator;
+  // Bình luận: như trên, thêm người được giao task cha khi xem công việc con
+  const canComment = canUpdateProgress || (isSubtask && task.parent?.assigneeId === user?.id);
 
   const changeStatus = async (status: TaskStatus) => {
     try {
@@ -162,7 +166,7 @@ export default function TaskDetailPage() {
             </Card>
           )}
 
-          <TaskDiscussion taskId={task.id} canComment={canUpdateProgress} canModerate={canManage} />
+          <TaskDiscussion taskId={task.id} canComment={canComment} canModerate={canManage} />
         </div>
 
         <div className="space-y-6">
