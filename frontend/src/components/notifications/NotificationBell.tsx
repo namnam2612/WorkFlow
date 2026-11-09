@@ -55,7 +55,7 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 z-40 mt-2 w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-white/[0.14] bg-modal shadow-[0_40px_100px_rgba(0,0,0,0.7)] [animation:modal-in_0.4s_var(--ease-out)_both]">
+        <div className="absolute right-0 z-40 mt-2 w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-white/[0.14] bg-modal shadow-[0_40px_100px_var(--shadow-deep)] [animation:modal-in_0.4s_var(--ease-out)_both]">
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
             <h2 className="text-sm font-semibold text-slate-900">Thông báo</h2>
             <button

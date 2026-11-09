@@ -1,5 +1,6 @@
 import { AlertTriangle, ListTodo } from 'lucide-react';
-import { STATUSES, STATUS_CHART_COLORS, STATUS_META } from '../../lib/constants';
+import { STATUSES, STATUS_META, statusChartColors } from '../../lib/constants';
+import { useTheme } from '../ui/useTheme';
 import type { StatusCounts } from '../../types/api';
 
 interface StatusSummaryProps {
@@ -22,6 +23,8 @@ function Tile({ label, value, accent, icon }: { label: string; value: number; ac
 
 /** Thẻ số liệu theo trạng thái + thanh phân bố (một tổng chia thành các phần, khe 2px giữa các đoạn) */
 export function StatusSummary({ counts, total, overdueCount }: StatusSummaryProps) {
+  const { theme } = useTheme();
+  const STATUS_CHART_COLORS = statusChartColors(theme);
   return (
     <section aria-label="Số công việc theo trạng thái">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7">

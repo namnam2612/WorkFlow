@@ -57,7 +57,7 @@ export default function ProjectsPage() {
             <TiltCard className="rounded-2xl border border-white/[0.08] bg-card hover:border-white/20">
             <article className="flex h-full flex-col p-5">
               <div className="flex items-start gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-gradient-to-br from-[#1a1a1a] to-[#0d0d0d] text-white/70">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.06] text-white/70">
                   <FolderKanban className="h-5 w-5" />
                 </span>
                 <div className="min-w-0 flex-1">

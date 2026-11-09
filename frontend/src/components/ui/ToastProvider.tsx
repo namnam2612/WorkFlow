@@ -13,7 +13,7 @@ const ICONS = { success: CheckCircle2, error: AlertCircle, info: Info };
 // Toast là viên thuốc trắng chữ đen; chỉ lỗi mới dùng màu để có ý nghĩa
 const STYLES: Record<ToastKind, string> = {
   success: 'border-transparent bg-white text-black',
-  error: 'border-red-300 bg-[#1a0d0d] text-red-600',
+  error: 'border-red-300 bg-card text-red-600',
   info: 'border-transparent bg-white text-black',
 };
 const DURATION_MS: Record<ToastKind, number> = { success: 2200, info: 2200, error: 4000 };
@@ -42,7 +42,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map((toast) => {
           const Icon = ICONS[toast.kind];
           return (
-            <div key={toast.id} role="status" className={clsx('pointer-events-auto flex items-center gap-2 rounded-full border px-5 py-3 text-sm font-medium shadow-[0_22px_50px_rgba(0,0,0,0.5)] [animation:toast-in_0.5s_var(--ease-out)_both]', STYLES[toast.kind])}>
+            <div key={toast.id} role="status" className={clsx('pointer-events-auto flex items-center gap-2 rounded-full border px-5 py-3 text-sm font-medium shadow-[0_22px_50px_var(--shadow-lift)] [animation:toast-in_0.5s_var(--ease-out)_both]', STYLES[toast.kind])}>
               <Icon className="h-4 w-4 shrink-0" />
               <p className="flex-1">{toast.message}</p>
               <button type="button" aria-label="Đóng" onClick={() => dismiss(toast.id)} className="opacity-60 hover:opacity-100">

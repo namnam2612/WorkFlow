@@ -7,6 +7,7 @@ import { useRealtime } from '../../hooks/useRealtime';
 import { ROLE_LABEL } from '../../lib/constants';
 import { NotificationBell } from '../notifications/NotificationBell';
 import { Avatar } from '../ui/Avatar';
+import { ThemeToggle } from '../ui/ThemeToggle';
 import { BrandMark } from '../ui/Brand';
 
 const NAV_ITEMS = [
@@ -119,8 +120,8 @@ export function Layout() {
       {/* Ngăn kéo mobile */}
       {drawerOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-[6px] [animation:fade-in_0.3s_ease_both]" onClick={() => setDrawerOpen(false)} />
-          <aside className="relative flex h-full w-72 flex-col border-r border-white/[0.08] bg-[#0a0a0a] px-3 py-6 shadow-[0_40px_100px_rgba(0,0,0,0.7)] [animation:drawer-in_0.45s_var(--ease-out)_both]">
+          <div className="absolute inset-0 bg-scrim-soft backdrop-blur-[6px] [animation:fade-in_0.3s_ease_both]" onClick={() => setDrawerOpen(false)} />
+          <aside className="relative flex h-full w-72 flex-col border-r border-white/[0.08] bg-sidebar px-3 py-6 shadow-[0_40px_100px_var(--shadow-deep)] [animation:drawer-in_0.45s_var(--ease-out)_both]">
             <div className="flex items-center justify-between px-3.5">
               <BrandMark className="text-xl" />
               <Burger open label="Đóng menu" onClick={() => setDrawerOpen(false)} />
@@ -142,7 +143,7 @@ export function Layout() {
         <header
           className={clsx(
             'absolute inset-x-0 top-0 z-30 flex items-center justify-between px-5 backdrop-blur-[16px] transition-[padding,background] duration-500 sm:px-8',
-            scrolled ? 'bg-[rgba(5,5,5,0.9)] py-4' : 'bg-gradient-to-b from-[rgba(5,5,5,0.92)] to-transparent py-6',
+            scrolled ? 'bg-bg/90 py-4' : 'bg-gradient-to-b from-bg/90 to-transparent py-6',
           )}
         >
           <button type="button" aria-label="Mở menu" aria-expanded={drawerOpen} onClick={() => setDrawerOpen(true)} className="flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.08] text-white transition hover:bg-white/5 lg:hidden">
@@ -153,6 +154,7 @@ export function Layout() {
           </button>
           <div className="hidden lg:block" />
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <NotificationBell />
             {user && (
               <div className="flex items-center gap-2">

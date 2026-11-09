@@ -12,13 +12,26 @@ export const STATUS_META: Record<TaskStatus, { label: string; badge: string; dot
 };
 
 // Màu trạng thái trên nền tối (màu chỉ mang ý nghĩa trạng thái). Kèm mã hóa phụ (legend, nhãn số, khe 2px, tooltip, bảng).
-export const STATUS_CHART_COLORS: Record<TaskStatus, string> = {
+const STATUS_CHART_COLORS_DARK: Record<TaskStatus, string> = {
   todo: '#8cc0ff',
   in_progress: '#ffd561',
   review: '#c5a6ff',
   done: '#7ee2a8',
   blocked: '#ff8a8a',
 };
+
+// Bản cho nền sáng: đậm hơn để đủ tương phản trên nền trắng
+const STATUS_CHART_COLORS_LIGHT: Record<TaskStatus, string> = {
+  todo: '#2272e6',
+  in_progress: '#e0a100',
+  review: '#7048e8',
+  done: '#2f9e44',
+  blocked: '#e03131',
+};
+
+export function statusChartColors(theme: 'dark' | 'light'): Record<TaskStatus, string> {
+  return theme === 'light' ? STATUS_CHART_COLORS_LIGHT : STATUS_CHART_COLORS_DARK;
+}
 
 export const PRIORITY_META: Record<Priority, { label: string; badge: string }> = {
   low: { label: 'Thấp', badge: 'bg-slate-100 text-slate-600 ring-slate-200' },

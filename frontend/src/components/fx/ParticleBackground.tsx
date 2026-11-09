@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { prefersReducedMotion } from '../../lib/motion';
+import { useTheme } from '../ui/useTheme';
 
 interface Particle {
   x: number;
@@ -15,6 +16,12 @@ const REPEL_RADIUS = 150;
 
 /** Nền hạt cố định: hạt trắng, nối nhau khi gần, né con trỏ. Không chạy khi giảm chuyển động. */
 export function ParticleBackground() {
+  const { theme } = useTheme();
+  const rgb = theme === 'light' ? '0,0,0' : '255,255,255';
+  const rgbRef = useRef(rgb);
+  useEffect(() => {
+    rgbRef.current = rgb;
+  }, [rgb]);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -63,7 +70,7 @@ export function ParticleBackground() {
         else if (p.x > width) p.x = 0;
         if (p.y < 0) p.y = height;
         else if (p.y > height) p.y = 0;
-        ctx.fillStyle = `rgba(255,255,255,${p.alpha})`;
+        ctx.fillStyle = `rgba(${rgbRef.current},${p.alpha})`;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
         ctx.fill();
@@ -75,7 +82,7 @@ export function ParticleBackground() {
           const b = particles[j];
           if (Math.abs(a.x - b.x) > LINK_DISTANCE || Math.abs(a.y - b.y) > LINK_DISTANCE) continue;
           if (Math.hypot(a.x - b.x, a.y - b.y) < LINK_DISTANCE) {
-            ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+            ctx.strokeStyle = `rgba(${rgbRef.current},0.06)`;
             ctx.beginPath();
             ctx.moveTo(a.x, a.y);
             ctx.lineTo(b.x, b.y);

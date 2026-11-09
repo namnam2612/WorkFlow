@@ -26,7 +26,7 @@ export function TiltCard({ children, className }: { children: ReactNode; classNa
       onPointerMove={onMove}
       onPointerLeave={() => apply('perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)')}
       className={clsx(
-        'h-full transition-[transform,border-color,box-shadow] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] will-change-transform hover:shadow-[0_22px_50px_rgba(0,0,0,0.5)]',
+        'h-full transition-[transform,border-color,box-shadow] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] will-change-transform hover:shadow-[0_22px_50px_var(--shadow-lift)]',
         className,
       )}
     >

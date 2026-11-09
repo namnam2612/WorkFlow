@@ -2,7 +2,7 @@ import clsx from 'clsx';
 import { initials } from '../../lib/format';
 
 // Đơn sắc: các sắc độ xám khác nhau để phân biệt người, không dùng màu thương hiệu
-const COLORS = ['bg-[#2a2a2a]', 'bg-[#333]', 'bg-[#3d3d3d]', 'bg-[#262626]', 'bg-[#474747]', 'bg-[#303030]', 'bg-[#3a3a3a]', 'bg-[#2e2e2e]'];
+const COLORS = ['bg-white/[0.08]', 'bg-white/[0.11]', 'bg-white/[0.14]', 'bg-white/[0.17]', 'bg-white/[0.2]', 'bg-white/[0.1]', 'bg-white/[0.13]', 'bg-white/[0.16]'];
 
 interface AvatarProps {
   name: string;

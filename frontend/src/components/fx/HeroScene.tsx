@@ -15,10 +15,20 @@ import {
   WebGLRenderer,
 } from 'three';
 import { prefersReducedMotion } from '../../lib/motion';
+import { useTheme } from '../ui/useTheme';
 
 /** Cảnh 3D đơn sắc: icosahedron khung lưới, octahedron kim loại, torus mảnh. Chỉ render khi đang hiện trên màn hình. */
 export default function HeroScene({ className }: { className?: string }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
+  const { theme } = useTheme();
+  const applyTheme = useRef<((theme: 'dark' | 'light') => void) | null>(null);
+  const themeRef = useRef(theme);
+
+  // Đổi giao diện: chỉ đổi màu vật liệu, không dựng lại cảnh
+  useEffect(() => {
+    themeRef.current = theme;
+    applyTheme.current?.(theme);
+  }, [theme]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -45,6 +55,14 @@ export default function HeroScene({ className }: { className?: string }) {
     const ring = new Mesh(new TorusGeometry(2.7, 0.014, 12, 160), new MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 }));
     ring.rotation.x = Math.PI / 2.4;
     group.add(wire, metal, ring);
+
+    applyTheme.current = (mode) => {
+      const ink = mode === 'light' ? 0x0a0a0a : 0xffffff;
+      (wire.material as MeshBasicMaterial).color.setHex(ink);
+      (ring.material as MeshBasicMaterial).color.setHex(ink);
+      (metal.material as MeshStandardMaterial).color.setHex(mode === 'light' ? 0x2a2a2a : 0xd8d8d8);
+    };
+    applyTheme.current(themeRef.current);
 
     scene.add(new AmbientLight(0xffffff, 0.35));
     const key = new DirectionalLight(0xffffff, 2.2);
@@ -108,6 +126,7 @@ export default function HeroScene({ className }: { className?: string }) {
         mesh.geometry.dispose();
         (mesh.material as MeshBasicMaterial | MeshStandardMaterial).dispose();
       }
+      applyTheme.current = null;
       renderer.dispose();
       renderer.domElement.remove();
     };

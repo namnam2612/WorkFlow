@@ -28,10 +28,10 @@ export function Modal({ open, title, onClose, children, size = 'md' }: ModalProp
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={title}>
-      <div className="absolute inset-0 bg-black/85 backdrop-blur-[12px] [animation:fade-in_0.4s_ease_both]" onClick={onClose} />
+      <div className="absolute inset-0 bg-scrim backdrop-blur-[12px] [animation:fade-in_0.4s_ease_both]" onClick={onClose} />
       <div
         className={clsx(
-          'relative flex max-h-[92vh] w-full flex-col rounded-t-3xl border border-white/[0.08] bg-modal shadow-[0_40px_100px_rgba(0,0,0,0.7)] [animation:modal-in_0.5s_var(--ease-out)_both] sm:rounded-3xl',
+          'relative flex max-h-[92vh] w-full flex-col rounded-t-3xl border border-white/[0.08] bg-modal shadow-[0_40px_100px_var(--shadow-deep)] [animation:modal-in_0.5s_var(--ease-out)_both] sm:rounded-3xl',
           size === 'md' ? 'sm:max-w-lg' : 'sm:max-w-2xl',
         )}
       >

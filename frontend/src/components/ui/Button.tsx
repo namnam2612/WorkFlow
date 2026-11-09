@@ -13,7 +13,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const VARIANTS: Record<Variant, string> = {
-  primary: 'bg-white text-black hover:scale-[1.04] hover:-translate-y-0.5 hover:shadow-[0_12px_36px_rgba(255,255,255,0.18)]',
+  primary: 'bg-white text-black hover:scale-[1.04] hover:-translate-y-0.5 hover:shadow-[0_12px_36px_var(--glow)]',
   secondary: 'border border-white/[0.08] bg-transparent text-white hover:-translate-y-0.5 hover:border-white/25 hover:bg-white/5',
   danger: 'border border-red-200 bg-red-50 text-red-600 hover:-translate-y-0.5 hover:border-red-400/60 hover:bg-red-100',
   ghost: 'bg-transparent text-slate-600 hover:bg-white/5 hover:text-white',
