@@ -34,7 +34,16 @@ Phân quyền được kiểm tra **ở backend** (`JwtAuthGuard` toàn cục, `
 - Node.js ≥ 20 (đã kiểm thử với 24) và npm
 - Docker + Docker Compose (cho MySQL, hoặc chạy cả stack)
 
-## Chạy để phát triển (backend/frontend chạy trực tiếp, MySQL trong Docker)
+## Chạy nhanh bằng một lệnh
+
+```bash
+./dev.sh
+```
+
+Script tự bật Docker/MySQL, cài thư viện (lần đầu), áp dụng migration, nạp dữ liệu mẫu nếu DB trống, chạy backend (`:3000`) và frontend (`:5173`) rồi mở trình duyệt. Dừng bằng `Ctrl+C` (hoặc nút Stop); MySQL vẫn chạy nền.
+Trong VS Code: mở `dev.sh` và bấm ▶ của **Code Runner** (đã cấu hình trong `.vscode/settings.json`), hoặc `Cmd+Shift+B` để chạy task mặc định.
+
+## Chạy để phát triển (từng bước thủ công)
 
 ```bash
 # 1) Cấu hình & khởi động MySQL (host port 3307 — tránh đụng MySQL cài sẵn ở 3306)
