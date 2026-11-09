@@ -1,3 +1,5 @@
+# Chạy riêng MySQL để phát triển:   docker compose up -d mysql
+# Chạy toàn bộ (MySQL + API + web): docker compose up -d --build
 services:
   mysql:
     image: mysql:8.0
@@ -22,6 +24,35 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+
+  backend:
+    build: ./backend
+    container_name: taskflow-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: mysql://${MYSQL_USER:-taskflow}:${MYSQL_PASSWORD:-taskflow_password}@mysql:3306/${MYSQL_DATABASE:-taskflow}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?Cần đặt JWT_ACCESS_SECRET (>= 32 ký tự) trong file .env}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Cần đặt JWT_REFRESH_SECRET (>= 32 ký tự) trong file .env}
+      JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-15m}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+      SEED_DEFAULT_PASSWORD: ${SEED_DEFAULT_PASSWORD:-Password123!}
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
+
+  frontend:
+    build: ./frontend
+    container_name: taskflow-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
 
 volumes:
   mysql_data:

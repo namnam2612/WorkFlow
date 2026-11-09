@@ -31,7 +31,7 @@
 ## Giai đoạn 7 — Hoàn thiện
 - [x] Unit test: auth (16), tasks (~35), users + RolesGuard — tổng 73 test, mock Prisma
 - [ ] Rà soát phân quyền, lỗi thống nhất, loading/empty state
-- [ ] Dockerfile backend + frontend
+- [x] Dockerfile backend + frontend (nginx proxy /api + /socket.io), compose chạy full stack — đã kiểm thử từ DB trống
 - [ ] Kiểm tra cuối, README
 
 ## Quyết định thiết kế
