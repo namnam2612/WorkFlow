@@ -7,7 +7,7 @@
 - [x] `.env.example`
 
 ## Giai đoạn 2 — Auth
-- [ ] Backend: login / refresh / logout, Guard theo role
+- [x] Backend: login / refresh / logout / me / đổi mật khẩu, Guard theo role
 - [ ] Frontend: đăng nhập, tự refresh token, layout chung, route bảo vệ
 
 ## Giai đoạn 3 — CRUD
