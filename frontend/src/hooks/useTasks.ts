@@ -22,7 +22,7 @@ export interface TaskInput {
 
 /** Làm mới mọi dữ liệu có thể bị ảnh hưởng bởi thay đổi task */
 export async function invalidateTaskRelated(queryClient: QueryClient, taskId?: number): Promise<void> {
-  const keys: unknown[][] = [['tasks'], ['board'], ['dashboard'], ['projects'], ['project'], ['users'], ['user'], ['attachments'], ['files']];
+  const keys: unknown[][] = [['tasks'], ['my-work'], ['board'], ['dashboard'], ['projects'], ['project'], ['users'], ['user'], ['attachments'], ['files']];
   if (taskId !== undefined) keys.push(['task', taskId], ['activity', taskId]);
   await Promise.all(keys.map((queryKey) => queryClient.invalidateQueries({ queryKey })));
 }
@@ -34,6 +34,20 @@ export function useTasks(filters: TaskFilters & { includeSubtasks?: boolean; ove
     placeholderData: keepPreviousData,
     enabled,
   });
+}
+
+export interface MyWork {
+  /** 00:00 giờ Việt Nam của hôm nay (UTC) */
+  date: string;
+  overdue: Task[];
+  dueToday: Task[];
+  inProgress: Task[];
+  upcoming: Task[];
+  doneToday: number;
+}
+
+export function useMyWork() {
+  return useQuery({ queryKey: ['my-work'], queryFn: () => api.get<MyWork>('/tasks/my-work') });
 }
 
 export function useTask(id: number | undefined) {

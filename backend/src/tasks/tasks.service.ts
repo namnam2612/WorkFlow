@@ -17,6 +17,7 @@ import { scopeOfType } from '../statuses/default-statuses';
 import { STATUS_SELECT } from '../statuses/status-view';
 import { StatusesService } from '../statuses/statuses.service';
 import { AttachmentCleanupService } from '../attachments/attachment-cleanup.service';
+import { bucketOf, MyWorkBucket, myWorkWindow } from './my-work';
 import { assigneesInclude, taskInclude, toTaskView } from './task-view';
 
 const detailInclude = {
@@ -96,6 +97,36 @@ export class TasksService {
       orderBy: [{ position: 'asc' }, { id: 'asc' }],
     });
     return tasks.map(toTaskView);
+  }
+
+  /**
+   * "Hôm nay cần làm gì": việc của TÔI chưa xong (kể cả công việc con), chia nhóm quá hạn / hạn hôm nay /
+   * đang làm / sắp tới 7 ngày theo ngày giờ Việt Nam. Epic không phải việc để làm nên bị loại.
+   */
+  async myWork(user: AuthUser, now: Date = new Date()) {
+    const window = myWorkWindow(now);
+    const mine: Prisma.TaskWhereInput = { assignees: { some: { userId: user.id } }, type: { not: 'epic' } };
+    const [candidates, doneToday] = await Promise.all([
+      this.prisma.task.findMany({
+        where: {
+          ...mine,
+          project: this.access.visibleProjectWhere(user),
+          status: { category: { not: 'done' } },
+          OR: [{ deadline: { lt: window.weekEnd } }, { status: { category: 'in_progress' } }],
+        },
+        include: taskInclude,
+        orderBy: [{ deadline: 'asc' }, { priority: 'desc' }, { id: 'asc' }],
+        take: 300,
+      }),
+      this.prisma.task.count({ where: { ...mine, completedAt: { gte: window.todayStart, lt: window.tomorrowStart } } }),
+    ]);
+
+    const groups: Record<MyWorkBucket, ReturnType<typeof toTaskView>[]> = { overdue: [], dueToday: [], inProgress: [], upcoming: [] };
+    for (const task of candidates) {
+      const bucket = bucketOf({ deadline: task.deadline, category: task.status.category }, window);
+      if (bucket) groups[bucket].push(toTaskView(task));
+    }
+    return { date: window.todayStart.toISOString(), ...groups, doneToday };
   }
 
   async get(user: AuthUser, id: number) {

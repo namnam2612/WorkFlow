@@ -21,7 +21,12 @@ export class TasksController {
     return this.tasks.list(user, query);
   }
 
-  // Phải khai báo trước ':id' để 'board' không bị hiểu là id
+  // Phải khai báo trước ':id' để 'board' / 'my-work' không bị hiểu là id
+  @Get('my-work')
+  myWork(@CurrentUser() user: AuthUser) {
+    return this.tasks.myWork(user);
+  }
+
   @Get('board')
   board(@CurrentUser() user: AuthUser, @Query() query: BoardQueryDto) {
     return this.tasks.board(user, query);

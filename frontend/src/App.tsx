@@ -11,6 +11,7 @@ import FilesProjectPage from './pages/files/FilesProjectPage';
 import FilesProjectsPage from './pages/files/FilesProjectsPage';
 import FilesTaskPage from './pages/files/FilesTaskPage';
 import DashboardPage from './pages/DashboardPage';
+import MyWorkPage from './pages/MyWorkPage';
 import KanbanPage from './pages/KanbanPage';
 import LoginPage from './pages/LoginPage';
 import MemberDetailPage from './pages/MemberDetailPage';
@@ -44,6 +45,7 @@ function AppRoutes() {
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
           <Route index element={<DashboardPage />} />
+          <Route path="my-work" element={<MyWorkPage />} />
           <Route path="projects" element={<ProjectsPage />} />
           <Route path="projects/:id" element={<ProjectDetailPage />} />
           <Route path="projects/:id/board" element={<KanbanPage />} />
