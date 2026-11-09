@@ -190,6 +190,7 @@ model Project {
   testCases   TestCase[]
   wikiPages   WikiPage[]
   automations AutomationRule[]
+  guestLinks  GuestLink[]
   testRuns    TestRun[]
   tasks       Task[]
   attachments Attachment[]
@@ -618,4 +619,24 @@ model AutomationRule {
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId, trigger, enabled])
+}
+
+/// Liên kết cho khách hàng xem roadmap của dự án (chỉ đọc, không cần đăng nhập). Token chỉ hiện một lần khi tạo; DB lưu băm SHA-256.
+model GuestLink {
+  id           Int       @id @default(autoincrement())
+  projectId    Int
+  tokenHash    String    @unique @db.VarChar(64)
+  /// 6 ký tự đầu của token để người quản lý nhận ra liên kết nào là liên kết nào
+  tokenPrefix  String    @db.VarChar(8)
+  name         String    @db.VarChar(120)
+  expiresAt    DateTime?
+  revokedAt    DateTime?
+  createdById  Int
+  createdAt    DateTime  @default(now())
+  lastViewedAt DateTime?
+  viewCount    Int       @default(0)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
 }

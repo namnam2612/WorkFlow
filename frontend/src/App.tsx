@@ -25,6 +25,7 @@ import TestRunPage from './pages/TestRunPage';
 import TeamDetailPage from './pages/TeamDetailPage';
 import TeamsPage from './pages/TeamsPage';
 import CalendarPage from './pages/CalendarPage';
+import GuestPortalPage from './pages/GuestPortalPage';
 import GanttPage from './pages/GanttPage';
 import KanbanPage from './pages/KanbanPage';
 import LoginPage from './pages/LoginPage';
@@ -56,6 +57,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/portal/:token" element={<GuestPortalPage />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
           <Route index element={<DashboardPage />} />

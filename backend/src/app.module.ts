@@ -16,6 +16,7 @@ import { CommentsModule } from './comments/comments.module';
 import { LeavesModule } from './leaves/leaves.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { PortalModule } from './portal/portal.module';
 import { ProjectsModule } from './projects/projects.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { PlanningModule } from './schedule/schedule.module';
@@ -55,6 +56,7 @@ import { WorkLogsModule } from './worklogs/worklogs.module';
     WikiModule,
     SearchModule,
     AutomationModule,
+    PortalModule,
     TasksModule,
     CommentsModule,
     AttachmentsModule,

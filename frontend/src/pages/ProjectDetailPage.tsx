@@ -1,8 +1,9 @@
-import { BarChart3, BookOpen, Zap, FlaskConical, GanttChart, Rocket, KanbanSquare, ListChecks, ListTodo, Pencil, Plus, Send, Trash2, UserMinus, UserPlus } from 'lucide-react';
+import { BarChart3, BookOpen, Share2, Zap, FlaskConical, GanttChart, Rocket, KanbanSquare, ListChecks, ListTodo, Pencil, Plus, Send, Trash2, UserMinus, UserPlus } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
 import { AttachmentSection } from '../components/attachments/AttachmentSection';
+import { GuestLinksModal } from '../components/portal/GuestLinksModal';
 import { ProjectFormModal } from '../components/projects/ProjectFormModal';
 import { TaskFormModal } from '../components/tasks/TaskFormModal';
 import { TaskTable } from '../components/tasks/TaskTable';
@@ -42,6 +43,7 @@ export default function ProjectDetailPage() {
   const [removeTarget, setRemoveTarget] = useState<{ id: number; name: string } | null>(null);
   const [selectedUser, setSelectedUser] = useState('');
   const [testingSlack, setTestingSlack] = useState(false);
+  const [guestOpen, setGuestOpen] = useState(false);
 
   const testSlack = async () => {
     setTestingSlack(true);
@@ -130,6 +132,9 @@ export default function ProjectDetailPage() {
               <>
                 <Button variant="secondary" icon={<Plus className="h-4 w-4" />} onClick={() => setCreatingTask(true)}>
                   Thêm công việc
+                </Button>
+                <Button variant="ghost" icon={<Share2 className="h-4 w-4" />} onClick={() => setGuestOpen(true)}>
+                  Cổng khách
                 </Button>
                 {project.slackConfigured && (
                   <Button variant="ghost" icon={<Send className="h-4 w-4" />} loading={testingSlack} onClick={() => void testSlack()}>
@@ -226,6 +231,7 @@ export default function ProjectDetailPage() {
         </Card>
       </div>
 
+      {guestOpen && <GuestLinksModal projectId={project.id} onClose={() => setGuestOpen(false)} />}
       {editing && <ProjectFormModal open project={project} onClose={() => setEditing(false)} />}
       {creatingTask && <TaskFormModal open defaultProjectId={project.id} onClose={() => setCreatingTask(false)} onSaved={(taskId) => navigate(`/tasks/${taskId}`)} />}
       <ConfirmDialog

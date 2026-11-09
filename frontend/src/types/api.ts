@@ -604,3 +604,23 @@ export interface AutomationRule {
   runCount: number;
   lastRunAt: string | null;
 }
+
+export interface GuestLink {
+  id: number;
+  projectId: number;
+  name: string;
+  tokenPrefix: string;
+  expiresAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+  lastViewedAt: string | null;
+  viewCount: number;
+}
+
+export interface PortalData {
+  project: { name: string; description: string | null; startDate: string | null; endDate: string | null; progress: number };
+  sprints: { name: string; goal: string | null; status: SprintStatus; startDate: string | null; endDate: string | null; progress: number }[];
+  epics: { title: string; progress: number; status: StatusCategory }[];
+  releases: { version: string; name: string | null; status: 'planned' | 'released'; releasedAt: string | null; description: string | null }[];
+  generatedAt: string;
+}
