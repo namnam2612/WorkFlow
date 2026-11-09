@@ -5,6 +5,7 @@ import { AuthUser } from '../common/types/auth-user';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProjectAccessService } from '../projects/project-access.service';
 import { taskInclude, toTaskView } from '../tasks/task-view';
+import { LeavesService } from '../leaves/leaves.service';
 import { Burndown, buildBurndown } from './burndown';
 import { CompleteSprintDto, CreateSprintDto, UpdateSprintDto } from './dto/sprint.dto';
 
@@ -28,6 +29,7 @@ export class SprintsService {
     private readonly prisma: PrismaService,
     private readonly access: ProjectAccessService,
     private readonly activity: ActivityService,
+    private readonly leaves: LeavesService,
   ) {}
 
   // ---------------------------------------------------------------- queries
@@ -98,6 +100,22 @@ export class SprintsService {
     const endDate = sprint.endDate ?? new Date(startDate.getTime() + DEFAULT_SPRINT_DAYS * DAY);
     const result = buildBurndown({ startDate, endDate, committedPoints: sprint.committedPoints, tasks: tasks.map((t) => ({ points: t.storyPoints, completedAt: t.completedAt })), now });
     return { sprint, ...result };
+  }
+
+  /**
+   * Capacity thực tế của sprint: ngày làm việc của từng thành viên dự án trừ nghỉ phép đã duyệt, quy ra giờ,
+   * kèm tổng điểm cam kết/phạm vi để so sánh với sức chứa.
+   */
+  async capacity(user: AuthUser, sprintId: number) {
+    const sprint = await this.findOrThrow(sprintId);
+    await this.access.assertCanView(user, sprint.projectId);
+    const start = sprint.startDate ?? sprint.startedAt ?? sprint.createdAt;
+    const end = sprint.endDate ?? new Date(start.getTime() + (DEFAULT_SPRINT_DAYS - 1) * DAY);
+    const [capacity, scope] = await Promise.all([
+      this.leaves.capacity(sprint.projectId, start, end),
+      this.prisma.task.aggregate({ where: { sprintId, ...PLANNABLE }, _sum: { storyPoints: true } }),
+    ]);
+    return { sprintId, ...capacity, plannedPoints: scope._sum.storyPoints ?? 0, committedPoints: sprint.committedPoints };
   }
 
   /** Velocity: điểm cam kết và điểm hoàn thành của các sprint đã kết thúc gần nhất (cũ → mới) + trung bình 3 sprint gần nhất */

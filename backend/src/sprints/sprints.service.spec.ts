@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, NotFoundException } from '@nes
 import { Sprint } from '@prisma/client';
 import { ActivityService } from '../activity/activity.service';
 import { AuthUser } from '../common/types/auth-user';
+import { LeavesService } from '../leaves/leaves.service';
 import { ProjectAccessService } from '../projects/project-access.service';
 import { asPrisma, callArg, createPrismaMock, PrismaMock } from '../test-utils';
 import { SprintsService } from './sprints.service';
@@ -44,7 +45,7 @@ describe('SprintsService', () => {
     prisma.task.findMany.mockResolvedValue([]);
     prisma.task.updateMany.mockResolvedValue({ count: 0 });
     const p = asPrisma(prisma);
-    service = new SprintsService(p, new ProjectAccessService(p), activity as unknown as ActivityService);
+    service = new SprintsService(p, new ProjectAccessService(p), activity as unknown as ActivityService, { capacity: jest.fn().mockResolvedValue({ totalAvailableHours: 80, members: [] }) } as unknown as LeavesService);
   });
 
   describe('quyền', () => {

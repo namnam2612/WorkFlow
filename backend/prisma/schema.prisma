@@ -29,6 +29,20 @@ enum Specialty {
   other
 }
 
+enum LeaveType {
+  annual
+  sick
+  unpaid
+  other
+}
+
+enum LeaveStatus {
+  pending
+  approved
+  rejected
+  cancelled
+}
+
 enum SprintStatus {
   planned
   active
@@ -98,6 +112,8 @@ model User {
   assignedTasks   TaskAssignee[]
   workLogs        WorkLog[]
   ledTeams        Team[]          @relation("TeamLeader")
+  leaves          Leave[]         @relation("LeaveUser")
+  reviewedLeaves  Leave[]         @relation("LeaveReviewer")
   teamMemberships TeamMember[]
   createdTasks    Task[]          @relation("TaskCreator")
   comments        Comment[]
@@ -381,4 +397,25 @@ model TeamMember {
 
   @@id([teamId, userId])
   @@index([userId])
+}
+
+/// Đơn nghỉ phép: khoảng ngày [startDate, endDate] (cả hai đầu, 00:00 giờ VN) — dùng tính capacity thực tế của nhóm
+model Leave {
+  id           Int         @id @default(autoincrement())
+  userId       Int
+  startDate    DateTime
+  endDate      DateTime
+  type         LeaveType   @default(annual)
+  status       LeaveStatus @default(pending)
+  reason       String?     @db.VarChar(500)
+  reviewedById Int?
+  reviewedAt   DateTime?
+  reviewNote   String?     @db.VarChar(500)
+  createdAt    DateTime    @default(now())
+
+  user     User  @relation("LeaveUser", fields: [userId], references: [id], onDelete: Cascade)
+  reviewer User? @relation("LeaveReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([userId, startDate])
+  @@index([status, startDate])
 }

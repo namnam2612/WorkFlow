@@ -12,6 +12,7 @@ import FilesProjectsPage from './pages/files/FilesProjectsPage';
 import FilesTaskPage from './pages/files/FilesTaskPage';
 import DashboardPage from './pages/DashboardPage';
 import BacklogPage from './pages/BacklogPage';
+import LeavePage from './pages/LeavePage';
 import MyWorkPage from './pages/MyWorkPage';
 import ReportsPage from './pages/ReportsPage';
 import TeamDetailPage from './pages/TeamDetailPage';
@@ -66,6 +67,7 @@ function AppRoutes() {
           <Route path="tasks/:id" element={<TaskDetailPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="leave" element={<LeavePage />} />
           <Route path="teams" element={<TeamsPage />} />
           <Route path="teams/:id" element={<TeamDetailPage />} />
           <Route path="members" element={<MembersPage />} />

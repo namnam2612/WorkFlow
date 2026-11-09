@@ -56,6 +56,11 @@ export class SprintsController {
     return this.sprints.complete(user, id, dto);
   }
 
+  @Get('sprints/:id/capacity')
+  capacity(@CurrentUser() user: AuthUser, @Param('id', ParseIntPipe) id: number) {
+    return this.sprints.capacity(user, id);
+  }
+
   @Get('sprints/:id/burndown')
   burndown(@CurrentUser() user: AuthUser, @Param('id', ParseIntPipe) id: number) {
     return this.sprints.burndown(user, id);

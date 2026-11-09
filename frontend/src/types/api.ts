@@ -393,3 +393,35 @@ export interface TeamDetail extends Team {
   members: TeamMemberView[];
   projects: { id: number; name: string }[];
 }
+
+export type LeaveType = 'annual' | 'sick' | 'unpaid' | 'other';
+export type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+
+export interface Leave {
+  id: number;
+  user: UserBrief;
+  startDate: string;
+  endDate: string;
+  type: LeaveType;
+  status: LeaveStatus;
+  createdAt: string;
+  /** Ẩn với đồng đội (chỉ chủ đơn, người duyệt và admin thấy) */
+  reason: string | null;
+  reviewNote: string | null;
+  reviewer: UserBrief | null;
+  reviewedAt: string | null;
+  canReview: boolean;
+  canCancel: boolean;
+}
+
+export interface Capacity {
+  from: string;
+  to: string;
+  hoursPerDay: number;
+  totalAvailableDays: number;
+  totalAvailableHours: number;
+  totalLeaveDays: number;
+  members: { user: UserBrief; workingDays: number; leaveDays: number; availableDays: number; availableHours: number }[];
+}
+
+export type SprintCapacity = Capacity & { sprintId: number; plannedPoints: number; committedPoints: number | null };

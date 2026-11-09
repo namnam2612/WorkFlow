@@ -1,4 +1,4 @@
-import type { BugSeverity, Environment, Priority, Role, Specialty, StatusCategory, TaskType } from '../types/api';
+import type { BugSeverity, Environment, LeaveStatus, LeaveType, Priority, Role, Specialty, StatusCategory, TaskType } from '../types/api';
 
 export const PRIORITIES: Priority[] = ['low', 'medium', 'high', 'urgent'];
 
@@ -68,3 +68,11 @@ export const CHART_CHROME = {
 
 export const SPECIALTIES: Specialty[] = ['dev', 'qa', 'designer', 'other'];
 export const SPECIALTY_LABEL: Record<Specialty, string> = { dev: 'Dev', qa: 'QA', designer: 'Designer', other: 'Khác' };
+
+export const LEAVE_TYPE_LABEL: Record<LeaveType, string> = { annual: 'Phép năm', sick: 'Nghỉ ốm', unpaid: 'Nghỉ không lương', other: 'Khác' };
+export const LEAVE_STATUS_META: Record<LeaveStatus, { label: string; badge: string }> = {
+  pending: { label: 'Chờ duyệt', badge: 'bg-amber-50 text-amber-700 ring-amber-200' },
+  approved: { label: 'Đã duyệt', badge: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
+  rejected: { label: 'Từ chối', badge: 'bg-red-50 text-red-700 ring-red-200' },
+  cancelled: { label: 'Đã hủy', badge: 'bg-slate-100 text-slate-600 ring-slate-200' },
+};

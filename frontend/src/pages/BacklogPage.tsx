@@ -14,6 +14,7 @@ import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { EmptyState, ErrorState, PageLoader } from '../components/ui/States';
 import { useToast } from '../components/ui/useToast';
 import { useProject } from '../hooks/useProjects';
+import { useSprintCapacity } from '../hooks/useLeaves';
 import { useBacklog, useDeleteSprint, useMoveToSprint, useStartSprint } from '../hooks/useSprints';
 import { getErrorMessage } from '../lib/api';
 import { formatDate } from '../lib/format';
@@ -22,6 +23,19 @@ import { chipClass, inputClass } from '../lib/styles';
 import type { SprintStats, SprintWithStats, Task, TaskType } from '../types/api';
 
 const SPRINT_STATUS_LABEL = { planned: 'Kế hoạch', active: 'Đang chạy', completed: 'Đã kết thúc' } as const;
+
+/** Capacity thực tế của sprint: giờ khả dụng sau khi trừ nghỉ phép đã duyệt, so với điểm đã xếp vào sprint */
+function CapacityLine({ sprintId, points }: { sprintId: number; points: number }) {
+  const query = useSprintCapacity(sprintId);
+  const c = query.data;
+  if (!c) return null;
+  return (
+    <span className="tabular-nums" title={c.members.map((m) => `${m.user.name}: ${m.availableDays}/${m.workingDays} ngày`).join('\n')}>
+      Capacity {c.totalAvailableHours} giờ ({c.totalAvailableDays} ngày công{c.totalLeaveDays > 0 ? `, trừ ${c.totalLeaveDays} ngày nghỉ` : ''})
+      {c.totalAvailableDays > 0 && points > 0 ? ` · ${(points / c.totalAvailableDays).toFixed(1)} điểm/ngày` : ''}
+    </span>
+  );
+}
 
 function Progress({ stats }: { stats: SprintStats }) {
   const total = stats.points > 0 ? stats.points : stats.taskCount;
@@ -194,6 +208,7 @@ export default function BacklogPage() {
                     {sprint.stats.doneCount}/{sprint.stats.taskCount} việc · {sprint.stats.donePoints}/{sprint.stats.points} điểm
                   </span>
                   <Progress stats={sprint.stats} />
+                  <CapacityLine sprintId={sprint.id} points={sprint.stats.points} />
                 </div>
                 {sprint.goal && (
                   <p className="mb-3 flex items-start gap-1.5 text-sm text-slate-600">

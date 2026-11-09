@@ -12,6 +12,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { validateEnv } from './config/env.validation';
 import { CommentsModule } from './comments/comments.module';
+import { LeavesModule } from './leaves/leaves.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProjectsModule } from './projects/projects.module';
@@ -41,6 +42,7 @@ import { WorkLogsModule } from './worklogs/worklogs.module';
     SprintsModule,
     WorkLogsModule,
     TeamsModule,
+    LeavesModule,
     TasksModule,
     CommentsModule,
     AttachmentsModule,
