@@ -11,7 +11,11 @@ Web app để Leader giao việc và theo dõi tiến độ/deadline; thành vi�
 - Frontend: React 19 + Vite + TS + Tailwind 4, React Router 7, TanStack Query, dnd-kit, Recharts, react-hook-form + zod
 
 ## Phân quyền
+<<<<<<< HEAD
 - Một task giao được cho NHIỀU người (`TaskAssignee`, API `assigneeIds`); "người được giao" = một trong số họ. `admin`: toàn hệ thống. `leader`: quản lý dự án mình tạo (task, thành viên). `member`: xem task của dự án mình tham gia; cập nhật status/actualHours/bình luận task được giao cho mình; thêm công việc con vào task lớn được giao cho mình (giao cho chính mình hoặc để trống) và sửa/xóa công việc con do mình tạo.
+=======
+- `admin`: toàn hệ thống. `leader`: quản lý dự án mình tạo (task, thành viên). `member`: xem task của dự án mình tham gia; cập nhật status/actualHours/bình luận task được giao cho mình; tạo công việc (luôn giao cho chính mình), thêm công việc con vào task lớn được giao cho mình (giao cho chính mình hoặc để trống) và sửa/xóa công việc con do mình tạo.
+>>>>>>> origin/main
 - Kiểm tra ở backend (Guard `JwtAuthGuard`, `RolesGuard`, + kiểm tra truy cập dự án trong service). Frontend chỉ ẩn nút thêm cho UX.
 
 ## Quy ước

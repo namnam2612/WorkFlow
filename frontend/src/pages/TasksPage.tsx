@@ -1,7 +1,6 @@
 import { Plus, Search, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useAuth } from '../auth/useAuth';
 import { TaskFormModal } from '../components/tasks/TaskFormModal';
 import { AssigneeFilter } from '../components/assignees/AssigneeFilter';
 import { TaskTable } from '../components/tasks/TaskTable';
@@ -33,7 +32,6 @@ function asEnum<T extends string>(value: string | null, allowed: readonly T[]): 
 }
 
 export default function TasksPage() {
-  const { user } = useAuth();
   const [params, setParams] = useSearchParams();
   const [creating, setCreating] = useState(false);
 
@@ -94,8 +92,12 @@ export default function TasksPage() {
   } satisfies TaskFilters & { includeSubtasks?: boolean };
   const tasksQuery = useTasks(filters);
 
+<<<<<<< HEAD
   const canCreate = user?.role === 'admin' || user?.role === 'leader';
   const hasFilters = Boolean(q || projectId || assigneeIds.length > 0 || status || priority || from || to || includeSubtasks);
+=======
+  const hasFilters = Boolean(q || projectId || assigneeId || status || priority || from || to || includeSubtasks);
+>>>>>>> origin/main
 
   const clearFilters = () => {
     window.clearTimeout(searchTimer.current);
@@ -114,11 +116,9 @@ export default function TasksPage() {
         title="Công việc"
         description="Tìm kiếm, lọc và theo dõi mọi công việc"
         actions={
-          canCreate && (
-            <Button icon={<Plus className="h-4 w-4" />} onClick={() => setCreating(true)}>
-              Tạo công việc
-            </Button>
-          )
+          <Button icon={<Plus className="h-4 w-4" />} onClick={() => setCreating(true)}>
+            Tạo công việc
+          </Button>
         }
       />
 

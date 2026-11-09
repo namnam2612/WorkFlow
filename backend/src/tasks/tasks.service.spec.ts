@@ -93,9 +93,18 @@ describe('TasksService', () => {
   describe('create', () => {
     const dto = { projectId: 1, title: 'Việc mới', assigneeIds: [20] };
 
-    it('member không được tạo task lớn (kiểm tra ở backend, không chỉ ẩn nút)', async () => {
-      await expect(service.create(assignee, dto)).rejects.toBeInstanceOf(ForbiddenException);
+    it('member không được giao task lớn cho người khác (kiểm tra ở backend)', async () => {
+      await expect(service.create(assignee, { ...dto, assigneeId: 21 })).rejects.toBeInstanceOf(ForbiddenException);
       expect(prisma.task.create).not.toHaveBeenCalled();
+    });
+
+    it('member tạo task lớn cho chính mình; để trống thì tự giao cho mình', async () => {
+      await service.create(assignee, dto);
+      await service.create(assignee, { projectId: 1, title: 'Việc mới' });
+      const first = callArg(prisma.task.create, 0) as { data: Partial<Task> };
+      const second = callArg(prisma.task.create, 1) as { data: Partial<Task> };
+      expect(first.data.assigneeId).toBe(20);
+      expect(second.data.assigneeId).toBe(20);
     });
 
     describe('member thêm công việc con', () => {

@@ -85,7 +85,6 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
 
   const projectId = Number(watch('projectId')) || undefined;
   const projectQuery = useProject(projectId);
-  const manageableProjects = (projectsQuery.data ?? []).filter((p) => canManageProject(user, p));
   // Thành viên (không phải leader/admin của dự án) chỉ được giao việc con cho chính mình
   const canAssignOthers = canManageProject(user, projectQuery.data);
   const members: UserBrief[] = (projectQuery.data?.members ?? []).filter((m) => canAssignOthers || m.id === user?.id);
@@ -169,13 +168,26 @@ export function TaskFormModal({ open, onClose, task, defaultProjectId, defaultSt
               {...register('projectId', { onChange: () => setAssignees([]) })}
             >
               <option value="">— Chọn dự án —</option>
-              {(isEdit || parentId !== undefined || defaultProjectId !== undefined ? (projectsQuery.data ?? []) : manageableProjects).map((p) => (
+              {(projectsQuery.data ?? []).map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
                 </option>
               ))}
             </select>
           </Field>
+<<<<<<< HEAD
+=======
+          <Field label="Người thực hiện" htmlFor="task-assignee" hint={!canAssignOthers && projectId ? 'Bạn chỉ có thể giao công việc cho chính mình' : undefined}>
+            <select id="task-assignee" className={inputClass} disabled={!projectId} {...register('assigneeId')}>
+              <option value="">— Chưa giao —</option>
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+>>>>>>> origin/main
           <Field label="Trạng thái" htmlFor="task-status">
             <select id="task-status" className={inputClass} {...register('status')}>
               {STATUSES.map((s) => (

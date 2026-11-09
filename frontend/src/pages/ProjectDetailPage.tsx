@@ -92,11 +92,11 @@ export default function ProjectDetailPage() {
             <Button icon={<KanbanSquare className="h-4 w-4" />} onClick={() => navigate(`/projects/${project.id}/board`)}>
               Bảng Kanban
             </Button>
+            <Button variant="secondary" icon={<Plus className="h-4 w-4" />} onClick={() => setCreatingTask(true)}>
+              Thêm công việc
+            </Button>
             {canManage && (
               <>
-                <Button variant="secondary" icon={<Plus className="h-4 w-4" />} onClick={() => setCreatingTask(true)}>
-                  Thêm công việc
-                </Button>
                 <Button variant="secondary" icon={<Pencil className="h-4 w-4" />} onClick={() => setEditing(true)}>
                   Sửa
                 </Button>

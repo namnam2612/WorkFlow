@@ -28,7 +28,7 @@ Web app để **Leader giao việc và theo dõi tiến độ/deadline** của t
 |---|---|
 | `admin` | Toàn hệ thống: người dùng, vai trò, mọi dự án/task |
 | `leader` | Tạo dự án; thêm/xóa thành viên; tạo/giao/sửa/xóa **mọi task trong dự án do mình tạo** |
-| `member` | Xem task trong dự án mình tham gia; cập nhật **trạng thái, giờ thực tế, bình luận** trên task **được giao cho mình**; **thêm công việc con** vào task lớn được giao cho mình (chỉ giao cho chính mình hoặc để trống) và sửa/xóa công việc con do mình tạo |
+| `member` | Xem task trong dự án mình tham gia; cập nhật **trạng thái, giờ thực tế, bình luận** trên task **được giao cho mình**; **tạo công việc** (luôn giao cho chính mình), **thêm công việc con** vào task lớn được giao cho mình (chỉ giao cho chính mình hoặc để trống) và sửa/xóa công việc con do mình tạo |
 
 Phân quyền được kiểm tra **ở backend** (`JwtAuthGuard` toàn cục, `RolesGuard` + `@Roles`, và `ProjectAccessService` cho quyền theo dự án/task cụ thể). Frontend chỉ ẩn nút để trải nghiệm tốt hơn.
 
