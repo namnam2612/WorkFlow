@@ -14,6 +14,7 @@ import { ListTasksQueryDto } from './dto/list-tasks-query.dto';
 import { MoveTaskDto } from './dto/move-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { STATUS_LABEL_VI } from './task-labels';
+import { AttachmentCleanupService } from '../attachments/attachment-cleanup.service';
 import { taskInclude, toTaskView } from './task-view';
 
 const detailInclude = {
@@ -22,7 +23,7 @@ const detailInclude = {
   project: { select: { id: true, name: true, createdById: true } },
   parent: { select: { id: true, title: true, assigneeId: true } },
   subtasks: { include: taskInclude, orderBy: [{ position: 'asc' }, { id: 'asc' }] },
-  _count: { select: { comments: true } },
+  _count: { select: { comments: true, attachments: true } },
 } satisfies Prisma.TaskInclude;
 
 /** Các trường mà người được giao (không phải leader/admin) được phép sửa */
@@ -36,6 +37,7 @@ export class TasksService {
     private readonly activity: ActivityService,
     private readonly notifications: NotificationsService,
     private readonly realtime: RealtimeService,
+    private readonly attachmentCleanup: AttachmentCleanupService,
   ) {}
 
   // ---------------------------------------------------------------- queries
@@ -97,6 +99,7 @@ export class TasksService {
       subtaskTotal: subtasks.length,
       subtaskDone: subtasks.filter((s) => s.status === 'done').length,
       commentCount: _count.comments,
+      attachmentCount: _count.attachments,
     };
   }
 
@@ -320,7 +323,9 @@ export class TasksService {
     if (!this.access.canManage(user, project) && !this.isSubtaskCreator(user, task)) {
       throw new ForbiddenException('Chỉ trưởng nhóm của dự án, quản trị viên hoặc người tạo công việc con mới được xóa');
     }
+    const files = await this.attachmentCleanup.collectTaskFiles(id);
     await this.prisma.task.delete({ where: { id } });
+    await this.attachmentCleanup.deleteFiles(files);
     this.realtime.taskChanged(task.projectId, id);
   }
 

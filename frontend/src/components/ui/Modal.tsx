@@ -7,7 +7,7 @@ interface ModalProps {
   title: string;
   onClose: () => void;
   children: ReactNode;
-  size?: 'md' | 'lg';
+  size?: 'md' | 'lg' | 'xl';
 }
 
 export function Modal({ open, title, onClose, children, size = 'md' }: ModalProps) {
@@ -32,7 +32,7 @@ export function Modal({ open, title, onClose, children, size = 'md' }: ModalProp
       <div
         className={clsx(
           'relative flex max-h-[92vh] w-full flex-col rounded-t-3xl border border-white/[0.08] bg-modal shadow-[0_40px_100px_var(--shadow-deep)] [animation:modal-in_0.5s_var(--ease-out)_both] sm:rounded-3xl',
-          size === 'md' ? 'sm:max-w-lg' : 'sm:max-w-2xl',
+          size === 'md' ? 'sm:max-w-lg' : size === 'lg' ? 'sm:max-w-2xl' : 'sm:max-w-5xl',
         )}
       >
         <div className="flex items-center justify-between border-b border-white/[0.08] px-6 py-4">

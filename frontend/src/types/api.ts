@@ -82,6 +82,7 @@ export interface Task {
   subtaskTotal: number;
   subtaskDone: number;
   commentCount: number;
+  attachmentCount: number;
 }
 
 export interface TaskDetail extends Task {
@@ -156,4 +157,36 @@ export interface UserStats {
 
 export interface UserProfile extends User {
   stats: UserStats;
+}
+
+export type FileCategory = 'image' | 'pdf' | 'document' | 'spreadsheet' | 'other';
+
+/** File đính kèm; `uploader` là người gửi (người đã tải file lên) */
+export interface Attachment {
+  id: number;
+  taskId: number;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  createdAt: string;
+  uploader: UserBrief;
+  task: { id: number; title: string; status: TaskStatus };
+  project: { id: number; name: string };
+  /** Ảnh/PDF xem trực tiếp được */
+  previewable: boolean;
+  /** Người xem có quyền xóa file này không (người gửi, leader dự án, admin) */
+  canDelete: boolean;
+}
+
+export interface AttachmentFilters {
+  search?: string;
+  projectId?: number;
+  uploaderId?: number;
+  type?: FileCategory;
+  from?: string;
+  to?: string;
+  sortBy?: 'createdAt' | 'name' | 'size';
+  order?: 'asc' | 'desc';
+  page?: number;
+  pageSize?: number;
 }

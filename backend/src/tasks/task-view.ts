@@ -5,7 +5,7 @@ export const taskInclude = {
   assignee: { select: USER_BRIEF_SELECT },
   project: { select: { id: true, name: true } },
   subtasks: { select: { status: true } },
-  _count: { select: { comments: true } },
+  _count: { select: { comments: true, attachments: true } },
 } satisfies Prisma.TaskInclude;
 
 export type TaskWithRelations = Prisma.TaskGetPayload<{ include: typeof taskInclude }>;
@@ -18,6 +18,7 @@ export function toTaskView(task: TaskWithRelations) {
     subtaskTotal: subtasks.length,
     subtaskDone: subtasks.filter((s) => s.status === 'done').length,
     commentCount: _count.comments,
+    attachmentCount: _count.attachments,
   };
 }
 

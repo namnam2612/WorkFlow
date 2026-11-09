@@ -48,6 +48,7 @@ model User {
   facebookUrl  String?  @db.VarChar(255)
 
   avatar          UserAvatar?
+  attachments     Attachment[]
 
   createdProjects Project[]       @relation("ProjectCreator")
   memberships     ProjectMember[]
@@ -135,12 +136,36 @@ model Task {
 
   comments     Comment[]
   activityLogs ActivityLog[]
+  attachments  Attachment[]
 
   @@index([assigneeId, status])
   @@index([deadline])
   @@index([projectId])
   @@index([projectId, status, position])
   @@index([parentId])
+}
+
+/// File đính kèm của task. File thật nằm ở UPLOAD_DIR (qua StorageService), bảng này chỉ giữ metadata.
+model Attachment {
+  id           Int      @id @default(autoincrement())
+  taskId       Int
+  uploaderId   Int
+  /// Tên gốc người dùng đặt (hiển thị và dùng khi tải về)
+  originalName String   @db.VarChar(255)
+  /// Tên lưu trên ổ đĩa: UUID + đuôi file, không lộ tên gốc
+  storedName   String   @db.VarChar(100)
+  mimeType     String   @db.VarChar(120)
+  size         Int
+  /// Đường dẫn tương đối so với UPLOAD_DIR (vd 2026/11/<uuid>.pdf)
+  path         String   @db.VarChar(255)
+  createdAt    DateTime @default(now())
+
+  task     Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploader User @relation(fields: [uploaderId], references: [id], onDelete: Restrict)
+
+  @@index([taskId])
+  @@index([uploaderId])
+  @@index([createdAt])
 }
 
 model Comment {

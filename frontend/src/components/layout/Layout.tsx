@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { Bell, FolderKanban, LayoutDashboard, ListChecks, LogOut, UserRound, Users } from 'lucide-react';
+import { Bell, FolderArchive, FolderKanban, LayoutDashboard, ListChecks, LogOut, UserRound, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { to: '/', label: 'Tổng quan', icon: LayoutDashboard, end: true },
   { to: '/projects', label: 'Dự án', icon: FolderKanban, end: false },
   { to: '/tasks', label: 'Công việc', icon: ListChecks, end: false },
+  { to: '/documents', label: 'Kho tài liệu', icon: FolderArchive, end: false },
   { to: '/members', label: 'Thành viên', icon: Users, end: false },
   { to: '/notifications', label: 'Thông báo', icon: Bell, end: false },
   { to: '/profile', label: 'Hồ sơ', icon: UserRound, end: false },

@@ -1,5 +1,6 @@
 import { PrismaClient, Priority, Role, TaskStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { clearAttachments, makePdf, makePng, writeSample } from './seed-files';
 
 const prisma = new PrismaClient();
 
@@ -115,6 +116,7 @@ async function main(): Promise<void> {
   const passwordHash = await bcrypt.hash(password, 10);
 
   console.log('Xóa dữ liệu cũ...');
+  await clearAttachments(prisma); // xóa cả file trên ổ đĩa
   await prisma.notification.deleteMany();
   await prisma.activityLog.deleteMany();
   await prisma.comment.deleteMany();
@@ -150,6 +152,7 @@ async function main(): Promise<void> {
   };
 
   let taskCount = 0;
+  let fileCount = 0;
   for (const def of PROJECTS) {
     const leader = getUser(def.leader);
     const project = await prisma.project.create({
@@ -203,6 +206,37 @@ async function main(): Promise<void> {
         data: { taskId: task.id, userId: leader.id, action: 'task_created', detail: { title: t.title } },
       });
 
+      // File đính kèm mẫu: vài task trong mỗi dự án, do nhiều người gửi khác nhau (người được giao, leader, đồng đội)
+      if (index % 3 === 0) {
+        const uploaders = [assigneeId ?? leader.id, leader.id, memberIds[(index + 1) % memberIds.length]];
+        const samples: { name: string; mime: string; data: Buffer; by: number; ago: number }[] = [
+          { name: `Yêu cầu - ${t.title}.pdf`, mime: 'application/pdf', data: makePdf(`Yeu cau: ${t.title}`), by: uploaders[1], ago: 6 },
+          { name: `Ảnh minh họa ${index + 1}.png`, mime: 'image/png', data: makePng(320, 220, index * 40), by: uploaders[0], ago: 3 },
+          { name: `Ghi chú họp ${index + 1}.txt`, mime: 'text/plain', data: Buffer.from(`Ghi chú họp cho "${t.title}"\n- Thống nhất phạm vi\n- Phân công người thực hiện\n`, 'utf8'), by: uploaders[2], ago: 1 },
+          { name: `Số liệu ${index + 1}.csv`, mime: 'text/csv', data: Buffer.from('Hạng mục,Số giờ\nThiết kế,8\nLập trình,16\nKiểm thử,6\n', 'utf8'), by: uploaders[0], ago: 2 },
+        ];
+        const take = index % 2 === 0 ? samples : samples.slice(0, 2);
+        for (const sample of take) {
+          const stored = await writeSample(sample);
+          const attachment = await prisma.attachment.create({
+            data: {
+              taskId: task.id,
+              uploaderId: sample.by,
+              originalName: sample.name,
+              storedName: stored.storedName,
+              mimeType: sample.mime,
+              size: stored.size,
+              path: stored.path,
+              createdAt: daysFromNow(-sample.ago),
+            },
+          });
+          await prisma.activityLog.create({
+            data: { taskId: task.id, userId: sample.by, action: 'attachment_added', detail: { attachmentId: attachment.id, name: sample.name, size: stored.size } },
+          });
+          fileCount++;
+        }
+      }
+
       for (const subtaskTitle of t.subtasks ?? []) {
         const subDone = t.status === 'review' || t.status === 'done';
         await prisma.task.create({
@@ -249,7 +283,7 @@ async function main(): Promise<void> {
     }
   }
 
-  console.log(`Seed xong: ${users.size} người dùng, ${PROJECTS.length} dự án, ${taskCount} task (gồm subtask).`);
+  console.log(`Seed xong: ${users.size} người dùng, ${PROJECTS.length} dự án, ${taskCount} task (gồm subtask), ${fileCount} file đính kèm.`);
   console.log(`Mật khẩu mặc định cho mọi tài khoản mẫu: ${password}`);
 }
 

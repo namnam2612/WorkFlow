@@ -20,6 +20,10 @@ COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/dist ./dist
 COPY prisma ./prisma
 COPY tsconfig.json ./
+# Thư mục file đính kèm: user node phải ghi được; khai báo VOLUME để dữ liệu không mất khi tạo lại container
+RUN mkdir -p /app/uploads && chown node:node /app/uploads
+ENV UPLOAD_DIR=/app/uploads
+VOLUME /app/uploads
 EXPOSE 3000
 USER node
 # Áp dụng migration rồi chạy server

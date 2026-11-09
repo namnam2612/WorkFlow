@@ -30,6 +30,12 @@ const DEFAULT_MESSAGES_VI: Record<number, string> = {
   429: 'Bạn thao tác quá nhanh, vui lòng thử lại sau',
 };
 
+/** Thông báo mặc định (tiếng Anh) của multer -> tiếng Việt */
+const MULTER_MESSAGES_VI: Record<string, string> = {
+  'Too many files': 'Mỗi lần chỉ tải lên tối đa 10 file',
+  'Unexpected field': 'Trường file không hợp lệ',
+};
+
 /** Chuẩn hóa mọi lỗi về cùng một cấu trúc JSON */
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -67,6 +73,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
         if (typeof raw === 'string' || Array.isArray(raw)) message = raw;
       }
       const statusCode = exception.getStatus();
+      if (typeof message === 'string' && message in MULTER_MESSAGES_VI) message = MULTER_MESSAGES_VI[message];
       const isGeneric = typeof message === 'string' && (message === STATUS_TEXT[statusCode] || /^(Forbidden resource|Unauthorized|Not Found|File too large|ThrottlerException.*)$/.test(message));
       if (isGeneric && DEFAULT_MESSAGES_VI[statusCode]) message = DEFAULT_MESSAGES_VI[statusCode];
       return { statusCode, message };

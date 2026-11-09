@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Priority, Task } from '@prisma/client';
 import { ActivityService } from '../activity/activity.service';
+import { AttachmentCleanupService } from '../attachments/attachment-cleanup.service';
 import { AuthUser } from '../common/types/auth-user';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ProjectAccessService } from '../projects/project-access.service';
@@ -48,6 +49,7 @@ describe('TasksService', () => {
   let activity: { log: jest.Mock };
   let notifications: { notify: jest.Mock };
   let realtime: { taskChanged: jest.Mock };
+  let cleanup: { collectTaskFiles: jest.Mock; deleteFiles: jest.Mock };
   let service: TasksService;
 
   beforeEach(() => {
@@ -68,6 +70,7 @@ describe('TasksService', () => {
       Promise.resolve(buildTask({ id: where.id, ...data })),
     );
 
+    cleanup = { collectTaskFiles: jest.fn().mockResolvedValue(['2026/11/a.pdf']), deleteFiles: jest.fn().mockResolvedValue(undefined) };
     const prismaService = asPrisma(prisma);
     service = new TasksService(
       prismaService,
@@ -75,6 +78,7 @@ describe('TasksService', () => {
       activity as unknown as ActivityService,
       notifications as unknown as NotificationsService,
       realtime as unknown as RealtimeService,
+      cleanup as unknown as AttachmentCleanupService,
     );
     // get() dựng lại chi tiết bằng nhiều truy vấn include — không thuộc phạm vi các test này
     jest.spyOn(service, 'get').mockResolvedValue({} as never);
@@ -392,6 +396,13 @@ describe('TasksService', () => {
       prisma.task.findUnique.mockResolvedValue(buildTask({ id: 5, parentId: null, creatorId: 20 }));
       await expect(service.remove(assignee, 5)).rejects.toBeInstanceOf(ForbiddenException);
       expect(prisma.task.delete).toHaveBeenCalledTimes(1);
+    });
+
+    it('xóa task => dọn cả file đính kèm trên ổ đĩa (sau khi xóa DB)', async () => {
+      prisma.task.findUnique.mockResolvedValue(buildTask());
+      await service.remove(owner, 5);
+      expect(cleanup.collectTaskFiles).toHaveBeenCalledWith(5);
+      expect(cleanup.deleteFiles).toHaveBeenCalledWith(['2026/11/a.pdf']);
     });
 
     it('leader sở hữu và admin xóa được', async () => {
