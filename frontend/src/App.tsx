@@ -18,6 +18,7 @@ import QaPage from './pages/QaPage';
 import ReleaseDetailPage from './pages/ReleaseDetailPage';
 import ReleasesPage from './pages/ReleasesPage';
 import ReportsPage from './pages/ReportsPage';
+import SearchPage from './pages/SearchPage';
 import WikiPage from './pages/WikiPage';
 import TestRunPage from './pages/TestRunPage';
 import TeamDetailPage from './pages/TeamDetailPage';
@@ -58,6 +59,7 @@ function AppRoutes() {
         <Route element={<Layout />}>
           <Route index element={<DashboardPage />} />
           <Route path="my-work" element={<MyWorkPage />} />
+          <Route path="search" element={<SearchPage />} />
           <Route path="projects" element={<ProjectsPage />} />
           <Route path="projects/:id" element={<ProjectDetailPage />} />
           <Route path="projects/:id/board" element={<KanbanPage />} />

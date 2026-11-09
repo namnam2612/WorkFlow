@@ -557,3 +557,23 @@ export interface WikiRevisionView {
   createdAt: string;
   author: UserBrief | null;
 }
+
+export type SearchKind = 'task' | 'wiki' | 'testCase' | 'release' | 'file' | 'comment';
+
+export interface SearchHit {
+  kind: SearchKind;
+  id: number;
+  title: string;
+  snippet: string;
+  projectId: number;
+  projectName: string;
+  link: string;
+  score: number;
+}
+
+export interface SearchResult {
+  query: string;
+  terms: string[];
+  total: number;
+  groups: { kind: SearchKind; hits: SearchHit[] }[];
+}

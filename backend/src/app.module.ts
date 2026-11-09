@@ -25,6 +25,7 @@ import { SprintsModule } from './sprints/sprints.module';
 import { StatusesModule } from './statuses/statuses.module';
 import { TasksModule } from './tasks/tasks.module';
 import { TeamsModule } from './teams/teams.module';
+import { SearchModule } from './search/search.module';
 import { WikiModule } from './wiki/wiki.module';
 import { UsersModule } from './users/users.module';
 import { WorkLogsModule } from './worklogs/worklogs.module';
@@ -51,6 +52,7 @@ import { WorkLogsModule } from './worklogs/worklogs.module';
     ReleasesModule,
     QaModule,
     WikiModule,
+    SearchModule,
     TasksModule,
     CommentsModule,
     AttachmentsModule,

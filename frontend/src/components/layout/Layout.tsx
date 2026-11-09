@@ -1,11 +1,12 @@
 import clsx from 'clsx';
-import { Bell, CalendarCheck, CalendarDays, CalendarOff, FolderArchive, FolderKanban, LayoutDashboard, ListChecks, LogOut, UserRound, Users, UsersRound } from 'lucide-react';
+import { Bell, Search, CalendarCheck, CalendarDays, CalendarOff, FolderArchive, FolderKanban, LayoutDashboard, ListChecks, LogOut, UserRound, Users, UsersRound } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
 import { useRealtime } from '../../hooks/useRealtime';
 import { ROLE_LABEL } from '../../lib/constants';
 import { NotificationBell } from '../notifications/NotificationBell';
+import { GlobalSearch } from './GlobalSearch';
 import { Avatar } from '../ui/Avatar';
 import { ThemeToggle } from '../ui/ThemeToggle';
 import { BrandMark } from '../ui/Brand';
@@ -160,6 +161,10 @@ export function Layout() {
           </button>
           <div className="hidden lg:block" />
           <div className="flex items-center gap-3">
+            <GlobalSearch />
+            <Link to="/search" aria-label="Tìm kiếm" className="flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.08] text-white transition hover:bg-white/5 xl:hidden">
+              <Search className="h-4 w-4" />
+            </Link>
             <ThemeToggle />
             <NotificationBell />
             {user && (
