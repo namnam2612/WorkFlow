@@ -23,15 +23,22 @@ Web app để Leader giao việc và theo dõi tiến độ/deadline; thành vi�
 
 ## Lệnh chạy
 ```bash
-docker compose up -d mysql                 # MySQL ở localhost:3307
+cp .env.example .env && docker compose up -d mysql     # MySQL ở localhost:3307
 cd backend && npm i && cp .env.example .env
 npx prisma migrate deploy && npm run seed
 npm run start:dev                          # API http://localhost:3000/api
-npm run build && npm run lint && npm test
-cd ../frontend && npm i && npm run dev     # http://localhost:5173
+npm run build && npm run lint && npm test  # 73 unit test
+cd ../frontend && npm i && npm run dev     # http://localhost:5173 (proxy /api, /socket.io)
 npm run build && npm run lint
+docker compose up -d --build               # toàn bộ stack: web http://localhost:8080
 ```
 Máy dev có MySQL riêng ở cổng 3306 — KHÔNG đụng vào; MySQL của dự án chạy ở 3307.
+Đăng nhập thử bị giới hạn 10 lần/phút/IP: khi chạy script kiểm thử nhiều lần hãy khởi động lại backend để reset.
+
+## Lưu ý khi sửa code
+- Đổi `schema.prisma` → `npm run migrate:dev -- --name <ten>` (cần quyền shadow DB, đã cấp trong `docker/mysql-init`).
+- Phân quyền theo dự án/task nằm ở `ProjectAccessService` + `TasksService`; thêm endpoint mới phải kiểm tra ở backend và có test.
+- Frontend: không dùng `eslint-disable`; màu biểu đồ theo bảng đã validate (`lib/constants.ts`).
 
 ## Tài liệu
 - `PROGRESS.md`: checklist tiến độ + "Quyết định thiết kế".

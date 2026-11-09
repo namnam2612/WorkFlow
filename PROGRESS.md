@@ -30,9 +30,9 @@
 
 ## Giai đoạn 7 — Hoàn thiện
 - [x] Unit test: auth (16), tasks (~35), users + RolesGuard — tổng 73 test, mock Prisma
-- [ ] Rà soát phân quyền, lỗi thống nhất, loading/empty state
+- [x] Rà soát phân quyền (ma trận 3 vai trò qua curl + Playwright + unit test), lỗi thống nhất (AllExceptionsFilter), loading/empty/error state ở mọi trang
 - [x] Dockerfile backend + frontend (nginx proxy /api + /socket.io), compose chạy full stack — đã kiểm thử từ DB trống
-- [ ] Kiểm tra cuối, README
+- [x] Kiểm tra cuối, README
 
 ## Quyết định thiết kế
 - MySQL của dự án map ra cổng host **3307** vì máy đã có MySQL khác ở 3306.
@@ -56,3 +56,10 @@
 - Socket.IO: sự kiện `notification` (riêng từng user) và `task:changed` (thành viên dự án + admin) để Kanban/danh sách tự làm mới.
 - Dashboard: member luôn xem số liệu "của tôi"; leader/admin chuyển được giữa "Cả nhóm" và "Của tôi". Biểu đồ workload và tiến độ dự án tính trên mọi dự án người xem được thấy.
 - Màu biểu đồ theo trạng thái dùng bảng màu phân loại đã qua `validate_palette` (kèm legend, nhãn số, khe 2px, tooltip, bảng thay thế).
+- Sau reverse proxy phải đặt `TRUST_PROXY=1`, nếu không mọi người dùng chia sẻ một giới hạn đăng nhập theo IP của proxy (đã bật sẵn trong docker-compose).
+- Backend image giữ devDependencies để chạy `prisma migrate deploy` và `npm run seed` trong container (đổi lại: image lớn hơn).
+
+## Vấn đề / ghi chú
+- Chưa có: upload ảnh đại diện (chỉ nhận URL), quên mật khẩu qua email, E2E tự động trong repo (đã chạy E2E bằng Playwright nhưng script nằm ngoài repo).
+- Token lưu `localStorage` (dễ bị XSS hơn cookie HttpOnly) — chấp nhận cho phạm vi hiện tại, xem README.
+- Cron chỉ chạy khi tiến trình backend chạy; nếu chạy nhiều bản backend song song sẽ trùng lần quét (đã chống tạo thông báo trùng ở mức DB-check, chưa có khóa phân tán).

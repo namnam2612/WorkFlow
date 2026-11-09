@@ -16,6 +16,13 @@ class EnvironmentVariables {
   @IsString()
   CORS_ORIGIN?: string;
 
+  /** Số reverse proxy phía trước API (0 = không có) */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(5)
+  TRUST_PROXY?: number;
+
   @IsString()
   @MinLength(1)
   DATABASE_URL: string;
