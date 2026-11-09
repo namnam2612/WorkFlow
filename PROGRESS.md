@@ -1,10 +1,10 @@
 # Tiến độ
 
 ## Giai đoạn 1 — Nền tảng
-- [ ] Monorepo, docker-compose MySQL
-- [ ] Prisma schema + migration
-- [ ] Seed (1 admin, 2 leader, 5 member, 3 dự án, ~40 task, có quá hạn)
-- [ ] `.env.example`
+- [x] Monorepo, docker-compose MySQL
+- [x] Prisma schema + migration (thêm model RefreshToken)
+- [x] Seed (1 admin, 2 leader, 5 member, 3 dự án, 40 task + 8 subtask, 6 task quá hạn)
+- [x] `.env.example`
 
 ## Giai đoạn 2 — Auth
 - [ ] Backend: login / refresh / logout, Guard theo role
@@ -39,3 +39,8 @@
 - Ghim phiên bản major ổn định: NestJS 11, Prisma 6, TypeScript 5.9, ESLint 9, Vite 7, Tailwind 4, Jest 29.
 
 ## Vấn đề / ghi chú
+- Task `position` là Int, đánh số lại theo từng cột (projectId + status) mỗi lần di chuyển.
+- Người tạo dự án cũng được thêm vào `ProjectMember` để kiểm tra truy cập thống nhất.
+- Người dùng bị vô hiệu hóa (`isActive=false`) thay vì xóa cứng, để giữ lịch sử task/bình luận.
+- Refresh token lưu dạng hash SHA-256 trong bảng `RefreshToken` (rotate mỗi lần refresh, thu hồi khi logout).
+- User MySQL `taskflow` được cấp quyền shadow DB (`docker/mysql-init`) để chạy `prisma migrate dev`.
