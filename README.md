@@ -11,15 +11,30 @@ Web app để **Leader giao việc và theo dõi tiến độ/deadline** của t
 | Màn hình | Nội dung |
 |---|---|
 | Đăng nhập | JWT, tự refresh token (single-flight), route bảo vệ |
-| Tổng quan | Số task theo trạng thái, sắp đến hạn (3 ngày), quá hạn (đỏ), tiến độ % từng dự án, biểu đồ workload theo thành viên |
-| Kanban | 5 cột theo trạng thái, kéo thả đổi cột + thứ tự (cập nhật optimistic, hoàn tác khi lỗi), lọc theo người/ưu tiên |
+| Tổng quan | Số task theo nhóm trạng thái (cần làm / đang làm / hoàn thành) + phân bố từng trạng thái, sắp đến hạn (3 ngày), quá hạn (đỏ), tiến độ % từng dự án, biểu đồ workload theo thành viên |
+| Kanban | Cột theo **trạng thái tùy biến của từng dự án** (mặc định Cần làm / Đang làm / Chờ duyệt / Hoàn thành / Bị chặn), tab **Bug** có vòng đời riêng; kéo thả đổi cột + thứ tự (cập nhật optimistic, hoàn tác khi lỗi), lọc theo người/ưu tiên; nút "Tùy chỉnh cột" (đổi tên/màu/nhóm/thứ tự, xóa kèm chuyển việc) |
 | Công việc | Lọc (dự án, người, trạng thái, ưu tiên, khoảng deadline), tìm kiếm, sắp xếp, phân trang; bộ lọc lưu trên URL |
 | Chi tiết task | Sửa thông tin, subtask, bình luận, lịch sử hoạt động (tự ghi) |
 | Giao việc cho nhiều người | Một công việc giao được cho nhiều thành viên cùng làm (chọn nhiều người có tìm kiếm, avatar + tên). Thẻ Kanban/danh sách hiển thị chồng avatar (tối đa 3 + "+N", rê chuột xem tên); chi tiết task thêm/bớt người trực tiếp; lọc theo nhiều người. Người mới thêm mới nhận thông báo "được giao"; thông báo bình luận/đổi trạng thái/deadline/sắp hạn/quá hạn gửi cho TẤT CẢ người được giao; lịch sử ghi "A đã giao việc cho B, C". Thống kê/workload tính task cho từng người |
 | Kho tài liệu dạng thư mục | Trang **Kho tài liệu** (`/files`) duyệt như thư mục trên máy tính: **Dự án → Công việc → File**. Mỗi dự án là một thư mục (chỉ dự án bạn được xem), bên trong có mục "File chung của dự án" và các task có file (bật "Hiện cả task chưa có file" để xem cả task trống); mỗi thư mục ghi số file · dung lượng. Có breadcrumb, link riêng cho từng cấp (bấm Back/chia sẻ được), lưới ⇄ danh sách (ghi nhớ), phân trang 20 mục, sắp xếp theo tên hoặc cập nhật mới nhất, ô tìm file trên TOÀN kho (kết quả ghi đường dẫn `Dự án / Task`), nút "Mở dự án"/"Mở công việc" và "Tải lên file" ngay trong thư mục. Danh sách phẳng cũ (tab Tài liệu/Ảnh, nhóm theo ngày) vẫn ở `/documents` ("Xem tất cả file") |
 | File đính kèm | Đính kèm được cho **công việc** và cho **dự án**, và chọn file ngay trong form Tạo/Sửa (file lỗi không làm mất dự án/công việc, thử lại được). Mỗi nơi đính kèm nhiều file (kéo thả, thanh tiến trình, xem trước ảnh/PDF, tải về, xóa); trang **Kho tài liệu** gom mọi file, tách tab **Tài liệu** / **Ảnh** (không lẫn nhau), nhóm theo ngày gửi (Hôm nay, Hôm qua, ...), hiển thị task/dự án chứa file và **Người gửi** (avatar + tên + thời gian), lọc theo tên/dự án/người gửi/loại/ngày, dạng bảng hoặc lưới có ảnh thu nhỏ. Xem trước ngay trên web: ảnh (kể cả SVG), PDF, văn bản/Markdown/JSON/XML/YAML, CSV, HTML, Word (.docx), Excel (.xlsx), PowerPoint (.pptx) |
 | Thành viên | Danh sách + trang từng người (đang làm / cần làm / đã xong / quá hạn); admin tạo/sửa/vô hiệu hóa người dùng |
-| Dự án | Danh sách, tạo/sửa/xóa, quản lý thành viên |
+| Dự án | Danh sách, tạo/sửa/xóa, quản lý thành viên, chọn **nhóm phụ trách** (thành viên nhóm tự vào dự án), Slack webhook, liên kết cổng khách. Trang chi tiết có lối tắt tới Kanban, Backlog, Gantt, Báo cáo, Phát hành, Kiểm thử, Tài liệu, Tự động hóa |
+| Hôm nay (My Work) | "Hôm nay cần làm gì": việc của tôi chia nhóm **Quá hạn / Đến hạn hôm nay / Đang làm / Sắp tới 7 ngày** theo ngày giờ Việt Nam; tích để hoàn thành ngay |
+| Loại công việc & Bug | Loại: Công việc, **User Story**, **Bug**, **Epic**; Story Point; Bug có mức nghiêm trọng, **môi trường (Dev/Staging/Prod)**, phiên bản phát hiện/sửa và bộ trạng thái riêng (Mới → Đã xác nhận → Đang sửa → Chờ kiểm thử → Mở lại/Đã đóng) |
+| Backlog & Sprint | Sprint (kế hoạch → đang chạy → kết thúc, mỗi dự án một sprint chạy), Epic gom Story, chuyển việc giữa backlog và sprint, mục tiêu sprint, **capacity thực tế** (ngày công trừ nghỉ phép). Kết thúc sprint ghi velocity và chuyển việc dở về backlog/sprint khác |
+| Báo cáo | **Burndown** theo ngày (điểm hoặc số việc), **Velocity** các sprint đã kết thúc (+ trung bình 3 sprint), **chấm công** theo người |
+| Thời gian làm việc (work log) | Người được giao ghi thời gian theo ngày ("1g30", "90p"); giờ thực tế của việc = tổng các lần ghi |
+| Lịch & Gantt | Trang **Lịch** (tháng): deadline, ngày bắt đầu, mốc sprint, ngày nghỉ đã duyệt; **Gantt** theo epic với thanh tiến độ và **phụ thuộc** "xong rồi mới bắt đầu" (chặn vòng lặp, cảnh báo đỏ khi sai thứ tự ngày) |
+| Nhóm (Team) | Nhóm là thực thể riêng: trưởng nhóm, thành viên có chuyên môn (Dev/QA/Designer/Khác), phụ trách nhiều dự án |
+| Nghỉ phép | Xin nghỉ (phép năm/ốm/không lương), leader/admin của nhóm/dự án duyệt, đồng đội chỉ thấy ngày nghỉ đã duyệt (ẩn lý do); capacity tính theo T2–T6 giờ VN × 8 giờ |
+| Tài liệu (Wiki) | Trang Markdown (GFM) theo dự án có cây trang, xem trước khi soạn, lịch sử 30 bản + khôi phục, chống ghi đè đồng thời, mẫu tài liệu API. Markdown không cho HTML thô (không XSS) |
+| Kiểm thử (QA) | Test case (tiền điều kiện, bước, kết quả mong đợi), **đợt kiểm thử** theo môi trường/phiên bản; ghi Đạt/Lỗi/Bị chặn/Bỏ qua; **Lỗi tự tạo Bug** (kế thừa môi trường + phiên bản, không sinh trùng) |
+| Phát hành | Phiên bản semver (v1.1.0), gắn việc/Bug vào phiên bản, phát hành (chặn khi còn việc dở trừ khi xác nhận), **release notes** Markdown tự tạo |
+| Tự động hóa | Quy tắc "khi (tạo việc / đổi trạng thái / được giao) + điều kiện → đổi trạng thái, giao việc, đổi ưu tiên, bình luận, thông báo"; chạy với quyền hệ thống, ghi lịch sử, chống vòng lặp |
+| Tìm kiếm | Tìm xuyên dự án (việc, bình luận, tài liệu, test case, phiên bản, file): nhiều từ khóa, không phân biệt hoa/thường và dấu (kể cả d↔đ), xếp theo độ liên quan |
+| Cổng khách hàng | Liên kết bí mật `/portal/:token` cho khách xem roadmap **chỉ đọc**, không cần tài khoản (tiến độ, epic, sprint, phiên bản); không lộ người dùng/bình luận/file/việc nội bộ |
+| Thông báo ngoài hệ thống | **Email** (SMTP, mỗi người tự bật trong Hồ sơ) và **Slack webhook** theo dự án |
 | Thông báo | Chuông ở header (realtime qua Socket.IO), trang thông báo, đánh dấu đã đọc; cron mỗi giờ quét task sắp hạn/quá hạn |
 
 ### Phân quyền
@@ -28,7 +43,7 @@ Web app để **Leader giao việc và theo dõi tiến độ/deadline** của t
 |---|---|
 | `admin` | Toàn hệ thống: người dùng, vai trò, mọi dự án/task |
 | `leader` | Tạo dự án; thêm/xóa thành viên; tạo/giao/sửa/xóa **mọi task trong dự án do mình tạo** |
-| `member` | Xem task trong dự án mình tham gia; cập nhật **trạng thái, giờ thực tế, bình luận** trên task **được giao cho mình**; **thêm công việc con** vào task lớn được giao cho mình (chỉ giao cho chính mình hoặc để trống) và sửa/xóa công việc con do mình tạo |
+| `member` | Xem task trong dự án mình tham gia; viết test case/tài liệu và ghi kết quả kiểm thử; cập nhật **trạng thái, giờ thực tế, bình luận** trên task **được giao cho mình**; **thêm công việc con** vào task lớn được giao cho mình (chỉ giao cho chính mình hoặc để trống) và sửa/xóa công việc con do mình tạo |
 
 Phân quyền được kiểm tra **ở backend** (`JwtAuthGuard` toàn cục, `RolesGuard` + `@Roles`, và `ProjectAccessService` cho quyền theo dự án/task cụ thể). Frontend chỉ ẩn nút để trải nghiệm tốt hơn.
 
@@ -132,6 +147,8 @@ npm run lint
 | `PORT` | `3000` | Cổng API |
 | `UPLOAD_DIR` | `./uploads` | Thư mục lưu file đính kèm (Docker: `/app/uploads`, nằm trên volume `uploads_data`) |
 | `MAX_UPLOAD_SIZE` | `20971520` | Dung lượng tối đa mỗi file đính kèm, đơn vị byte (20MB) |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` | — / `587` / `false` | Gửi email thông báo; để trống `SMTP_HOST` = tắt kênh email (mỗi người còn phải tự bật trong Hồ sơ) |
+| `APP_URL` | — | Địa chỉ web của ứng dụng, dùng làm link trong email/Slack (Docker tự lấy từ `PUBLIC_URL`/`CORS_ORIGIN`) |
 | `SEED_DEFAULT_PASSWORD` | `Password123!` | Mật khẩu cho tài khoản mẫu |
 
 ## Cấu trúc thư mục
@@ -171,6 +188,19 @@ Tiền tố `/api`. Mọi route cần `Authorization: Bearer <accessToken>` tr�
 | Comments | `GET/POST /tasks/:id/comments` · `DELETE /comments/:id` | xem: thành viên dự án; viết: leader/admin, MỘT trong những người được giao, và với công việc con thêm người tạo việc con + người được giao của task cha; xóa: tác giả hoặc leader/admin |
 | Attachments | `POST /tasks/:taskId/attachments` (multipart, field `files`, tối đa 10 file) · `GET /tasks/:taskId/attachments` · `POST /projects/:projectId/attachments` · `GET /projects/:projectId/attachments` · `GET /attachments` (danh sách phẳng, mỗi file có `source=project\|task`: `search, projectId, source=project\|task, uploaderId, type=image\|pdf\|document\|spreadsheet\|other\|file` (`file` = mọi thứ không phải ảnh; kết quả kèm `counts` theo loại)`, from, to, sortBy=createdAt\|name\|size, order, page, pageSize`) · `GET /attachments/:id/download` · `GET /attachments/:id/preview` (ảnh, PDF, txt/md/csv/json/xml/yaml, html, docx, xlsx, pptx) · `DELETE /attachments/:id` | xem/tải: thành viên dự án (admin: tất cả); tải lên file công việc: thành viên dự án; tải lên file dự án: leader của dự án, admin; xóa: người gửi, leader của dự án, admin |
 | Files (Kho tài liệu dạng thư mục) | `GET /files/projects` (cấp 1: dự án + số file/dung lượng/file mới nhất) · `GET /files/projects/:id` (cấp 2: `common` = file chung, danh sách task kèm số file; `includeEmpty=true` lấy cả task chưa có file) · `GET /files/projects/:id/files` (file chung) · `GET /files/tasks/:id` (cấp 3: thông tin task + file) · `GET /files/search?q=` (tìm theo tên trên toàn kho). Mọi cấp: `page, pageSize` (mặc định 20), `search`, `sortBy=name\|updatedAt` (file: thêm `size`), `order` | chỉ trong các dự án người dùng được xem (admin: tất cả); người ngoài nhận 403 |
+| Trạng thái | `GET/POST /projects/:id/statuses` · `PATCH/DELETE /projects/:id/statuses/:statusId` (xóa cần `?moveTo=` nếu còn việc) · `PUT /projects/:id/statuses/order` | xem: thành viên; sửa: leader dự án/admin |
+| Hôm nay | `GET /tasks/my-work` | đăng nhập |
+| Sprint & Backlog | `GET/POST /projects/:id/sprints` · `PATCH/DELETE /sprints/:id` · `POST /sprints/:id/start\|complete` · `POST /sprints/:id/tasks`, `POST /projects/:id/backlog/tasks` · `GET /projects/:id/backlog` · `GET /sprints/:id/burndown\|capacity` · `GET /projects/:id/velocity` | xem: thành viên; ghi: leader dự án/admin |
+| Work log | `GET/POST /tasks/:id/worklogs` · `DELETE /worklogs/:id` · `GET /projects/:id/timesheet` | ghi: người được giao hoặc leader/admin |
+| Nhóm | `GET/POST /teams` · `GET/PATCH/DELETE /teams/:id` · `POST /teams/:id/members` · `PATCH/DELETE /teams/:id/members/:userId` | xem: thành viên nhóm; ghi: trưởng nhóm/admin (nhóm ngoài phạm vi trả 404) |
+| Nghỉ phép | `GET/POST /leaves` · `POST /leaves/:id/cancel\|review` · `GET /projects/:id/capacity` | gửi: mọi người; duyệt: admin hoặc leader của nhóm/dự án có người đó (không tự duyệt) |
+| Lịch & Gantt | `GET /calendar?from=&to=&projectId=&mine=` · `GET /projects/:id/gantt` · `POST/DELETE /tasks/:id/dependencies` | xem: thành viên dự án; phụ thuộc: leader/admin |
+| Phát hành | `GET/POST /projects/:id/releases` · `GET/PATCH/DELETE /releases/:id` · `POST /releases/:id/publish` | xem: thành viên; ghi: leader dự án/admin |
+| Kiểm thử | `GET/POST /projects/:id/test-cases` · `PATCH/DELETE /test-cases/:id` · `GET/POST /projects/:id/test-runs` · `GET /test-runs/:id` · `POST /test-runs/:id/close` · `PATCH /test-results/:id` (Fail tự tạo Bug) | thành viên dự án |
+| Tài liệu | `GET/POST /projects/:id/wiki` · `GET/PATCH/DELETE /wiki/:id` · `GET /wiki/:id/revisions` · `POST /wiki/:id/revisions/:revId/restore` · `GET /wiki-templates/api-spec` | thành viên dự án; xóa: người tạo/leader/admin |
+| Tự động hóa | `GET/POST /projects/:id/automations` · `PATCH/DELETE /automations/:id` | xem: thành viên; ghi: leader dự án/admin |
+| Tìm kiếm | `GET /search?q=&projectId=` | chỉ trong dự án được xem |
+| Cổng khách hàng | `GET/POST /projects/:id/guest-links` · `DELETE /guest-links/:id` · `GET /public/portal/:token` (**công khai**, 30 lượt/phút/IP) | quản lý: leader dự án/admin |
 | Activity | `GET /tasks/:id/activity` | thành viên dự án |
 | Notifications | `GET /notifications` · `GET /notifications/unread-count` · `PATCH /notifications/:id/read` · `POST /notifications/read-all` · `POST /notifications/scan-deadlines` | người dùng; `scan-deadlines`: admin |
 | Dashboard | `GET /dashboard?projectId=&mine=` | đăng nhập (member luôn xem "của tôi") |
@@ -184,6 +214,16 @@ Tiền tố `/api`. Mọi route cần `Authorization: Bearer <accessToken>` tr�
 - Đăng nhập giới hạn 10 lần/phút/IP; toàn API 600 request/phút/IP.
 - Task kéo ra khỏi/vào `done` tự xóa/đặt `completedAt`. Subtask chỉ 1 cấp.
 - Chưa có: upload ảnh đại diện (chỉ nhận URL), quên mật khẩu qua email, test e2e tự động trong repo.
+- **Trạng thái tùy biến**: mỗi dự án có 2 bộ trạng thái (công việc / Bug), mỗi trạng thái thuộc một *nhóm* (cần làm / đang làm / hoàn thành); hệ thống chỉ dựa vào nhóm để tính tiến độ, quá hạn, `completedAt`. Mỗi bộ luôn phải còn ít nhất một trạng thái "hoàn thành" và một trạng thái chưa xong. Migration giữ nguyên dữ liệu cũ (5 trạng thái cũ thành 5 trạng thái cùng tên).
+- **Bug dùng chung bảng `Task`** (`type = bug`) nhưng có bộ trạng thái riêng; kéo Bug sang cột công việc bị từ chối. Đổi loại task ⇄ Bug tự ánh xạ trạng thái theo nhóm.
+- **Burndown** dựa vào `completedAt` nên việc mở lại sau khi xong chỉ được tính theo trạng thái hiện tại; chưa ước lượng điểm thì đếm theo số việc.
+- **Capacity** chỉ trừ ngày nghỉ đã duyệt và cuối tuần (chưa có lịch nghỉ lễ), 8 giờ/ngày (`HOURS_PER_DAY`).
+- **Fail tự sinh Bug** chạy với quyền của người ghi kết quả (QA không cần là leader); Bug nằm ở trạng thái đầu bộ Bug, chưa có người xử lý.
+- **Tự động hóa** ghi thẳng DB với quyền hệ thống nên hành động của quy tắc KHÔNG kích hoạt quy tắc khác; điều kiện luôn so với trạng thái lúc xảy ra sự kiện (không có chuỗi A→B→A).
+- **Cổng khách hàng**: token chỉ hiện một lần khi tạo, DB chỉ lưu băm SHA-256 (mất link thì tạo link mới, thu hồi link cũ); sai token/thu hồi/hết hạn cùng trả 404.
+- **Email/Slack** gửi nền, lỗi kênh ngoài không làm hỏng thao tác; Slack chỉ nhận `https://hooks.slack.com/...` (chống SSRF) và URL webhook không bao giờ trả về qua API.
+- **Tìm kiếm**: MySQL `utf8mb4_unicode_ci` coi ă/â/ơ/dấu thanh là chữ gốc nhưng `đ` ≠ `d`, nên truy vấn thử thêm biến thể d↔đ; nhiều từ khóa là AND. Chưa dùng full-text index.
+- **Gỡ khỏi nhóm không gỡ khỏi dự án** (người đó có thể đang giữ việc); thêm vào nhóm thì vào luôn mọi dự án của nhóm.
 
 ## Deploy lên máy chủ (Ubuntu + Docker + nginx + HTTPS)
 

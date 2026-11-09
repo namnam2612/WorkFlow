@@ -11,6 +11,7 @@ Web app để Leader giao việc và theo dõi tiến độ/deadline; thành vi�
 - Frontend: React 19 + Vite + TS + Tailwind 4, React Router 7, TanStack Query, dnd-kit, Recharts, react-hook-form + zod
 
 ## Phân quyền
+- Trạng thái task KHÔNG cố định: mỗi dự án có bộ trạng thái riêng (`ProjectStatus`, `Task.statusId`); logic hệ thống (tiến độ, quá hạn, `completedAt`) chỉ dựa vào `status.category` (`todo|in_progress|done`), không so tên trạng thái. Bug (`type = bug`) dùng bộ trạng thái scope `bug`.
 - Một task giao được cho NHIỀU người (`TaskAssignee`, API `assigneeIds`); "người được giao" = một trong số họ. `admin`: toàn hệ thống. `leader`: quản lý dự án mình tạo (task, thành viên). `member`: xem task của dự án mình tham gia; cập nhật status/actualHours/bình luận task được giao cho mình; thêm công việc con vào task lớn được giao cho mình (giao cho chính mình hoặc để trống) và sửa/xóa công việc con do mình tạo.
 - Kiểm tra ở backend (Guard `JwtAuthGuard`, `RolesGuard`, + kiểm tra truy cập dự án trong service). Frontend chỉ ẩn nút thêm cho UX.
 
@@ -30,7 +31,7 @@ cp .env.example .env && docker compose up -d mysql     # MySQL ở localhost:330
 cd backend && npm i && cp .env.example .env
 npx prisma migrate deploy && npm run seed
 npm run start:dev                          # API http://localhost:3000/api
-npm run build && npm run lint && npm test  # 261 unit test
+npm run build && npm run lint && npm test  # 456 unit test
 VERIFY_DATABASE_URL=mysql://.../taskflow_migtest npm run verify:assignee-migration  # diễn tập migration trên DB tạm
 cd ../frontend && npm i && npm run dev     # http://localhost:5173 (proxy /api, /socket.io)
 npm run build && npm run lint
@@ -45,6 +46,10 @@ Máy dev có MySQL riêng ở cổng 3306 — KHÔNG đụng vào; MySQL của d
 - Frontend: không dùng `eslint-disable`; màu trạng thái/biểu đồ ở `lib/constants.ts`.
 - Kho tài liệu: `/files` (thư mục Dự án → Task → File, API `GET /files/...` trong `backend/src/files/`); danh sách phẳng cũ ở `/documents`. Điều kiện quyền file luôn qua `AttachmentsService.visibleWhere` (admin = `{}`, đừng dùng `{ project: {} }`).
 - Giao diện: nền tối đơn sắc (cảm hứng Lusion), trắng là màu nhấn. Token màu + keyframes ở `frontend/src/index.css` (thang `slate/brand/red/...` của Tailwind được ánh xạ lại sang bảng tối nên class cũ vẫn đúng). Hiệu ứng ở `components/fx/` (Reveal, TiltCard, ParticleBackground, LoadingScreen, HeroScene/three.js); tôn trọng `prefers-reduced-motion`. Có 2 giao diện Tối (mặc định) / Sáng: `<html data-theme>`, ghi nhớ ở localStorage `taskflow.theme`; bản sáng đảo `--color-white/--color-black` + ghi đè token trong `index.css`. Màu cố định trong code (biểu đồ, hạt, 3D) phải đọc `useTheme()`.
+
+## Tính năng Agile (module backend theo thư mục)
+`statuses/` (cột tùy biến), `sprints/` (+ burndown/velocity/capacity), `worklogs/`, `teams/`, `leaves/` (nghỉ phép + capacity), `schedule/` (module `PlanningModule`: calendar + gantt), `releases/`, `qa/` (Fail tự sinh Bug), `wiki/`, `search/`, `automation/` (engine chạy sau TasksService, không đệ quy), `portal/` (cổng khách công khai `@Public`). Nguyên tắc: mọi endpoint mới kiểm tra quyền ở service (`ProjectAccessService`) và có unit test; thao tác phụ (email/Slack/automation) không bao giờ được làm hỏng thao tác gốc. Khi viết test cho service dùng `createPrismaMock` ở `test-utils.ts` (thêm model mới vào đó). DTO có trường kiểu `unknown` vẫn cần ít nhất một decorator của class-validator, nếu không `whitelist` sẽ loại/ từ chối trường đó.
+Email: `SMTP_*`; Slack: webhook theo dự án; liên kết cổng khách chỉ lưu băm token.
 
 ## Tài liệu
 - `PROGRESS.md`: checklist tiến độ + "Quyết định thiết kế".

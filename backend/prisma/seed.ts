@@ -1,6 +1,7 @@
 import { PrismaClient, Priority, Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { createDefaultStatuses, DEFAULT_TASK_STATUSES } from '../src/statuses/default-statuses';
+import { seedAgile, type SeededProject } from './seed-agile';
 import { clearAttachments, makeDocx, makePdf, makePng, makePptx, makeXlsx, writeSample } from './seed-files';
 
 const prisma = new PrismaClient();
@@ -132,6 +133,7 @@ async function main(): Promise<void> {
   await prisma.task.deleteMany();
   await prisma.projectMember.deleteMany();
   await prisma.project.deleteMany();
+  await prisma.team.deleteMany();
   await prisma.refreshToken.deleteMany();
   await prisma.user.deleteMany();
 
@@ -161,6 +163,7 @@ async function main(): Promise<void> {
 
   let taskCount = 0;
   let fileCount = 0;
+  const seeded: SeededProject[] = [];
   for (const def of PROJECTS) {
     const leader = getUser(def.leader);
     const project = await prisma.project.create({
@@ -174,6 +177,7 @@ async function main(): Promise<void> {
     });
 
     const memberIds = def.memberKeys.map((key) => getUser(key).id);
+    seeded.push({ id: project.id, name: def.name, leaderId: leader.id, memberIds });
     await prisma.projectMember.createMany({
       data: [leader.id, ...memberIds].map((userId) => ({ projectId: project.id, userId })),
     });
@@ -372,8 +376,10 @@ async function main(): Promise<void> {
     }
   }
 
+  const agileLines = await seedAgile(prisma, seeded);
   console.log(`Seed xong: ${users.size} người dùng, ${PROJECTS.length} dự án, ${taskCount} task (gồm subtask), ${fileCount} file đính kèm.`);
   console.log(`Mật khẩu mặc định cho mọi tài khoản mẫu: ${password}`);
+  for (const line of agileLines) console.log(line);
 }
 
 main()

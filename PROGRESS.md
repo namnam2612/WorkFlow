@@ -66,6 +66,23 @@
 - [x] Sửa lỗi cũ: Kho tài liệu dạng phẳng và tìm kiếm bỏ sót file dự án khi xem bằng admin (`visibleWhere` trả `{}` cho admin)
 - [x] Seed: 3 dự án, mỗi dự án có file chung và task có 2–5 file (một số task không có file); test phân quyền từng cấp, số đếm, script migrate
 
+## Giai đoạn 12 — Nâng cấp Agile (Phân hệ 1–4 theo bản audit)
+- [x] **Trạng thái tùy biến theo dự án** (`ProjectStatus`, nhóm todo/in_progress/done, 2 bộ công việc/Bug) + migration giữ dữ liệu + UI "Tùy chỉnh cột"
+- [x] **Loại công việc** (Task/Story/Bug/Epic), Story Point, Bug (mức nghiêm trọng, môi trường) với vòng đời riêng — dùng chung bảng `Task`
+- [x] **Hôm nay (My Work)** theo giờ Việt Nam
+- [x] **Thông báo ngoài hệ thống**: email SMTP (bật theo người) + Slack webhook theo dự án
+- [x] **Sprint, Backlog, Epic**, Burndown, Velocity, **work log** + chấm công
+- [x] **Nhóm (Team)** là thực thể riêng, chuyên môn Dev/QA/Designer
+- [x] **Nghỉ phép** + duyệt đơn + capacity thực tế của sprint
+- [x] **Lịch tháng** + **Gantt** có phụ thuộc giữa công việc
+- [x] **Phát hành**: phiên bản semver, release notes, phiên bản/môi trường cho Bug
+- [x] **QA**: test case, đợt kiểm thử, Fail tự sinh Bug
+- [x] **Tài liệu Wiki** Markdown (lịch sử, chống ghi đè, mẫu API spec)
+- [x] **Tìm kiếm thông minh** xuyên dự án (không phân biệt dấu)
+- [x] **Tự động hóa** (workflow rules) chống vòng lặp
+- [x] **Cổng khách hàng** chỉ đọc
+- [x] Seed mẫu cho toàn bộ tính năng mới (`prisma/seed-agile.ts`, in ra link cổng khách demo); 456 unit test backend
+
 ## Quyết định thiết kế
 - Kho tài liệu dạng thư mục: danh sách phẳng cũ giữ ở `/documents` (nút "Xem tất cả file"). Cấp 1/2 sắp xếp và phân trang ở bộ nhớ sau khi đếm bằng GROUP BY (số dự án/task mỗi dự án nhỏ); cấp 3 và tìm kiếm phân trang ở DB. Số đếm của cấp 1 dùng SQL thô (`Attachment LEFT JOIN Task`) vì Prisma không groupBy qua quan hệ.
 - Giao nhiều người: thành viên (không phải leader/admin) chỉ thêm/bớt được CHÍNH MÌNH trong danh sách của công việc con mình tạo (không động tới người khác). Người đã được giao nhưng sau đó rời dự án được giữ nguyên cho tới khi bị bớt; khi gỡ thành viên khỏi dự án họ bị gỡ khỏi mọi task của dự án đó. Thống kê tính trên bảng nối ở bộ nhớ (MySQL không groupBy qua quan hệ), đủ cho quy mô hiện tại; nếu task lên tới hàng trăm nghìn hãy chuyển sang truy vấn SQL thô.
