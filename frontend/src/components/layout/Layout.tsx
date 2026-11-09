@@ -1,7 +1,7 @@
 import clsx from 'clsx';
-import { Bell, FolderKanban, LayoutDashboard, ListChecks, LogOut, Users } from 'lucide-react';
+import { Bell, FolderKanban, LayoutDashboard, ListChecks, LogOut, UserRound, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/useAuth';
 import { useRealtime } from '../../hooks/useRealtime';
 import { ROLE_LABEL } from '../../lib/constants';
@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { to: '/tasks', label: 'Công việc', icon: ListChecks, end: false },
   { to: '/members', label: 'Thành viên', icon: Users, end: false },
   { to: '/notifications', label: 'Thông báo', icon: Bell, end: false },
+  { to: '/profile', label: 'Hồ sơ', icon: UserRound, end: false },
 ];
 
 function Burger({ open, label, onClick }: { open: boolean; label: string; onClick: () => void }) {
@@ -99,13 +100,13 @@ export function Layout() {
         <NavList />
         <div className="mt-auto rounded-2xl border border-white/[0.08] p-3">
           {user && (
-            <div className="flex items-center gap-3">
+            <Link to="/profile" className="flex items-center gap-3 rounded-xl transition hover:opacity-80" aria-label="Hồ sơ của tôi">
               <Avatar name={user.name} avatarUrl={user.avatarUrl} />
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-white">{user.name}</p>
                 <p className="truncate text-xs text-muted">{ROLE_LABEL[user.role]}</p>
               </div>
-            </div>
+            </Link>
           )}
           <button
             type="button"
@@ -157,10 +158,10 @@ export function Layout() {
             <ThemeToggle />
             <NotificationBell />
             {user && (
-              <div className="flex items-center gap-2">
+              <Link to="/profile" className="flex items-center gap-2 transition hover:opacity-80" aria-label="Hồ sơ của tôi">
                 <Avatar name={user.name} avatarUrl={user.avatarUrl} size="sm" />
                 <span className="hidden text-[13px] font-medium text-slate-700 sm:inline">{user.name}</span>
-              </div>
+              </Link>
             )}
           </div>
         </header>

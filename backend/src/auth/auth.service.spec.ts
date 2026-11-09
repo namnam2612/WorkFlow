@@ -21,6 +21,13 @@ function buildUser(overrides: Partial<User> = {}): User {
     avatarUrl: null,
     isActive: true,
     createdAt: new Date('2026-01-01T00:00:00Z'),
+    jobTitle: null,
+    phone: null,
+    contactEmail: null,
+    bio: null,
+    githubUrl: null,
+    linkedinUrl: null,
+    facebookUrl: null,
     ...overrides,
   };
 }

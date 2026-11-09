@@ -84,13 +84,15 @@ function refreshOnce(): Promise<boolean> {
 
 async function send(path: string, options: RequestOptions): Promise<Response> {
   const headers: Record<string, string> = {};
-  if (options.body !== undefined) headers['Content-Type'] = 'application/json';
+  const isForm = options.body instanceof FormData;
+  // FormData: để trình duyệt tự đặt Content-Type (kèm boundary)
+  if (options.body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
   const access = tokenStore.getAccess();
   if (access) headers.Authorization = `Bearer ${access}`;
   return fetch(buildUrl(path, options.query), {
     method: options.method ?? 'GET',
     headers,
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    body: options.body === undefined ? undefined : isForm ? (options.body as FormData) : JSON.stringify(options.body),
   });
 }
 
@@ -117,6 +119,7 @@ export const api = {
   post: <T>(path: string, body?: unknown, skipAuthRefresh = false) =>
     request<T>(path, { method: 'POST', body: body ?? {}, skipAuthRefresh }),
   patch: <T>(path: string, body: unknown) => request<T>(path, { method: 'PATCH', body }),
+  put: <T>(path: string, body: unknown) => request<T>(path, { method: 'PUT', body }),
   delete: <T = void>(path: string) => request<T>(path, { method: 'DELETE' }),
 };
 

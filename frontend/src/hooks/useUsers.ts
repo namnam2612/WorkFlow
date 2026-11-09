@@ -39,6 +39,13 @@ export interface CreateUserInput {
 export interface UpdateUserInput {
   name?: string;
   avatarUrl?: string | null;
+  jobTitle?: string | null;
+  phone?: string | null;
+  contactEmail?: string | null;
+  bio?: string | null;
+  githubUrl?: string | null;
+  linkedinUrl?: string | null;
+  facebookUrl?: string | null;
   role?: Role;
   isActive?: boolean;
   password?: string;
@@ -61,4 +68,25 @@ export function useUpdateUser(id: number) {
       await queryClient.invalidateQueries({ queryKey: ['user', id] });
     },
   });
+}
+
+/** Tải/xóa ảnh đại diện của chính mình; làm mới danh sách người dùng để ảnh mới hiện ở mọi nơi */
+export function useAvatarMutations(id: number) {
+  const queryClient = useQueryClient();
+  const refresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['users'] });
+    await queryClient.invalidateQueries({ queryKey: ['user', id] });
+    await queryClient.invalidateQueries({ queryKey: ['project'] });
+    await queryClient.invalidateQueries({ queryKey: ['projects'] });
+  };
+  const upload = useMutation({
+    mutationFn: (file: Blob) => {
+      const form = new FormData();
+      form.append('file', file, 'avatar.jpg');
+      return api.put<User>(`/users/${id}/avatar`, form);
+    },
+    onSuccess: refresh,
+  });
+  const remove = useMutation({ mutationFn: () => api.delete<User>(`/users/${id}/avatar`), onSuccess: refresh });
+  return { upload, remove };
 }

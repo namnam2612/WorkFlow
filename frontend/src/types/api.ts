@@ -10,6 +10,14 @@ export interface User {
   avatarUrl: string | null;
   isActive: boolean;
   createdAt: string;
+  /** Hồ sơ cá nhân (tùy chọn) */
+  jobTitle: string | null;
+  phone: string | null;
+  contactEmail: string | null;
+  bio: string | null;
+  githubUrl: string | null;
+  linkedinUrl: string | null;
+  facebookUrl: string | null;
 }
 
 export interface UserBrief {

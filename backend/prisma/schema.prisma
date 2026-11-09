@@ -38,6 +38,17 @@ model User {
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
 
+  // Hồ sơ cá nhân (tất cả tùy chọn)
+  jobTitle     String?  @db.VarChar(120)
+  phone        String?  @db.VarChar(20)
+  contactEmail String?  @db.VarChar(190)
+  bio          String?  @db.VarChar(500)
+  githubUrl    String?  @db.VarChar(255)
+  linkedinUrl  String?  @db.VarChar(255)
+  facebookUrl  String?  @db.VarChar(255)
+
+  avatar          UserAvatar?
+
   createdProjects Project[]       @relation("ProjectCreator")
   memberships     ProjectMember[]
   assignedTasks   Task[]          @relation("TaskAssignee")
@@ -46,6 +57,16 @@ model User {
   activityLogs    ActivityLog[]
   notifications   Notification[]
   refreshTokens   RefreshToken[]
+}
+
+/// Ảnh đại diện đã tải lên (lưu trong DB để không phụ thuộc ổ đĩa của container)
+model UserAvatar {
+  userId    Int      @id
+  mime      String   @db.VarChar(20)
+  data      Bytes    @db.MediumBlob
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model RefreshToken {

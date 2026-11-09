@@ -16,6 +16,7 @@ const STATUS_TEXT: Record<number, string> = {
   403: 'Forbidden',
   404: 'Not Found',
   409: 'Conflict',
+  413: 'Payload Too Large',
   422: 'Unprocessable Entity',
   429: 'Too Many Requests',
   500: 'Internal Server Error',
@@ -25,6 +26,7 @@ const DEFAULT_MESSAGES_VI: Record<number, string> = {
   401: 'Bạn chưa đăng nhập hoặc phiên đã hết hạn',
   403: 'Bạn không có quyền thực hiện thao tác này',
   404: 'Không tìm thấy dữ liệu',
+  413: 'Tệp tải lên quá lớn',
   429: 'Bạn thao tác quá nhanh, vui lòng thử lại sau',
 };
 
@@ -65,7 +67,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
         if (typeof raw === 'string' || Array.isArray(raw)) message = raw;
       }
       const statusCode = exception.getStatus();
-      const isGeneric = typeof message === 'string' && (message === STATUS_TEXT[statusCode] || /^(Forbidden resource|Unauthorized|Not Found|ThrottlerException.*)$/.test(message));
+      const isGeneric = typeof message === 'string' && (message === STATUS_TEXT[statusCode] || /^(Forbidden resource|Unauthorized|Not Found|File too large|ThrottlerException.*)$/.test(message));
       if (isGeneric && DEFAULT_MESSAGES_VI[statusCode]) message = DEFAULT_MESSAGES_VI[statusCode];
       return { statusCode, message };
     }

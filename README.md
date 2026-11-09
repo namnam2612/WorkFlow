@@ -158,7 +158,7 @@ Tiền tố `/api`. Mọi route cần `Authorization: Bearer <accessToken>` tr�
 | Nhóm | Endpoint | Quyền |
 |---|---|---|
 | Auth | `POST /auth/login` · `POST /auth/register` (công khai, luôn tạo `member`) · `POST /auth/refresh` · `POST /auth/logout` · `GET /auth/me` · `POST /auth/change-password` | công khai / đăng nhập |
-| Users | `GET /users` (lọc, phân trang, kèm thống kê) · `GET /users/:id` · `POST /users` · `PATCH /users/:id` | list/get: theo phạm vi dự án; tạo: admin; sửa: admin hoặc chính mình (giới hạn trường) |
+| Users | `GET /users` (lọc, phân trang, kèm thống kê) · `GET /users/:id` · `POST /users` · `PATCH /users/:id` (gồm trường hồ sơ) · `PUT/DELETE /users/:id/avatar` (multipart `file`) · `GET /users/:id/avatar` (công khai) | list/get: theo phạm vi dự án; tạo: admin; sửa: admin hoặc chính mình (giới hạn trường) |
 | Projects | `GET /projects` · `POST /projects` · `GET/PATCH/DELETE /projects/:id` · `POST /projects/:id/members` · `DELETE /projects/:id/members/:userId` | tạo: admin/leader; sửa/xóa/thành viên: admin hoặc leader của dự án |
 | Tasks | `GET /tasks` (lọc, tìm kiếm, sắp xếp, phân trang) · `GET /tasks/board?projectId=` · `POST /tasks` (kèm `parentId` = subtask) · `GET/PATCH/DELETE /tasks/:id` · `PATCH /tasks/:id/move` (status + position) | tạo task lớn/xóa: leader của dự án/admin; tạo công việc con: thêm cả assignee của task cha; sửa: leader/admin (mọi trường), assignee (status, actualHours), người tạo công việc con (mọi trường của việc con đó); move: leader/admin hoặc assignee |
 | Comments | `GET/POST /tasks/:id/comments` · `DELETE /comments/:id` | xem: thành viên dự án; viết: leader/admin, assignee, và với công việc con thêm người tạo việc con + assignee của task cha; xóa: tác giả hoặc leader/admin |

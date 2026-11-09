@@ -36,6 +36,7 @@
 
 ## Quyết định thiết kế
 - MySQL của dự án map ra cổng host **3307** vì máy đã có MySQL khác ở 3306.
+- Hồ sơ cá nhân (`/profile`): chức danh, SĐT, email liên hệ, giới thiệu, link GitHub/LinkedIn/Facebook (kiểm tra tên miền ở backend). Ảnh đại diện lưu trong DB (bảng `UserAvatar`, MEDIUMBLOB) để không phụ thuộc ổ đĩa container; trình duyệt tự cắt vuông 256px trước khi gửi, backend nhận tối đa 1MB và kiểm tra JPEG/PNG/WebP bằng chữ ký file. `GET /users/:id/avatar` công khai (thẻ <img> không gửi được header Authorization).
 - Ghim phiên bản major ổn định: NestJS 11, Prisma 6, TypeScript 5.9, ESLint 9, Vite 7, Tailwind 4, Jest 29.
 
 ## Vấn đề / ghi chú
