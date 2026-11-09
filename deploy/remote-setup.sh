@@ -8,7 +8,7 @@ DOMAIN="${DOMAIN:?cần DOMAIN}"
 REPO_URL="${REPO_URL:?cần REPO_URL}"
 BRANCH="${BRANCH:-main}"
 LE_EMAIL="${LE_EMAIL:?cần LE_EMAIL}"
-APP_DIR="${APP_DIR:-/opt/taskflow}"
+APP_DIR="${APP_DIR:-/opt/taskflow-alpha}"
 FRONTEND_PORT="${FRONTEND_PORT:-18080}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-admin@${DOMAIN#*.}}"
 

@@ -1,6 +1,6 @@
 # Production: chỉ mở frontend ở 127.0.0.1:18080 (nginx của máy chủ proxy ra domain + HTTPS).
 # MySQL và backend KHÔNG mở cổng ra ngoài.
-name: taskflow
+name: taskflow-alpha
 services:
   mysql:
     image: mysql:8.0
