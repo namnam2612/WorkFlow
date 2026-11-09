@@ -31,7 +31,7 @@ describe('search-text', () => {
   });
   it('snippet lấy ngữ cảnh quanh vị trí khớp đầu tiên (khớp không dấu), có dấu … ở đầu/cuối', () => {
     const text = `${'Lorem ipsum dolor sit amet '.repeat(10)}Trang ĐĂNG NHẬP hiển thị lỗi ${'sau đó là chữ khác '.repeat(10)}`;
-    const s = snippet(['dang nhap'.split(' ')[0] as string], text);
+    const s = snippet(['dang'], text);
     expect(s.toLowerCase()).toContain('đăng');
     expect(s.startsWith('…') && s.endsWith('…')).toBe(true);
     expect(snippet(['zzz'], 'Một đoạn ngắn')).toBe('Một đoạn ngắn');
