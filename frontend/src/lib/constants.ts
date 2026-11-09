@@ -1,4 +1,4 @@
-import type { BugSeverity, Environment, LeaveStatus, LeaveType, Priority, Role, Specialty, StatusCategory, TaskType } from '../types/api';
+import type { BugSeverity, Environment, LeaveStatus, LeaveType, Priority, Role, Specialty, StatusCategory, TaskType, TestResultStatus } from '../types/api';
 
 export const PRIORITIES: Priority[] = ['low', 'medium', 'high', 'urgent'];
 
@@ -75,4 +75,12 @@ export const LEAVE_STATUS_META: Record<LeaveStatus, { label: string; badge: stri
   approved: { label: 'Đã duyệt', badge: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
   rejected: { label: 'Từ chối', badge: 'bg-red-50 text-red-700 ring-red-200' },
   cancelled: { label: 'Đã hủy', badge: 'bg-slate-100 text-slate-600 ring-slate-200' },
+};
+
+export const RESULT_META: Record<TestResultStatus, { label: string; badge: string }> = {
+  untested: { label: 'Chưa chạy', badge: 'bg-slate-100 text-slate-600 ring-slate-200' },
+  passed: { label: 'Đạt', badge: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
+  failed: { label: 'Lỗi', badge: 'bg-red-50 text-red-700 ring-red-200' },
+  blocked: { label: 'Bị chặn', badge: 'bg-amber-50 text-amber-700 ring-amber-200' },
+  skipped: { label: 'Bỏ qua', badge: 'bg-sky-50 text-sky-700 ring-sky-200' },
 };

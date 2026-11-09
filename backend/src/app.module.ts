@@ -19,6 +19,7 @@ import { ProjectsModule } from './projects/projects.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { PlanningModule } from './schedule/schedule.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
+import { QaModule } from './qa/qa.module';
 import { ReleasesModule } from './releases/releases.module';
 import { SprintsModule } from './sprints/sprints.module';
 import { StatusesModule } from './statuses/statuses.module';
@@ -47,6 +48,7 @@ import { WorkLogsModule } from './worklogs/worklogs.module';
     LeavesModule,
     PlanningModule,
     ReleasesModule,
+    QaModule,
     TasksModule,
     CommentsModule,
     AttachmentsModule,

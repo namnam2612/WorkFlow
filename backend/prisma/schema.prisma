@@ -48,6 +48,19 @@ enum ReleaseStatus {
   released
 }
 
+enum TestResultStatus {
+  untested
+  passed
+  failed
+  blocked
+  skipped
+}
+
+enum TestRunStatus {
+  open
+  closed
+}
+
 enum SprintStatus {
   planned
   active
@@ -168,6 +181,8 @@ model Project {
   statuses    ProjectStatus[]
   sprints     Sprint[]
   releases    Release[]
+  testCases   TestCase[]
+  testRuns    TestRun[]
   tasks       Task[]
   attachments Attachment[]
 
@@ -238,6 +253,7 @@ model Task {
   project      Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
   status       ProjectStatus    @relation(fields: [statusId], references: [id], onDelete: Restrict)
   sprint       Sprint?          @relation(fields: [sprintId], references: [id], onDelete: SetNull)
+  testResults  TestResult[]
   fixRelease   Release?         @relation("ReleaseFixes", fields: [fixReleaseId], references: [id], onDelete: SetNull)
   foundRelease Release?         @relation("ReleaseFound", fields: [foundReleaseId], references: [id], onDelete: SetNull)
   epic         Task?            @relation("EpicChildren", fields: [epicId], references: [id], onDelete: SetNull)
@@ -466,10 +482,72 @@ model Release {
   createdById Int
   createdAt   DateTime      @default(now())
 
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  fixes   Task[]  @relation("ReleaseFixes")
-  found   Task[]  @relation("ReleaseFound")
+  project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  fixes    Task[]    @relation("ReleaseFixes")
+  testRuns TestRun[]
+  found    Task[]    @relation("ReleaseFound")
 
   @@unique([projectId, version])
   @@index([projectId, status])
+}
+
+/// Kịch bản kiểm thử của dự án (QA viết, chạy lại nhiều lần qua các Test run)
+model TestCase {
+  id            Int      @id @default(autoincrement())
+  projectId     Int
+  title         String   @db.VarChar(255)
+  preconditions String?  @db.Text
+  /// Các bước thực hiện (mỗi bước một dòng)
+  steps         String   @db.Text
+  expected      String   @db.Text
+  priority      Priority @default(medium)
+  /// Đã lưu trữ: không đưa vào Test run mới nhưng giữ lịch sử kết quả cũ
+  archived      Boolean  @default(false)
+  createdById   Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  project Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  results TestResult[]
+
+  @@index([projectId, archived])
+}
+
+/// Một đợt chạy kiểm thử (theo môi trường / phiên bản)
+model TestRun {
+  id          Int           @id @default(autoincrement())
+  projectId   Int
+  name        String        @db.VarChar(160)
+  environment Environment?
+  releaseId   Int?
+  status      TestRunStatus @default(open)
+  createdById Int
+  createdAt   DateTime      @default(now())
+  closedAt    DateTime?
+
+  project Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  release Release?     @relation(fields: [releaseId], references: [id], onDelete: SetNull)
+  results TestResult[]
+
+  @@index([projectId, status])
+}
+
+model TestResult {
+  id           Int              @id @default(autoincrement())
+  runId        Int
+  testCaseId   Int
+  status       TestResultStatus @default(untested)
+  note         String?          @db.Text
+  executedById Int?
+  executedAt   DateTime?
+  /// Bug tự sinh khi kết quả là Fail
+  bugId        Int?
+
+  run      TestRun  @relation(fields: [runId], references: [id], onDelete: Cascade)
+  testCase TestCase @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  bug      Task?    @relation(fields: [bugId], references: [id], onDelete: SetNull)
+
+  @@unique([runId, testCaseId])
+  @@index([testCaseId])
+  @@index([bugId])
 }

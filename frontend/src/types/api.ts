@@ -484,3 +484,50 @@ export interface ReleaseDetail extends Release {
   /** Release notes dạng Markdown tự tạo từ các việc trong phiên bản */
   notes: string;
 }
+
+export type TestResultStatus = 'untested' | 'passed' | 'failed' | 'blocked' | 'skipped';
+
+export interface TestCase {
+  id: number;
+  projectId: number;
+  title: string;
+  preconditions: string | null;
+  steps: string;
+  expected: string;
+  priority: Priority;
+  archived: boolean;
+  createdById: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TestRunSummary {
+  id: number;
+  projectId: number;
+  name: string;
+  environment: Environment | null;
+  releaseId: number | null;
+  release?: { id: number; version: string } | null;
+  status: 'open' | 'closed';
+  createdAt: string;
+  closedAt: string | null;
+  counts: Record<TestResultStatus, number>;
+  total: number;
+  executed: number;
+  passRate: number | null;
+}
+
+export interface TestResultView {
+  id: number;
+  runId: number;
+  testCaseId: number;
+  status: TestResultStatus;
+  note: string | null;
+  executedAt: string | null;
+  executedBy: UserBrief | null;
+  bugId: number | null;
+  bug: { id: number; title: string; status: StatusRef } | null;
+  testCase: Pick<TestCase, 'id' | 'title' | 'preconditions' | 'steps' | 'expected' | 'priority' | 'archived'>;
+}
+
+export type TestRunDetail = TestRunSummary & { results: TestResultView[] };
